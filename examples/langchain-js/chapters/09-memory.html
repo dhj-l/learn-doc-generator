@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第9章 记忆系统 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch09">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html" class="active"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="08-middleware.html" class="prev-chapter">← 第8章 中间件</a>
+        <span class="chapter-indicator">第 9 章 / 共 10 章</span>
+        <a href="10-capstone.html" class="next-chapter">第10章 综合实战 →</a>
+      </div>
+
+      <h1>🧠 第9章：记忆系统 — 短期与长期记忆</h1>
+      <p class="subtitle">让 Agent 拥有持久化的对话上下文与跨会话记忆能力</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <section id="objectives">
+        <h2>🎯 本章目标</h2>
+        <div class="card">
+          <p>完成本章后，你将掌握以下核心能力：</p>
+          <ol>
+            <li><strong>理解记忆系统的本质</strong> — 深入了解为什么 Agent 需要记忆，以及短期记忆与长期记忆的区别和适用场景</li>
+            <li><strong>掌握 Checkpointer 机制</strong> — 学会使用 <code>MemorySaver</code> 实现对话级别的短期记忆，理解 <code>thread_id</code> 的工作原理</li>
+            <li><strong>构建带记忆的聊天 Agent</strong> — 通过完整实战示例，让 Agent 能够记住上下文，进行连贯的多轮对话</li>
+            <li><strong>实现长期记忆存储</strong> — 使用 <code>InMemoryStore</code> 和 <code>BaseStore</code> 实现跨会话的信息持久化</li>
+            <li><strong>掌握上下文压缩技术</strong> — 学会使用 <code>summarizationMiddleware</code> 处理超长对话，避免 token 超限问题</li>
+            <li><strong>用户偏好记忆实战</strong> — 构建一个能够记住用户偏好设置的智能 Agent 系统</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <section id="prerequisites">
+        <h2>📋 前置知识</h2>
+        <div class="callout info">
+          <div class="callout-title">📖 学习本章前，请确保你已掌握：</div>
+          <ul>
+            <li><strong>第2章 Agent 基础</strong> — 了解 <code>createAgent</code> 的基本用法和 Agent 执行流程</li>
+            <li><strong>第4章 消息 Messages</strong> — 理解 <code>HumanMessage</code>、<code>AIMessage</code> 等消息类型</li>
+            <li><strong>第5章 工具 Tools</strong> — 掌握工具的定义和 <code>tool()</code> 函数的使用</li>
+            <li><strong>第8章 中间件</strong> — 理解中间件的概念及其在 Agent 管道中的拦截作用</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ==================== 为什么 Agent 需要记忆 ==================== -->
+      <section id="why-memory">
+        <h2>💡 为什么 Agent 需要记忆</h2>
+
+        <p>想象一下这个场景：你走进一家常去的咖啡店，店员却完全不认识你，每次都问你同样的问题 —— "请问您要点什么？""您的名字？""要加糖吗？"。这种体验让人非常沮丧，对吧？</p>
+
+        <p><strong>没有记忆的 Agent 就像一个每天失忆的人，每次对话都是初次见面。</strong></p>
+
+        <p>在前几章中，我们构建的 Agent 每次调用都是独立的 —— 它无法记住上一轮对话中用户说了什么，也无法积累任何关于用户的了解。这意味着：</p>
+
+        <ul>
+          <li>用户必须在每次提问时重复提供背景信息</li>
+          <li>Agent 无法根据对话历史做出个性化回应</li>
+          <li>多步骤任务无法通过对话逐步推进</li>
+          <li>用户体验极度碎片化，缺乏连贯性</li>
+        </ul>
+
+        <p>记忆系统解决了这些问题。通过为 Agent 添加记忆能力，我们可以让它：</p>
+
+        <ul>
+          <li><strong>记住对话上下文</strong> — 知道之前聊了什么，避免重复询问</li>
+          <li><strong>积累用户偏好</strong> — 了解用户的习惯、喜好和常用设置</li>
+          <li><strong>追踪任务进度</strong> — 在多轮对话中逐步完成复杂任务</li>
+          <li><strong>提供个性化服务</strong> — 根据历史记录给出更精准的建议</li>
+        </ul>
+
+        <p>在 LangChain.js 中，记忆系统分为两个层次：<strong>短期记忆（Checkpointer）</strong>和<strong>长期记忆（Store）</strong>。它们各自解决不同场景下的记忆需求，接下来我们将逐一深入学习。</p>
+      </section>
+
+      <!-- ==================== 短期记忆 vs 长期记忆 ==================== -->
+      <section id="memory-types">
+        <h2>🔄 短期记忆 vs 长期记忆</h2>
+
+        <p>在开始编码之前，我们先来理解两种记忆类型的核心区别。可以用一个简单的类比来帮助理解：</p>
+
+        <div class="card">
+          <h3>📝 类比：便签纸 vs 文件柜</h3>
+          <p>想象你的办公桌上有两种记录工具：</p>
+          <ul>
+            <li><strong>便签纸（短期记忆）</strong> — 你正在处理某个项目时，会在桌面的便签纸上快速记录相关信息。这个项目结束后，便签纸可能会被丢掉，也可能被收起来。每张便签纸对应一个特定的任务或会话。</li>
+            <li><strong>文件柜（长期记忆）</strong> — 办公室角落的文件柜里存放着所有历史资料。无论你换了多少个项目，文件柜里的信息始终可以查阅。它跨越所有会话，是持久化的知识存储。</li>
+          </ul>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>特性</th>
+              <th>短期记忆（Checkpointer）</th>
+              <th>长期记忆（Store）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>作用范围</td>
+              <td>单个会话（thread）内</td>
+              <td>跨所有会话</td>
+            </tr>
+            <tr>
+              <td>存储内容</td>
+              <td>完整的对话消息历史</td>
+              <td>键值对形式的结构化数据</td>
+            </tr>
+            <tr>
+              <td>生命周期</td>
+              <td>随会话存在，会话结束后可能清除</td>
+              <td>永久保存，直到手动删除</td>
+            </tr>
+            <tr>
+              <td>标识方式</td>
+              <td><code>thread_id</code></td>
+              <td><code>namespace</code> + <code>key</code></td>
+            </tr>
+            <tr>
+              <td>典型用途</td>
+              <td>多轮聊天、任务跟进</td>
+              <td>用户偏好、历史摘要、知识库</td>
+            </tr>
+            <tr>
+              <td>LangChain 实现</td>
+              <td><code>MemorySaver</code> / 数据库 Checkpointer</td>
+              <td><code>InMemoryStore</code> / 自定义 Store</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>简单来说：<strong>短期记忆帮你记住"这次聊了什么"，长期记忆帮你记住"关于这个人我知道什么"</strong>。在实际应用中，两种记忆通常配合使用，共同构建一个智能且贴心的 Agent 系统。</p>
+      </section>
+
+      <!-- ==================== Checkpointer 详解 ==================== -->
+      <section id="checkpointer">
+        <h2>💾 Checkpointer 详解</h2>
+
+        <p>Checkpointer 是 LangGraph 中实现短期记忆的核心机制。它的作用是在 Agent 执行的每个步骤中保存状态快照，使得对话可以在任意节点恢复或回溯。理解 Checkpointer 的工作原理对于构建可靠的对话系统至关重要。</p>
+
+        <h3>Checkpointer 的工作原理</h3>
+
+        <p>当 Agent 接收到一条消息并开始处理时，Checkpointer 会在以下关键节点保存状态：</p>
+
+        <ul>
+          <li><strong>消息接收时</strong> — 保存用户输入的消息</li>
+          <li><strong>模型调用前</strong> — 记录即将发送给模型的完整上下文</li>
+          <li><strong>工具调用时</strong> — 保存工具选择和参数信息</li>
+          <li><strong>工具返回时</strong> — 记录工具执行的结果</li>
+          <li><strong>响应生成后</strong> — 保存最终的 AI 回复</li>
+        </ul>
+
+        <p>每个状态快照都与一个 <code>thread_id</code> 关联。<code>thread_id</code> 就像对话的唯一标识符，同一个 <code>thread_id</code> 下的所有消息和状态变化都属于同一个对话线程。当你再次使用相同的 <code>thread_id</code> 发起请求时，Checkpointer 会自动加载该线程的所有历史状态，Agent 就能"记住"之前发生的一切。</p>
+
+        <h3>MemorySaver：内存存储</h3>
+
+        <p><code>MemorySaver</code> 是最简单的 Checkpointer 实现，它将所有状态保存在内存中。非常适合开发和测试阶段使用。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">checkpointer-basics.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">// 导入 MemorySaver —— 内存版 Checkpointer
+import { MemorySaver } from "@langchain/langgraph";
+
+// 创建 MemorySaver 实例
+// 所有对话状态都保存在内存中，程序重启后会丢失
+const checkpointer = new MemorySaver();
+
+// 在创建 Agent 时传入 checkpointer
+import { createAgent } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+
+const model = new ChatOpenAI({ modelName: "gpt-4o-mini" });
+
+const agent = createAgent({
+  model,
+  tools: [],
+  // 关键配置：指定 checkpointer
+  checkpointer,
+});
+
+// 第一轮对话 —— 使用 thread_id 标识会话
+const result1 = await agent.invoke(
+  { messages: [{ role: "user", content: "我叫小明，我是一个前端工程师" }] },
+  { configurable: { thread_id: "user-session-001" } }
+);
+console.log("第一轮回复:", result1.messages.at(-1)?.content);
+
+// 第二轮对话 —— 使用相同的 thread_id，Agent 能记住之前的内容
+const result2 = await agent.invoke(
+  { messages: [{ role: "user", content: "你还记得我是谁吗？" }] },
+  { configurable: { thread_id: "user-session-001" } }
+);
+console.log("第二轮回复:", result2.messages.at(-1)?.content);
+// Agent 会回答："你是小明，一个前端工程师！"</code></pre>
+        </div>
+
+        <h3>Persistent Checkpointer：持久化存储</h3>
+
+        <p>在生产环境中，你不可能依赖内存存储 —— 服务器重启意味着所有记忆消失。这时你需要一个持久化的 Checkpointer，将对话状态保存到数据库中。</p>
+
+        <p>LangGraph 提供了多种持久化 Checkpointer 的实现：</p>
+
+        <ul>
+          <li><strong>SqliteSaver</strong> — 基于 SQLite，适合小型应用和单机部署</li>
+          <li><strong>PostgresSaver</strong> — 基于 PostgreSQL，适合生产环境的多实例部署</li>
+          <li><strong>MongoDBSaver</strong> — 基于 MongoDB，适合需要灵活 schema 的场景</li>
+        </ul>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">persistent-checkpointer.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">// 生产环境：使用 SQLite 持久化存储
+// 需要安装：npm install better-sqlite3
+import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+
+// 连接到 SQLite 数据库文件
+const checkpointer = SqliteSaver.fromConnString("./checkpoints.db");
+
+// 创建 Agent，使用持久化 Checkpointer
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o-mini" }),
+  tools: [],
+  checkpointer, // 数据会保存到文件，重启后仍然可用
+});
+
+// 即使程序重启，使用相同的 thread_id 也能恢复对话历史
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "我们之前聊到哪了？" }] },
+  { configurable: { thread_id: "persistent-session-001" } }
+);</code></pre>
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-title">⚠️ 选择 Checkpointer 的建议</div>
+          <p>开发和测试阶段使用 <code>MemorySaver</code>，因为它零配置、启动快。但一旦进入生产环境，请务必切换到持久化方案。没有持久化的记忆系统就像一个优秀的店员每天下班后都会失忆 —— 第二天一切从头开始。</p>
+        </div>
+      </section>
+
+      <!-- ==================== 实战：带记忆的聊天 Agent ==================== -->
+      <section id="chat-agent-with-memory">
+        <h2>🛠️ 实战：带记忆的聊天 Agent</h2>
+
+        <p>现在让我们构建一个完整的示例：一个能记住对话上下文的聊天 Agent。我们会模拟一个旅行顾问场景，用户可以与它进行多轮对话，Agent 能够记住之前讨论的目的地、预算等信息。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">chat-agent-memory.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">import { createAgent } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { MemorySaver } from "@langchain/langgraph";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// ========== 第一步：创建记忆存储 ==========
+const checkpointer = new MemorySaver();
+
+// ========== 第二步：定义旅行相关工具 ==========
+// 搜索航班的工具
+const searchFlights = tool(
+  async ({ destination, date }) => {
+    // 模拟航班搜索结果
+    return JSON.stringify({
+      destination,
+      date,
+      flights: [
+        { airline: "国航 CA1234", price: 1280, time: "08:00-11:30" },
+        { airline: "东航 MU5678", price: 1150, time: "14:00-17:20" },
+        { airline: "南航 CZ9012", price: 980, time: "19:00-22:15" },
+      ],
+    });
+  },
+  {
+    name: "search_flights",
+    description: "搜索指定目的地和日期的航班信息",
+    schema: z.object({
+      destination: z.string().describe("目的地城市"),
+      date: z.string().describe("出发日期，格式 YYYY-MM-DD"),
+    }),
+  }
+);
+
+// 搜索酒店的工具
+const searchHotels = tool(
+  async ({ city, checkIn, checkOut, budget }) => {
+    return JSON.stringify({
+      city,
+      checkIn,
+      checkOut,
+      hotels: [
+        { name: "城市精品酒店", pricePerNight: 380, rating: 4.5 },
+        { name: "商务连锁酒店", pricePerNight: 260, rating: 4.0 },
+        { name: "青年旅舍", pricePerNight: 80, rating: 3.5 },
+      ],
+    });
+  },
+  {
+    name: "search_hotels",
+    description: "搜索指定城市的酒店信息",
+    schema: z.object({
+      city: z.string().describe("城市名称"),
+      checkIn: z.string().describe("入住日期"),
+      checkOut: z.string().describe("退房日期"),
+      budget: z.string().describe("每晚预算范围"),
+    }),
+  }
+);
+
+// ========== 第三步：创建带记忆的 Agent ==========
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o-mini" }),
+  tools: [searchFlights, searchHotels],
+  checkpointer, // 注入记忆能力
+  systemMessage: `你是一个专业的旅行顾问助手。
+请根据用户的偏好和历史对话信息，提供个性化的旅行建议。
+记住用户之前提到的目的地、预算、出行日期等信息，避免重复询问。`,
+});
+
+// ========== 第四步：模拟多轮对话 ==========
+const threadId = "travel-advisor-session";
+
+// 第一轮：用户介绍旅行需求
+console.log("=== 第一轮对话 ===");
+const response1 = await agent.invoke(
+  {
+    messages: [
+      { role: "user", content: "你好，我计划下个月去成都玩，预算大概3000元左右" }
+    ],
+  },
+  { configurable: { thread_id: threadId } }
+);
+console.log("Agent:", response1.messages.at(-1)?.content);
+
+// 第二轮：用户追问细节，Agent 应该记住目的地和预算
+console.log("\n=== 第二轮对话 ===");
+const response2 = await agent.invoke(
+  {
+    messages: [
+      { role: "user", content: "帮我查一下7月15号的航班，顺便看看酒店" }
+    ],
+  },
+  { configurable: { thread_id: threadId } }
+);
+console.log("Agent:", response2.messages.at(-1)?.content);
+// Agent 会自动搜索成都的航班和酒店，无需再次询问目的地
+
+// 第三轮：用户修改偏好
+console.log("\n=== 第三轮对话 ===");
+const response3 = await agent.invoke(
+  {
+    messages: [
+      { role: "user", content: "预算提高到5000吧，帮我升级一下酒店推荐" }
+    ],
+  },
+  { configurable: { thread_id: threadId } }
+);
+console.log("Agent:", response3.messages.at(-1)?.content);
+// Agent 记得之前推荐的酒店，并根据新预算给出升级建议</code></pre>
+        </div>
+
+        <p>这个示例展示了短期记忆的核心价值：<strong>在同一个会话中，Agent 能够自动积累和利用对话上下文</strong>。用户不需要在每条消息中重复说明目的地是成都、预算已经调整到5000元 —— Agent 通过 Checkpointer 自动保存的历史消息就能获取这些信息。</p>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 理解 thread_id 的重要性</div>
+          <p><code>thread_id</code> 是连接用户和对话记忆的桥梁。在真实应用中，你通常会为每个用户会话生成一个唯一的 <code>thread_id</code>（比如使用 UUID 或用户ID+时间戳的组合）。相同的 <code>thread_id</code> 意味着同一个对话，不同的 <code>thread_id</code> 则是全新的对话。</p>
+        </div>
+      </section>
+
+      <!-- ==================== 长期记忆（Store） ==================== -->
+      <section id="long-term-memory">
+        <h2>🏛️ 长期记忆（Store）</h2>
+
+        <p>短期记忆解决了"这次对话聊了什么"的问题，但有些信息需要跨越多个会话持久存在。比如：</p>
+
+        <ul>
+          <li>用户的基本偏好（喜欢靠窗座位、素食主义者、偏好经济型酒店）</li>
+          <li>用户的历史摘要（过去三个月去了哪些城市、消费水平如何）</li>
+          <li>系统级别的知识（产品目录、常见问题库）</li>
+        </ul>
+
+        <p>这些信息需要在不同的对话会话之间共享和持久化。这就是 <strong>Store</strong>（长期记忆存储）的用武之地。</p>
+
+        <h3>BaseStore 与 InMemoryStore</h3>
+
+        <p>LangChain 的 Store 系统基于 <code>BaseStore</code> 接口，使用命名空间（namespace）和键（key）的二级结构来组织数据。你可以把它想象成一个带有文件夹的键值存储系统。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">store-basics.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">// 导入 InMemoryStore —— 内存版长期记忆存储
+import { InMemoryStore } from "@langchain/langgraph";
+
+// 创建 Store 实例
+const store = new InMemoryStore();
+
+// 存储用户偏好 —— namespace 定义"文件夹"，key 定义"文件名"
+await store.put(
+  ["user_preferences", "user-001"],  // namespace: 分类路径
+  "travel_prefs",                     // key: 具体的键名
+  {
+    favoriteCity: "成都",
+    budgetRange: "3000-5000",
+    preferWindowSeat: true,
+    dietaryRestrictions: "素食",
+    lastUpdated: new Date().toISOString(),
+  }
+);
+
+// 读取用户偏好
+const prefs = await store.get(["user_preferences", "user-001"], "travel_prefs");
+console.log("用户偏好:", prefs);
+
+// 搜索某个命名空间下的所有条目
+const allUserPrefs = await store.search(["user_preferences", "user-001"]);
+console.log("该用户的所有记忆:", allUserPrefs);</code></pre>
+        </div>
+
+        <h3>在 Agent 中使用 Store</h3>
+
+        <p>要让 Agent 的工具能够访问长期记忆，需要在创建 Agent 时传入 <code>store</code>，然后在工具内部通过 <code>runtime.store</code> 访问。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">agent-with-store.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">import { createAgent } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { InMemoryStore, MemorySaver } from "@langchain/langgraph";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 创建长期记忆存储
+const store = new InMemoryStore();
+// 同时也可以搭配短期记忆
+const checkpointer = new MemorySaver();
+
+// 定义一个能读写长期记忆的工具
+const savePreference = tool(
+  async ({ key, value }, config) => {
+    // 从 config 中获取 store（通过 runtime 注入）
+    // 注意：在 LangGraph 中，store 通过 config 的 runtime 传入
+    const userId = config.configurable?.user_id ?? "default";
+
+    // 这里我们直接使用外部的 store 变量（简化示例）
+    await store.put(
+      ["user_preferences", userId],
+      key,
+      { value, savedAt: new Date().toISOString() }
+    );
+
+    return `已保存偏好设置：${key} = ${value}`;
+  },
+  {
+    name: "save_preference",
+    description: "保存用户的偏好设置到长期记忆中",
+    schema: z.object({
+      key: z.string().describe("偏好的名称，如 favorite_color"),
+      value: z.string().describe("偏好的值，如 蓝色"),
+    }),
+  }
+);
+
+const getPreference = tool(
+  async ({ key }, config) => {
+    const userId = config.configurable?.user_id ?? "default";
+    const result = await store.get(["user_preferences", userId], key);
+
+    if (!result) {
+      return `未找到名为 "${key}" 的偏好设置`;
+    }
+    return `偏好设置 ${key} 的值为: ${JSON.stringify(result)}`;
+  },
+  {
+    name: "get_preference",
+    description: "从长期记忆中读取用户的偏好设置",
+    schema: z.object({
+      key: z.string().describe("要查询的偏好名称"),
+    }),
+  }
+);
+
+// 创建同时具备短期和长期记忆的 Agent
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o-mini" }),
+  tools: [savePreference, getPreference],
+  checkpointer, // 短期记忆：对话历史
+  store,        // 长期记忆：持久化数据
+});</code></pre>
+        </div>
+      </section>
+
+      <!-- ==================== 实战：用户偏好记忆 ==================== -->
+      <section id="preference-memory">
+        <h2>⚙️ 实战：用户偏好记忆</h2>
+
+        <p>让我们构建一个更完整的示例：一个能够记住用户偏好的个性化助手。这个助手可以在不同的对话会话中识别同一个用户，并自动调取其历史偏好。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">preference-agent.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">import { createAgent } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { InMemoryStore, MemorySaver } from "@langchain/langgraph";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// ========== 创建记忆系统 ==========
+const store = new InMemoryStore();
+const checkpointer = new MemorySaver();
+
+// ========== 定义记忆工具 ==========
+
+// 保存用户偏好
+const saveUserPreference = tool(
+  async ({ category, key, value }, config) => {
+    const userId = config.configurable?.user_id ?? "anonymous";
+    const namespace = ["preferences", userId, category];
+
+    // 读取该类别下已有的偏好
+    const existing = await store.get(namespace, key);
+
+    await store.put(namespace, key, {
+      value,
+      updatedAt: new Date().toISOString(),
+      timesAccessed: existing?.timesAccessed ?? 0,
+    });
+
+    return `✅ 已保存偏好 [${category}/${key}]: ${value}`;
+  },
+  {
+    name: "save_user_preference",
+    description: "保存用户的偏好设置。category 是分类（如 饮食、旅行、工作），key 是具体偏好名，value 是偏好值。",
+    schema: z.object({
+      category: z.string().describe("偏好分类，如：饮食、旅行、工作、娱乐"),
+      key: z.string().describe("具体偏好名称"),
+      value: z.string().describe("偏好值"),
+    }),
+  }
+);
+
+// 查询用户偏好
+const getUserPreferences = tool(
+  async ({ category }, config) => {
+    const userId = config.configurable?.user_id ?? "anonymous";
+    const namespace = ["preferences", userId, category || "general"];
+
+    const results = await store.search(namespace);
+
+    if (results.length === 0) {
+      return `该类别下暂无保存的偏好设置`;
+    }
+
+    // 格式化返回结果
+    const formatted = results.map(
+      (item) => `  - ${item.key}: ${item.value.value}`
+    ).join("\n");
+
+    return `用户偏好设置（${category}）:\n${formatted}`;
+  },
+  {
+    name: "get_user_preferences",
+    description: "查询用户在某个类别下的所有偏好设置",
+    schema: z.object({
+      category: z.string().describe("偏好分类名称"),
+    }),
+  }
+);
+
+// ========== 创建个性化助手 Agent ==========
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o-mini" }),
+  tools: [saveUserPreference, getUserPreferences],
+  checkpointer,
+  store,
+  systemMessage: `你是一个贴心的个性化助手。你的核心能力是记住用户的偏好。
+
+当用户表达偏好（如"我喜欢..."、"我不吃..."、"我更喜欢..."）时，
+你应该主动使用 save_user_preference 工具保存这些信息。
+
+当用户询问推荐或需要做出选择时，你应该先查询相关偏好，
+然后基于用户的历史偏好给出个性化建议。
+
+你可以在对话开头主动查询用户偏好，提供更贴心的服务。`,
+});
+
+// ========== 场景一：第一次对话 —— 收集偏好 ==========
+console.log("=== 场景一：首次对话，收集偏好 ===");
+
+await agent.invoke(
+  {
+    messages: [
+      { role: "user", content: "你好，我是小李。我平时喜欢喝美式咖啡，不吃辣的，旅行喜欢住民宿" }
+    ],
+  },
+  {
+    configurable: {
+      thread_id: "session-001",
+      user_id: "user-xiaoli",
+    },
+  }
+);
+// Agent 应该自动保存三条偏好：
+// 1. 饮食/咖啡: 美式咖啡
+// 2. 饮食/口味: 不吃辣
+// 3. 旅行/住宿: 民宿
+
+console.log("\n=== 场景二：第二次对话 —— 利用偏好 ===");
+
+// 新的会话，但同一个用户
+const response = await agent.invoke(
+  {
+    messages: [
+      { role: "user", content: "这周末我想去杭州玩，帮我推荐一下住宿和吃的" }
+    ],
+  },
+  {
+    configurable: {
+      thread_id: "session-002", // 新的会话
+      user_id: "user-xiaoli",   // 同一个用户
+    },
+  }
+);
+console.log("Agent:", response.messages.at(-1)?.content);
+// Agent 会：
+// 1. 先查询用户偏好，发现小李喜欢民宿、不吃辣、喜欢美式咖啡
+// 2. 推荐杭州的民宿，推荐不辣的杭帮菜，推荐有好咖啡的民宿
+
+console.log("\n=== 场景三：更新偏好 ===");
+
+await agent.invoke(
+  {
+    messages: [
+      { role: "user", content: "我现在改主意了，能吃微辣了，帮我重新推荐一下" }
+    ],
+  },
+  {
+    configurable: {
+      thread_id: "session-002",
+      user_id: "user-xiaoli",
+    },
+  }
+);
+// Agent 更新偏好为"微辣"，重新推荐餐厅</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 namespace 设计最佳实践</div>
+          <p>Store 的 namespace 是一个字符串数组，建议按层级组织：<code>["类型", "用户ID", "分类"]</code>。这样既便于按用户隔离数据，也便于按分类搜索。例如 <code>["preferences", "user-001", "饮食"]</code> 清晰地表达了"用户001的饮食偏好"这一语义。</p>
+        </div>
+      </section>
+
+      <!-- ==================== 上下文压缩 ==================== -->
+      <section id="context-compression">
+        <h2>🗜️ 上下文压缩</h2>
+
+        <p>短期记忆虽然强大，但也有一个实际问题：<strong>对话越长，发送给模型的上下文就越大</strong>。当对话持续数十轮甚至上百轮时，累积的消息历史可能轻松超过模型的上下文窗口限制（token 上限），或者导致 API 调用成本飙升。</p>
+
+        <p>上下文压缩就是解决这个问题的关键技术。它的核心思想是：<strong>在对话变长时，自动将早期的消息压缩为摘要，只保留最近的消息原文</strong>。这样既保留了重要的历史信息，又控制了上下文大小。</p>
+
+        <h3>summarizationMiddleware：自动压缩</h3>
+
+        <p>LangChain 提供了 <code>summarizationMiddleware</code>，可以自动监控对话长度，并在超过阈值时触发压缩。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">context-compression.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">import { createAgent } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { MemorySaver } from "@langchain/langgraph";
+import { summarizationMiddleware } from "langchain/agents";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// ========== 创建用于压缩的模型 ==========
+// 推荐使用较小的模型来做摘要，节省成本
+const summaryModel = new ChatOpenAI({
+  modelName: "gpt-4o-mini",
+  temperature: 0, // 摘要需要确定性输出
+});
+
+// ========== 创建压缩中间件 ==========
+const memoryMiddleware = summarizationMiddleware({
+  // 使用哪个模型来生成摘要
+  model: summaryModel,
+  // 当消息数量超过这个阈值时触发压缩
+  maxTokensBeforeSummary: 4000,
+  // 压缩后保留最近多少条原始消息
+  messagesToKeep: 6,
+  // 自定义摘要提示词
+  summaryPrompt: `请将以下对话历史压缩为简洁的摘要。
+保留关键信息：用户的需求、重要决定、已确认的偏好、
+任务进度和待办事项。忽略寒暄和重复信息。`,
+});
+
+// ========== 创建带压缩能力的 Agent ==========
+const checkpointer = new MemorySaver();
+
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o-mini" }),
+  tools: [/* 你的工具列表 */],
+  checkpointer,
+  // 将压缩中间件加入 Agent
+  middleware: [memoryMiddleware],
+});
+
+// 长对话场景 —— 前20轮正常对话
+const threadId = "long-session-001";
+
+for (let i = 1; i <= 20; i++) {
+  await agent.invoke(
+    {
+      messages: [
+        { role: "user", content: `这是第${i}轮对话消息，讨论话题${i}` }
+      ],
+    },
+    { configurable: { thread_id: threadId } }
+  );
+}
+// 当消息累积到一定量后，summarizationMiddleware 会自动：
+// 1. 将早期消息压缩为一段摘要
+// 2. 只保留最近 6 条原始消息
+// 3. 以 [对话摘要] + [最近消息] 的形式发送给模型</code></pre>
+        </div>
+
+        <h3>手动上下文管理</h3>
+
+        <p>除了自动压缩，有时你也需要手动管理上下文。例如，在某些场景下你只想保留特定类型的消息，或者需要在压缩前提取特定信息。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">manual-context.ts</span>
+            <span class="lang">TypeScript</span>
+          </div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
+
+// 手动管理上下文的策略
+function compressMessages(messages: Array&lt;any&gt;, keepRecent: number = 6) {
+  // 如果消息不多，不需要压缩
+  if (messages.length <= keepRecent + 2) {
+    return messages;
+  }
+
+  // 分离出需要压缩的旧消息和需要保留的新消息
+  const oldMessages = messages.slice(0, -keepRecent);
+  const recentMessages = messages.slice(-keepRecent);
+
+  // 将旧消息转换为摘要文本
+  const summaryText = oldMessages
+    .map((msg) => {
+      const role = msg instanceof HumanMessage ? "用户" : "助手";
+      return `${role}: ${msg.content}`;
+    })
+    .join("\n");
+
+  // 创建摘要消息
+  const summaryMessage = new SystemMessage(
+    `[以下是早期对话的摘要]\n${summaryText}\n[摘要结束]`
+  );
+
+  // 返回：摘要 + 最近消息
+  return [summaryMessage, ...recentMessages];
+}
+
+// 在发送请求前手动压缩
+const fullHistory = [
+  new HumanMessage("你好，我想学习 TypeScript"),
+  new AIMessage("好的！TypeScript 是 JavaScript 的超集..."),
+  // ... 假设有很多轮对话
+  new HumanMessage("那泛型怎么用？"),
+  new AIMessage("泛型允许你创建可复用的组件..."),
+  new HumanMessage("能给个实际例子吗？"),
+  new AIMessage("当然，比如一个通用的 API 响应类型..."),
+];
+
+const compressed = compressMessages(fullHistory, 4);
+console.log("压缩后消息数量:", compressed.length);</code></pre>
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-title">⚠️ 压缩的注意事项</div>
+          <ul>
+            <li>压缩是有损的 —— 细节信息可能在压缩过程中丢失</li>
+            <li>不要压缩得太激进，保留足够的近期消息让模型理解当前上下文</li>
+            <li>对于关键信息（如用户明确的偏好、合同条款等），建议额外保存到长期记忆</li>
+            <li>压缩本身也会消耗 token，需要在压缩频率和成本之间找到平衡</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <section id="quiz">
+        <h2>🧠 知识检查点</h2>
+        <p>完成以下问题，检验你对本章内容的理解程度：</p>
+
+        <div class="card">
+          <h3>问题 1：短期记忆的标识</h3>
+          <p>在 LangGraph 中，用来标识一个对话线程（短期记忆的基本单位）的关键参数是什么？</p>
+          <details>
+            <summary>查看答案</summary>
+            <p><strong><code>thread_id</code></strong>。它通过 <code>configurable</code> 传递，例如 <code>{ configurable: { thread_id: "my-thread" } }</code>。相同的 <code>thread_id</code> 会加载该线程的所有历史状态。</p>
+          </details>
+        </div>
+
+        <div class="card">
+          <h3>问题 2：MemorySaver 的适用场景</h3>
+          <p>为什么 <code>MemorySaver</code> 不适合在生产环境中使用？如果需要生产级别的持久化，应该选择什么方案？</p>
+          <details>
+            <summary>查看答案</summary>
+            <p><code>MemorySaver</code> 将所有数据保存在内存中，<strong>服务器重启后数据会全部丢失</strong>。生产环境应该使用持久化的 Checkpointer，如 <code>SqliteSaver</code>（小型应用）、<code>PostgresSaver</code>（企业级应用）或 <code>MongoDBSaver</code>。</p>
+          </details>
+        </div>
+
+        <div class="card">
+          <h3>问题 3：Store 的 namespace 作用</h3>
+          <p>在 <code>InMemoryStore</code> 中，<code>namespace</code> 参数的作用是什么？请设计一个适合多用户偏好存储的 namespace 结构。</p>
+          <details>
+            <summary>查看答案</summary>
+            <p><code>namespace</code> 是一个字符串数组，用于<strong>组织和隔离数据</strong>，类似于文件系统的目录结构。多用户偏好存储的 namespace 示例：<code>["preferences", userId, category]</code>，例如 <code>["preferences", "user-001", "饮食"]</code>。这样可以按用户和类别灵活查询数据。</p>
+          </details>
+        </div>
+
+        <div class="card">
+          <h3>问题 4：上下文压缩</h3>
+          <p>当对话变得很长时，<code>summarizationMiddleware</code> 如何工作？它解决了什么问题？</p>
+          <details>
+            <summary>查看答案</summary>
+            <p><code>summarizationMiddleware</code> 会在对话消息超过设定阈值时，<strong>自动将早期消息压缩为摘要</strong>，只保留最近几条原始消息。它解决了两个问题：（1）避免超出模型的上下文窗口限制；（2）降低 API 调用的 token 成本。压缩是有损的，建议同时将关键信息保存到长期记忆。</p>
+          </details>
+        </div>
+      </section>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <section id="common-errors">
+        <h2>🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：忘记传递 thread_id</div>
+        <p><strong>症状：</strong>每次调用 Agent，它都无法记住之前的消息，表现得像全新对话一样。</p>
+        <p><strong>原因：</strong>在 <code>invoke</code> 时没有通过 <code>configurable</code> 传递 <code>thread_id</code>，导致每次调用都创建了新的会话线程。</p>
+        <p><strong>解决：</strong>确保每次调用都传递一致的 <code>thread_id</code>：</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="filename">正确写法</span>
+          <span class="lang">TypeScript</span>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：没有 thread_id
+await agent.invoke({ messages: [{ role: "user", content: "你好" }] });
+
+// ❌ 错误：每次使用不同的 thread_id
+await agent.invoke(
+  { messages: [...] },
+  { configurable: { thread_id: `session-${Date.now()}` } } // 每次都不同！
+
+// ✅ 正确：使用固定的 thread_id
+await agent.invoke(
+  { messages: [...] },
+  { configurable: { thread_id: "my-session-001" } } // 保持一致
+);</code></pre>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：内存存储丢失数据</div>
+        <p><strong>症状：</strong>开发时记忆功能正常，部署到服务器后所有记忆消失。</p>
+        <p><strong>原因：</strong>使用 <code>MemorySaver</code>（内存存储）或 <code>InMemoryStore</code> 进入了生产环境，服务器重启或扩缩容时内存数据被清除。</p>
+        <p><strong>解决：</strong>生产环境使用持久化方案，如 <code>SqliteSaver</code>、<code>PostgresSaver</code>，或配合数据库实现自定义 Store。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：上下文溢出（Token 超限）</div>
+        <p><strong>症状：</strong>长对话进行到一定轮次后，API 返回 "maximum context length exceeded" 错误。</p>
+        <p><strong>原因：</strong>没有配置上下文压缩，随着对话增长，累积的消息总 token 数超过了模型的上下文窗口限制。</p>
+        <p><strong>解决：</strong>添加 <code>summarizationMiddleware</code> 自动压缩旧消息，或手动管理消息列表长度：</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="filename">添加压缩中间件</span>
+          <span class="lang">TypeScript</span>
+        </div>
+        <pre><code class="language-typescript">// 配置 summarizationMiddleware 防止上下文溢出
+import { summarizationMiddleware } from "langchain/agents";
+
+const agent = createAgent({
+  model,
+  tools,
+  checkpointer,
+  middleware: [
+    summarizationMiddleware({
+      model: new ChatOpenAI({ modelName: "gpt-4o-mini" }),
+      maxTokensBeforeSummary: 4000, // 超过 4000 token 时触发压缩
+      messagesToKeep: 6,            // 保留最近 6 条原始消息
+    }),
+  ],
+});</code></pre>
+      </div>
+      </section>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <section id="summary">
+        <h2>📝 本章小结</h2>
+
+        <div class="card">
+          <p>本章我们深入学习了 LangChain.js 的记忆系统，这是构建智能对话 Agent 的关键能力。让我们回顾一下核心要点：</p>
+          <ul>
+            <li><strong>记忆的本质</strong> — 没有记忆的 Agent 每次对话都是初次见面，记忆让它能积累上下文、追踪进度、提供个性化服务</li>
+            <li><strong>短期记忆（Checkpointer）</strong> — 通过 <code>MemorySaver</code> 或持久化方案实现，以 <code>thread_id</code> 标识对话，保存完整的对话消息历史</li>
+            <li><strong>长期记忆（Store）</strong> — 通过 <code>InMemoryStore</code> 或自定义 Store 实现，以 namespace + key 组织数据，跨会话持久化存储</li>
+            <li><strong>上下文压缩</strong> — 使用 <code>summarizationMiddleware</code> 自动压缩过长对话，防止 token 超限，同时降低 API 成本</li>
+            <li><strong>记忆配合使用</strong> — 短期记忆记住"这次聊了什么"，长期记忆记住"关于这个用户我知道什么"，两者配合构建完整记忆体系</li>
+          </ul>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>概念</th>
+              <th>API</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>内存 Checkpointer</td>
+              <td><code>new MemorySaver()</code></td>
+              <td>开发测试用的短期记忆</td>
+            </tr>
+            <tr>
+              <td>持久化 Checkpointer</td>
+              <td><code>SqliteSaver</code> / <code>PostgresSaver</code></td>
+              <td>生产环境的短期记忆</td>
+            </tr>
+            <tr>
+              <td>对话标识</td>
+              <td><code>thread_id</code></td>
+              <td>区分不同的对话会话</td>
+            </tr>
+            <tr>
+              <td>内存 Store</td>
+              <td><code>new InMemoryStore()</code></td>
+              <td>开发测试用的长期记忆</td>
+            </tr>
+            <tr>
+              <td>存储/读取记忆</td>
+              <td><code>store.put()</code> / <code>store.get()</code></td>
+              <td>操作长期记忆数据</td>
+            </tr>
+            <tr>
+              <td>上下文压缩</td>
+              <td><code>summarizationMiddleware()</code></td>
+              <td>自动压缩过长对话历史</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <section id="next-chapter">
+        <h2>➡️ 下一章预告</h2>
+
+        <div class="card">
+          <h3>🎓 第10章：综合实战项目 —— 智能客服助手</h3>
+          <p>恭喜你完成了记忆系统的学习！在最后一章中，我们将把前面学到的所有知识<strong>融会贯通</strong>，从零开始构建一个完整的智能客服助手项目。你将综合运用：</p>
+          <ul>
+            <li>Agent 基础与工具系统 —— 构建核心对话引擎</li>
+            <li>流式传输 —— 实现打字机效果的实时响应</li>
+            <li>结构化输出 —— 工单分类与情绪分析</li>
+            <li>中间件 —— 添加内容安全过滤与请求限流</li>
+            <li>记忆系统 —— 实现用户识别与历史对话管理</li>
+          </ul>
+          <p>这将是一个可以部署到真实场景的完整项目，也是检验你全部学习成果的最佳实践机会。准备好了吗？让我们开始最后的冲刺！</p>
+        </div>
+
+        <div class="btn-group">
+          <a href="10-capstone.html" class="btn btn-primary">🚀 进入第10章：综合实战项目</a>
+        </div>
+      </section>
+
+      <!-- 底部章节导航 -->
+      <div class="chapter-nav" style="margin-top: 3rem;">
+        <a href="08-middleware.html" class="prev-chapter">← 第8章 中间件</a>
+        <span class="chapter-indicator">第 9 章 / 共 10 章</span>
+        <a href="10-capstone.html" class="next-chapter">第10章 综合实战 →</a>
+      </div>
+
+      <hr>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

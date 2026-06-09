@@ -15,6 +15,16 @@
 - 🧪 **知识检查点** —— 每章末尾自测题，折叠式答案
 - 📋 **附录齐全** —— API 速查表 + 常见错误排错指南
 
+## 📖 生成示例
+
+查看 [`examples/`](./examples/) 目录中由该 Skill 实际生成的学习文档：
+
+| 示例 | 技术 | 章节数 | 格式 |
+|------|------|--------|------|
+| [LangChain.js](./examples/langchain-js/) | LangChain.js | 10 章 + 附录 | HTML 静态站点 |
+
+> 在 `examples/langchain-js/` 目录下运行 `npx serve .` 或 `python -m http.server 8080` 即可在浏览器中预览。
+
 ## 📦 安装
 
 ### 方式一：用户级安装（推荐，所有项目通用）

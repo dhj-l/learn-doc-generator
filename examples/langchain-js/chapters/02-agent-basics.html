@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第2章 Agent 基础 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch02">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html" class="active"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="01-introduction.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 2 章 / 共 10 章</span>
+        <a href="03-models.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>🎯 Agent 基础 — 你的第一个 AI 代理</h1>
+      <p class="subtitle">理解 Agent 核心概念，用 createAgent 构建你的第一个 AI 代理 <span class="tag tag-beginner">入门</span></p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 Agent 的核心定义：Agent = Model + Harness，以及 Agent 循环的运作机制</li>
+          <li>掌握 <code>createAgent</code> 函数的所有关键参数及其用途</li>
+          <li>使用 <code>tool()</code> 函数和 Zod schema 定义自定义工具</li>
+          <li>构建一个完整的天气查询 Agent 并理解其执行流程</li>
+          <li>构建一个具备多个工具的 Agent，理解工具选择与链式调用</li>
+          <li>编写高质量的 systemPrompt 来引导 Agent 行为</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="01-introduction.html">第 1 章：概述与环境搭建</a> 的学习。
+        本章假设你已经安装好了 Node.js、TypeScript 开发环境，并且拥有一个可用的 OpenAI API Key。
+        如果你还没有完成环境搭建，请先回到第 1 章完成相关操作。此外，你需要对 TypeScript 的基本语法（接口、泛型、async/await）有初步了解。
+      </div>
+
+      <!-- ==================== 什么是 Agent ==================== -->
+      <h2 id="what-is-agent" class="anchor-heading">🤖 什么是 Agent</h2>
+
+      <p>
+        在 LangChain 的语境中，<strong>Agent（代理）</strong>是一个非常核心的概念。如果你之前接触过传统编程，
+        你可能熟悉"函数调用"的模式——你写好函数，程序按照固定的逻辑去执行。但 Agent 打破了这种模式。
+        Agent 赋予了大语言模型（LLM）<strong>自主决策</strong>的能力：它不再只是被动地回答问题，
+        而是能够根据用户的请求，自主决定需要调用哪些工具、以什么顺序调用、以及如何组合结果来给出最终答案。
+      </p>
+
+      <h3>Agent 的官方定义</h3>
+
+      <p>
+        LangChain 官方对 Agent 的定义非常精炼：<strong>Agent = Model + Harness</strong>。
+        这里的 Model 指的是大语言模型（如 GPT-4、Claude 等），而 Harness 则是一个编排框架，
+        负责管理 Agent 的运行循环、工具调用、状态管理和错误处理。你可以把 Harness 想象成一个
+        "调度中心"，它协调着 LLM 和各种外部工具之间的交互。
+      </p>
+
+      <div class="callout info">
+        <div class="callout-title">💡 通俗类比</div>
+        <p>Agent 就像一个聪明的助手：<strong>LLM 是大脑</strong>（负责思考和决策），
+        <strong>工具是双手</strong>（负责执行具体操作，如查询天气、计算数学题、搜索网页），
+        而 <strong>Harness 是工作流程</strong>（负责协调大脑和双手的配合，确保任务有条不紊地完成）。</p>
+      </div>
+
+      <h3>Agent 循环：核心运作机制</h3>
+
+      <p>
+        Agent 最重要的特性是它的<strong>循环执行机制</strong>。当你给 Agent 一个任务时，
+        它并不是一次性就给出答案，而是经历一个循环过程。这个循环是 Agent 与简单模型调用的根本区别。
+        传统的模型调用是"一问一答"——你发一条消息，模型返回一条回复，对话结束。
+        而 Agent 则会持续循环，直到它认为任务已经完成。
+      </p>
+
+      <div class="card">
+        <h4>Agent 循环流程图</h4>
+        <pre style="background: var(--bg-code); color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6; overflow-x: auto;">
+用户提问
+   │
+   ▼
+┌──────────────────────┐
+│   调用 LLM（Model）    │ ←──────┐
+│   传入消息 + 工具列表    │        │
+└──────────┬───────────┘        │
+           │                     │
+           ▼                     │
+   模型返回结果                   │
+           │                     │
+     ┌─────┴─────┐              │
+     │ 是否调用工具？│              │
+     └─────┬─────┘              │
+       是 │     │ 否             │
+          ▼     │                │
+   执行工具调用   │                │
+   获取结果     │                │
+          │     │                │
+          │     ▼                │
+          │  返回最终回答给用户     │
+          │     ✅ 结束           │
+          │                     │
+          └──────────────────────┘
+              将工具结果反馈给 LLM</pre>
+      </div>
+
+      <p>
+        在上面的流程中，每次 LLM 返回"我需要调用工具"时，Harness 就会执行相应的工具，
+        把工具的返回结果再传回给 LLM。这个过程可能重复多次——例如用户问"北京和上海今天的天气怎么样？"，
+        Agent 可能需要先调用天气工具查询北京，再调用一次查询上海，最后综合两次结果给出回答。
+        只有当 LLM 判断不再需要调用任何工具，直接返回文本回答时，循环才会结束。
+      </p>
+
+      <h3>Agent、Chain 和简单模型调用的区别</h3>
+
+      <p>
+        刚接触 LangChain 的开发者经常会混淆 Agent、Chain 和直接模型调用这三者的区别。
+        让我们用一个清晰的对比来说明它们之间的差异。简单模型调用是最基础的用法——你发消息给 LLM，
+        它回复文本，没有任何工具或编排逻辑。Chain 是一种预定义的工作流——你事先定义好步骤，
+        比如"先翻译再总结"，模型按照固定的流水线执行。而 Agent 则是动态的——模型自己决定下一步做什么，
+        它可以根据上下文灵活选择工具和执行顺序。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>特性</th><th>简单模型调用</th><th>Chain</th><th>Agent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>决策者</td><td>无（直接调用）</td><td>开发者（预定义流程）</td><td>LLM（动态决策）</td></tr>
+          <tr><td>工具使用</td><td>❌ 不支持</td><td>✅ 固定顺序</td><td>✅ 动态选择</td></tr>
+          <tr><td>循环执行</td><td>❌</td><td>❌</td><td>✅</td></tr>
+          <tr><td>适用场景</td><td>简单问答</td><td>固定流程处理</td><td>复杂任务、多步推理</td></tr>
+          <tr><td>灵活性</td><td>低</td><td>中</td><td>高</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ==================== createAgent 详解 ==================== -->
+      <h2 id="create-agent" class="anchor-heading">⚙️ createAgent 详解</h2>
+
+      <p>
+        在 LangChain.js v1.x 中，<code>createAgent</code> 是创建 Agent 的核心函数。
+        它位于 <code>langchain</code> 包的顶层导出中，使用起来非常简洁。
+        让我们深入了解它的导入方式、参数配置和返回值。
+      </p>
+
+      <h3>导入方式</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 从 langchain 顶层包导入 createAgent 和 tool 工具函数
+import { createAgent, tool } from "langchain";
+
+// 也可以从 @langchain/langgraph 导入（底层实现）
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+
+// 推荐使用顶层导入，API 更简洁
+// tool 用于定义自定义工具，createAgent 用于创建 Agent 实例</code></pre>
+      </div>
+
+      <h3>参数详解</h3>
+
+      <p>
+        <code>createAgent</code> 接受一个配置对象作为参数，其中包含多个可选和必填字段。
+        下面我们逐一讲解每个参数的作用和使用场景。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>model</code></td><td><code>BaseChatModel</code></td><td>✅</td><td>使用的 LLM 实例，如 <code>new ChatOpenAI()</code></td></tr>
+          <tr><td><code>tools</code></td><td><code>Tool[]</code></td><td>✅</td><td>Agent 可使用的工具数组</td></tr>
+          <tr><td><code>systemPrompt</code></td><td><code>string</code></td><td>❌</td><td>系统提示词，定义 Agent 的角色和行为规范</td></tr>
+          <tr><td><code>checkpointer</code></td><td><code>BaseCheckpointSaver</code></td><td>❌</td><td>状态检查点保存器，用于持久化对话状态</td></tr>
+          <tr><td><code>middleware</code></td><td><code>Middleware[]</code></td><td>❌</td><td>中间件数组，用于拦截和增强 Agent 行为</td></tr>
+          <tr><td><code>responseFormat</code></td><td><code>ZodSchema</code></td><td>❌</td><td>结构化输出的 schema，让 Agent 返回指定格式</td></tr>
+        </tbody>
+      </table>
+
+      <h3>agent.invoke() 方法</h3>
+
+      <p>
+        创建 Agent 实例后，我们通过 <code>agent.invoke()</code> 方法来与 Agent 交互。
+        这个方法接受一个包含 <code>messages</code> 数组的对象作为输入，返回一个包含
+        <code>messages</code> 的结果对象。返回的消息数组中包含了整个对话过程中的所有消息，
+        包括用户的输入、Agent 的思考过程、工具调用记录和最终回答。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 创建 Agent 的基本结构
+import { createAgent, tool } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+// 1. 创建模型实例
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+// 2. 定义工具（后续章节会详细讲解）
+const myTool = tool(
+  async (input) => `结果: ${input.query}`,
+  {
+    name: "my_tool",
+    description: "一个示例工具",
+    schema: z.object({
+      query: z.string().describe("查询内容"),
+    }),
+  }
+);
+
+// 3. 创建 Agent
+const agent = createAgent({
+  model,                          // 必填：LLM 模型
+  tools: [myTool],                // 必填：工具列表
+  systemPrompt: "你是一个有帮助的助手。", // 可选：系统提示词
+});
+
+// 4. 调用 Agent
+const result = await agent.invoke({
+  messages: [{ role: "user", content: "你好！" }],
+});
+
+// 5. 获取最终回答
+// result.messages 是一个数组，最后一个元素通常是 Agent 的最终回答
+const lastMessage = result.messages[result.messages.length - 1];
+console.log(lastMessage.content);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 关于返回值</div>
+        <p><code>agent.invoke()</code> 返回的 <code>result.messages</code> 数组中可能包含多种类型的消息：
+        HumanMessage（用户输入）、AIMessage（模型回复，可能包含工具调用请求）、
+        ToolMessage（工具执行结果）。最终回答通常是最后一条 AIMessage，
+        且其 <code>tool_calls</code> 属性为空数组（表示不再需要调用工具）。</p>
+      </div>
+
+      <!-- ==================== 实战：天气查询 Agent ==================== -->
+      <h2 id="weather-agent" class="anchor-heading">🌤️ 实战：构建天气查询 Agent</h2>
+
+      <p>
+        理论讲完了，让我们通过一个实际的例子来动手构建你的第一个 Agent。
+        我们将创建一个能够查询天气信息的 Agent。这个 Agent 接收用户关于天气的自然语言提问，
+        自动调用天气查询工具获取数据，然后以友好的方式回复用户。
+      </p>
+
+      <h3>第一步：定义天气查询工具</h3>
+
+      <p>
+        在 LangChain 中，工具是 Agent 与外部世界交互的桥梁。每个工具都有三个核心要素：
+        <strong>名称</strong>（让 LLM 识别工具）、<strong>描述</strong>（告诉 LLM 什么时候该用这个工具）、
+        和<strong>执行函数</strong>（工具被调用时实际执行的逻辑）。我们使用 <code>tool()</code> 函数来创建工具，
+        并用 Zod schema 来定义输入参数的类型和描述。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// weather-agent.ts
+import { createAgent, tool } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+// ==========================================
+// 第一步：定义天气查询工具
+// ==========================================
+
+// 模拟天气数据（实际项目中你会调用真实的天气 API）
+const weatherData: Record&lt;string, { temp: number; condition: string; humidity: number }&gt; = {
+  "北京": { temp: 28, condition: "晴", humidity: 45 },
+  "上海": { temp: 32, condition: "多云", humidity: 72 },
+  "广州": { temp: 35, condition: "雷阵雨", humidity: 85 },
+  "深圳": { temp: 34, condition: "阴", humidity: 68 },
+  "成都": { temp: 26, condition: "小雨", humidity: 78 },
+};
+
+// 使用 tool() 函数创建天气查询工具
+// tool() 接受三个参数：执行函数、配置对象（name, description, schema）
+const weatherTool = tool(
+  // 执行函数：当 Agent 决定调用此工具时会执行
+  async ({ city }: { city: string }) => {
+    const data = weatherData[city];
+    if (!data) {
+      return `抱歉，暂无 ${city} 的天气数据。支持的城市：${Object.keys(weatherData).join("、")}`;
+    }
+    // 返回格式化的天气信息字符串
+    return `${city} 当前天气：温度 ${data.temp}°C，${data.condition}，湿度 ${data.humidity}%`;
+  },
+  {
+    name: "get_weather",                              // 工具名称，LLM 通过此名称调用
+    description: "查询指定城市的当前天气信息，包括温度、天气状况和湿度。",  // 工具描述，帮助 LLM 决定何时使用
+    schema: z.object({
+      city: z.string().describe("要查询天气的城市名称，如：北京、上海、广州"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>第二步：创建 Agent 并调用</h3>
+
+      <p>
+        工具定义好之后，我们用 <code>createAgent</code> 创建 Agent 实例，传入模型和工具列表。
+        然后通过 <code>agent.invoke()</code> 发送用户消息，Agent 就会自动完成"理解需求 → 选择工具 →
+        调用工具 → 整理回答"的完整流程。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 第二步：创建天气查询 Agent
+// ==========================================
+
+const agent = createAgent({
+  model: new ChatOpenAI({ model: "gpt-4o" }),
+  tools: [weatherTool],
+  systemPrompt:
+    "你是一个专业的天气助手。当用户询问天气时，使用天气查询工具获取信息，" +
+    "然后用友好的语气向用户报告结果。回答要简洁明了，包含关键天气数据。",
+});
+
+// ==========================================
+// 第三步：调用 Agent
+// ==========================================
+
+async function main() {
+  console.log("🤖 天气 Agent 已启动，正在查询...\n");
+
+  const result = await agent.invoke({
+    messages: [{ role: "user", content: "北京和上海今天天气怎么样？帮我对比一下。" }],
+  });
+
+  // 获取最后一条消息（Agent 的最终回答）
+  const finalMessage = result.messages[result.messages.length - 1];
+  console.log("📢 Agent 回答：");
+  console.log(finalMessage.content);
+}
+
+main();</code></pre>
+      </div>
+
+      <h3>完整执行流程分析</h3>
+
+      <p>
+        让我们一步步分析当用户发送"北京和上海今天天气怎么样？帮我对比一下"这条消息时，
+        Agent 内部发生了什么。首先，Harness 将用户消息和工具列表一起发送给 LLM。
+        LLM 分析用户需求后，判断需要调用 <code>get_weather</code> 工具，而且需要调用两次
+        （分别查询北京和上海）。Harness 依次执行这两次工具调用，将结果反馈给 LLM。
+        最后 LLM 综合两次查询结果，生成一段对比性的回答。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">输出</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-text">🤖 天气 Agent 已启动，正在查询...
+
+📢 Agent 回答：
+北京和上海的天气对比如下：
+
+📍 北京：温度 28°C，天气晴朗，湿度 45%
+📍 上海：温度 32°C，多云天气，湿度 72%
+
+总结：上海比北京热 4°C，且湿度明显更高（72% vs 45%），
+体感上上海会更闷热一些。北京今天天气晴好，比较舒适。</code></pre>
+      </div>
+      <div class="code-output">Agent 自动调用了两次天气工具，然后综合结果生成了对比回答</div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 注意观察</div>
+        <p>在这个例子中，Agent 自主决定需要调用两次天气工具（分别查询北京和上海），而不是你手动指定的。
+        这就是 Agent 与 Chain 的本质区别——决策权在 LLM 手中，它根据用户的自然语言请求
+        动态决定需要执行哪些操作。</p>
+      </div>
+
+      <!-- ==================== 实战：多工具 Agent ==================== -->
+      <h2 id="multi-tool-agent" class="anchor-heading">🔧 实战：构建多工具 Agent</h2>
+
+      <p>
+        在真实的应用场景中，Agent 通常需要具备多种能力。接下来我们构建一个更复杂的 Agent，
+        它同时拥有<strong>计算器</strong>和<strong>字符串处理</strong>两种工具。
+        通过这个例子，你将看到 Agent 如何根据用户的问题智能选择合适的工具，
+        以及如何在需要时链式调用多个工具来完成复杂任务。
+      </p>
+
+      <h3>定义多个工具</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// multi-tool-agent.ts
+import { createAgent, tool } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+// ==========================================
+// 工具 1：计算器
+// ==========================================
+const calculatorTool = tool(
+  async ({ expression }: { expression: string }) => {
+    try {
+      // 安全起见，只允许基本数学运算
+      // 实际项目中应使用 mathjs 等库来安全解析表达式
+      const sanitized = expression.replace(/[^0-9+\-*/().%\s]/g, "");
+      if (sanitized !== expression) {
+        return "错误：表达式包含不允许的字符，只支持数字和基本运算符。";
+      }
+      // 使用 Function 构造器来安全计算数学表达式
+      const result = new Function(`return (${sanitized})`)();
+      return `${expression} = ${result}`;
+    } catch (error) {
+      return `计算错误：无法解析表达式 "${expression}"。请检查格式是否正确。`;
+    }
+  },
+  {
+    name: "calculator",
+    description: "执行数学计算。支持加(+)、减(-)、乘(*)、除(/)、取模(%)和括号运算。输入一个数学表达式，返回计算结果。",
+    schema: z.object({
+      expression: z.string().describe("数学表达式，如 '2 + 3 * 4' 或 '(10 - 2) / 4'"),
+    }),
+  }
+);
+
+// ==========================================
+// 工具 2：字符串反转
+// ==========================================
+const reverseStringTool = tool(
+  async ({ text }: { text: string }) => {
+    // 将字符串按字符反转
+    const reversed = text.split("").reverse().join("");
+    return `原文: "${text}"\n反转: "${reversed}"`;
+  },
+  {
+    name: "reverse_string",
+    description: "将输入的字符串进行反转。例如 'hello' 变成 'olleh'。",
+    schema: z.object({
+      text: z.string().describe("需要反转的字符串"),
+    }),
+  }
+);
+
+// ==========================================
+// 工具 3：字符计数
+// ==========================================
+const countCharsTool = tool(
+  async ({ text }: { text: string }) => {
+    const total = text.length;
+    const noSpaces = text.replace(/\s/g, "").length;
+    const chinese = (text.match(/[一-鿿]/g) || []).length;
+    const english = (text.match(/[a-zA-Z]/g) || []).length;
+    const digits = (text.match(/[0-9]/g) || []).length;
+    return [
+      `文本: "${text}"`,
+      `总字符数: ${total}`,
+      `去除空格后: ${noSpaces}`,
+      `中文字符: ${chinese}`,
+      `英文字母: ${english}`,
+      `数字: ${digits}`,
+    ].join("\n");
+  },
+  {
+    name: "count_chars",
+    description: "统计文本中的字符数量，包括总字符数、中文字符数、英文字母数和数字个数。",
+    schema: z.object({
+      text: z.string().describe("需要统计的文本"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>创建多工具 Agent</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 创建多工具 Agent
+// ==========================================
+
+const multiToolAgent = createAgent({
+  model: new ChatOpenAI({ model: "gpt-4o" }),
+  tools: [calculatorTool, reverseStringTool, countCharsTool],
+  systemPrompt:
+    "你是一个多功能助手，拥有以下能力：\n" +
+    "1. 数学计算 - 使用 calculator 工具处理各种数学表达式\n" +
+    "2. 字符串反转 - 使用 reverse_string 工具反转文本\n" +
+    "3. 字符统计 - 使用 count_chars 工具统计文本信息\n\n" +
+    "请根据用户的问题，选择最合适的工具来完成任务。" +
+    "如果用户的问题涉及多个步骤，可以依次调用多个工具。",
+});
+
+// ==========================================
+// 测试：单工具调用
+// ==========================================
+
+async function testSingleTool() {
+  const result = await multiToolAgent.invoke({
+    messages: [{ role: "user", content: "请帮我计算 (15 + 27) * 3 - 18 等于多少？" }],
+  });
+
+  const answer = result.messages[result.messages.length - 1];
+  console.log("📢 单工具调用结果：");
+  console.log(answer.content);
+}
+
+// ==========================================
+// 测试：工具选择
+// ==========================================
+
+async function testToolSelection() {
+  const result = await multiToolAgent.invoke({
+    messages: [{ role: "user", content: "把 'LangChain' 这个词反转一下" }],
+  });
+
+  const answer = result.messages[result.messages.length - 1];
+  console.log("\n📢 工具选择结果：");
+  console.log(answer.content);
+}
+
+// ==========================================
+// 测试：链式工具调用
+// ==========================================
+
+async function testToolChaining() {
+  const result = await multiToolAgent.invoke({
+    messages: [{
+      role: "user",
+      content: "请帮我计算 'Hello Agent' 这段文字有多少个字符，然后把字符数乘以 5。",
+    }],
+  });
+
+  const answer = result.messages[result.messages.length - 1];
+  console.log("\n📢 链式调用结果：");
+  console.log(answer.content);
+}
+
+// 运行所有测试
+async function main() {
+  await testSingleTool();
+  await testToolSelection();
+  await testToolChaining();
+}
+
+main();</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">输出</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-text">📢 单工具调用结果：
+(15 + 27) * 3 - 18 = 108
+
+计算过程：
+1. 先算括号：15 + 27 = 42
+2. 再算乘法：42 * 3 = 126
+3. 最后减法：126 - 18 = 108
+
+📢 工具选择结果：
+"LangChain" 反转后是 "niahCgnaL"。
+Agent 正确选择了 reverse_string 工具来完成任务。
+
+📢 链式调用结果：
+Agent 分两步完成了任务：
+1. 先用 count_chars 工具统计："Hello Agent" 共有 11 个字符
+2. 再用 calculator 工具计算：11 * 5 = 55
+
+最终结果是 55。</code></pre>
+      </div>
+      <div class="code-output">Agent 根据不同问题自动选择了合适的工具，并在链式调用场景中依次使用了多个工具</div>
+
+      <div class="callout info">
+        <div class="callout-title">🔍 工具选择的原理</div>
+        <p>Agent 并不是随机选择工具的。LLM 会根据工具的 <code>name</code> 和 <code>description</code>
+        来判断哪个工具最适合当前任务。因此，给工具写一个清晰、准确的描述非常重要。
+        如果你的工具描述含糊不清，Agent 可能会选错工具或根本不会使用它。</p>
+      </div>
+
+      <!-- ==================== Agent 与 Deep Agents 对比 ==================== -->
+      <h2 id="deep-agents" class="anchor-heading">🔄 Agent 与 Deep Agents 对比</h2>
+
+      <p>
+        除了标准的 <code>createAgent</code>，LangChain 生态中还有一个强大的工具——<strong>Deep Agents</strong>。
+        如果说 <code>createAgent</code> 是一把灵活的瑞士军刀，那么 Deep Agents 就是一台开箱即用的全自动机器。
+        了解它们的区别，有助于你在实际项目中做出正确的选择。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>特性</th><th>LangChain Agent（createAgent）</th><th>Deep Agents</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>定位</td><td>轻量级、可定制的 Agent 框架</td><td>功能齐全的"电池全包"方案</td></tr>
+          <tr><td>规划能力</td><td>需要自行实现或通过工具实现</td><td>内置规划模块，自动拆解复杂任务</td></tr>
+          <tr><td>文件系统</td><td>需自行编写工具</td><td>内置文件读写、代码执行能力</td></tr>
+          <tr><td>子 Agent</td><td>需手动编排</td><td>支持多 Agent 协作</td></tr>
+          <tr><td>适用场景</td><td>自定义业务逻辑、API 集成</td><td>代码生成、数据分析、自动化任务</td></tr>
+          <tr><td>学习曲线</td><td>较低</td><td>中等</td></tr>
+          <tr><td>灵活性</td><td>极高</td><td>中等（受限于内置功能）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>何时使用 LangChain Agent</h3>
+
+      <ul>
+        <li>你需要精确控制 Agent 的行为和工具调用逻辑</li>
+        <li>你的项目是面向特定业务场景的（如客服、数据查询）</li>
+        <li>你需要集成特定的第三方 API 或服务</li>
+        <li>你希望保持项目轻量，不想引入过多依赖</li>
+      </ul>
+
+      <h3>何时使用 Deep Agents</h3>
+
+      <ul>
+        <li>你需要 Agent 具备代码编写和执行能力</li>
+        <li>你的任务需要自动规划和多步骤分解</li>
+        <li>你需要多个 Agent 协作完成复杂任务</li>
+        <li>你希望快速原型开发，减少工具编写工作</li>
+      </ul>
+
+      <h3>Deep Agents 快速示例</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// Deep Agents 示例（概念演示）
+// Deep Agents 提供开箱即用的强大能力，包括代码执行、文件操作等
+// 安装：npm install @anthropic-ai/deep-agents
+
+import { DeepAgent } from "@anthropic-ai/deep-agents";
+
+const deepAgent = new DeepAgent({
+  model: "claude-sonnet-4-20250514",
+  // Deep Agents 自动拥有文件系统、代码执行等内置能力
+  // 无需手动定义工具
+});
+
+// Deep Agents 会自动规划任务步骤
+const result = await deepAgent.run(
+  "请分析当前目录下的 sales-data.csv 文件，" +
+  "计算每个月的销售总额，并生成一个趋势图表。"
+);
+
+console.log(result.summary);
+// Deep Agents 会自动：1) 读取 CSV 2) 分析数据 3) 生成图表代码 4) 执行并输出结果</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 选择建议</div>
+        <p>对于大多数 Web 应用和 API 集成场景，<code>createAgent</code> 已经足够强大且更加灵活。
+        只有当你的需求涉及到复杂的多步骤自动化（如代码生成、数据分析流水线）时，
+        才需要考虑 Deep Agents。在本教程中，我们将主要聚焦于 <code>createAgent</code> 的使用。</p>
+      </div>
+
+      <!-- ==================== systemPrompt 编写技巧 ==================== -->
+      <h2 id="system-prompt" class="anchor-heading">✍️ systemPrompt 编写技巧</h2>
+
+      <p>
+        <code>systemPrompt</code> 是你与 Agent 沟通的第一道桥梁。它定义了 Agent 的角色、能力边界和行为规范。
+        一个好的 systemPrompt 能够显著提升 Agent 的表现，而一个糟糕的 systemPrompt 则可能导致
+        Agent 行为不可预测。以下是编写高质量 systemPrompt 的核心原则。
+      </p>
+
+      <h3>原则一：具体明确，避免模糊</h3>
+
+      <div class="code-comparison">
+        <div class="your-code">
+          <h4>❌ 差的 systemPrompt</h4>
+          <div class="code-block" style="margin:0">
+            <div class="code-header">
+              <span class="lang-tag">TypeScript</span>
+              <button class="copy-btn">📋 复制</button>
+            </div>
+            <pre><code class="language-typescript">systemPrompt: "你是一个助手。"</code></pre>
+          </div>
+        </div>
+        <div class="reference-code">
+          <h4>✅ 好的 systemPrompt</h4>
+          <div class="code-block" style="margin:0">
+            <div class="code-header">
+              <span class="lang-tag">TypeScript</span>
+              <button class="copy-btn">📋 复制</button>
+            </div>
+            <pre><code class="language-typescript">systemPrompt:
+  "你是一个专业的天气助手。" +
+  "使用天气查询工具获取实时数据。" +
+  "回答时包含温度、天气状况和湿度。" +
+  "语气友好专业，适合普通用户阅读。"</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <h3>原则二：明确列出能力边界</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 好的实践：明确告诉 Agent 它能做什么、不能做什么
+systemPrompt:
+  "你是一个订单查询助手。你的能力包括：\n" +
+  "- 查询订单状态和物流信息\n" +
+  "- 查询商品库存和价格\n" +
+  "- 取消未发货的订单\n\n" +
+  "你不能处理以下请求：\n" +
+  "- 修改订单地址（请转人工客服）\n" +
+  "- 处理退款（请转人工客服）\n" +
+  "- 回答与订单无关的问题\n\n" +
+  "当遇到无法处理的请求时，礼貌地建议用户联系人工客服。"</code></pre>
+      </div>
+
+      <h3>原则三：定义输出格式</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 当你需要 Agent 输出特定格式时，在 systemPrompt 中明确说明
+systemPrompt:
+  "你是一个数据分析助手。当用户要求分析数据时，请按以下格式回答：\n" +
+  "📊 数据概览：简要描述数据的基本信息\n" +
+  "📈 关键发现：列出 3-5 个最重要的发现\n" +
+  "💡 建议：基于数据提出 2-3 条可操作的建议\n\n" +
+  "每个部分使用简短的段落或列表，避免冗长的文字。"</code></pre>
+      </div>
+
+      <h3>systemPrompt 编写检查清单</h3>
+
+      <div class="card">
+        <ul>
+          <li><strong>角色定义</strong> — Agent 是谁？它的专业领域是什么？</li>
+          <li><strong>能力说明</strong> — Agent 拥有哪些工具？每个工具什么时候该用？</li>
+          <li><strong>行为规范</strong> — Agent 应该如何回答？语气是正式还是轻松？</li>
+          <li><strong>限制边界</strong> — Agent 不应该做什么？遇到边界情况怎么处理？</li>
+          <li><strong>输出格式</strong> — 需要特定的输出结构吗？使用列表还是段落？</li>
+          <li><strong>语言偏好</strong> — 用什么语言回答？是否需要翻译？</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. 请用自己的话解释 Agent = Model + Harness 的含义。Harness 在 Agent 运行中扮演什么角色？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>Model（模型）是 LLM，负责理解用户输入、推理和决策。Harness（编排框架）负责管理整个 Agent 的运行循环，包括：将消息和工具列表发送给 LLM、解析 LLM 返回的工具调用请求、执行工具并将结果反馈给 LLM、判断何时终止循环。Harness 就像一个"指挥官"，协调 LLM 和工具之间的交互，确保整个流程有序进行。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. Agent 循环在什么条件下会终止？如果 LLM 一直要求调用工具会怎样？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>Agent 循环在 LLM 返回的 AIMessage 中不包含 <code>tool_calls</code>（或 <code>tool_calls</code> 为空数组）时终止，此时 LLM 认为可以直接给用户最终回答了。为了避免无限循环，LangChain 通常支持设置最大迭代次数（<code>maxIterations</code> 或 <code>recursionLimit</code>），超过限制后 Agent 会强制终止并返回当前结果或错误信息。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. 为什么工具的 description 属性如此重要？如果描述写得不好会有什么后果？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>LLM 根据工具的 <code>name</code> 和 <code>description</code> 来决定何时使用哪个工具。这是 LLM 进行工具选择的唯一依据。如果描述写得含糊不清或不准确，LLM 可能会：(1) 在不该使用该工具时使用它；(2) 在应该使用该工具时选择其他工具；(3) 完全忽略该工具。好的描述应该说明工具的功能、适用场景和输入输出格式。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. <code>createAgent</code> 的哪些参数是必填的？哪些是推荐配置的？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>必填参数只有两个：<code>model</code>（LLM 模型实例）和 <code>tools</code>（工具数组）。虽然 <code>systemPrompt</code> 不是必填的，但强烈推荐配置，因为它能显著提升 Agent 的表现和可控性。其他可选参数包括 <code>checkpointer</code>（用于对话持久化）、<code>middleware</code>（用于添加日志、防护栏等）和 <code>responseFormat</code>（用于结构化输出）。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：忘记安装 zod 依赖</div>
+        <p><strong>症状：</strong>运行时报错 <code>Cannot find module 'zod'</code>。</p>
+        <p><strong>原因：</strong>使用 <code>tool()</code> 函数定义工具的 schema 时需要 Zod 库，但没有安装。</p>
+        <p><strong>解决：</strong>运行 <code>npm install zod</code> 或 <code>npm install zod @langchain/core</code> 安装所需依赖。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：工具描述过于简短或为空</div>
+        <p><strong>症状：</strong>Agent 不调用工具，或者在应该使用工具时选择了直接回答。</p>
+        <p><strong>原因：</strong>工具的 <code>description</code> 缺失或过于简短（如只写了"查询"），LLM 无法理解工具的用途。</p>
+        <p><strong>解决：</strong>为每个工具写详细、具体的描述，说明工具的功能、适用场景和输入要求。例如：<code>"查询指定城市的当前天气信息，包括温度、天气状况和湿度"</code>。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：API Key 未设置或过期</div>
+        <p><strong>症状：</strong>运行时报错 <code>OpenAI API key not found</code> 或 <code>401 Unauthorized</code>。</p>
+        <p><strong>原因：</strong>未设置 <code>OPENAI_API_KEY</code> 环境变量，或 Key 已过期/被撤销。</p>
+        <p><strong>解决：</strong>在项目根目录创建 <code>.env</code> 文件，添加 <code>OPENAI_API_KEY=sk-your-key-here</code>，并确保安装了 <code>dotenv</code> 包。注意不要将 API Key 提交到版本控制系统。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：工具执行函数未使用 async</div>
+        <p><strong>症状：</strong>工具返回了 Promise 对象而不是实际结果，Agent 接收到 <code>[object Promise]</code> 作为工具输出。</p>
+        <p><strong>原因：</strong><code>tool()</code> 的执行函数必须是异步函数（使用 <code>async</code> 关键字），即使你的函数内部没有 await 操作。</p>
+        <p><strong>解决：</strong>确保工具的执行函数声明为 <code>async</code>：<code>async (input) => { ... }</code>。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 2 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>Agent 核心概念</strong> — Agent = Model + Harness，理解了 Agent 循环的运作机制：调用模型 → 模型决策 → 执行工具 → 循环直到完成</li>
+          <li><strong>createAgent 函数</strong> — 掌握了创建 Agent 的核心 API，理解了 model、tools、systemPrompt 等关键参数的作用</li>
+          <li><strong>工具定义</strong> — 学会了使用 <code>tool()</code> 函数配合 Zod schema 定义自定义工具，理解了工具名称和描述的重要性</li>
+          <li><strong>天气查询 Agent</strong> — 通过实战构建了第一个 Agent，理解了从用户提问到工具调用再到最终回答的完整流程</li>
+          <li><strong>多工具 Agent</strong> — 构建了包含计算器和字符串工具的 Agent，掌握了工具选择和链式调用的机制</li>
+          <li><strong>Agent 与 Deep Agents</strong> — 了解了两者的区别和适用场景，能够根据需求做出合理选择</li>
+          <li><strong>systemPrompt 技巧</strong> — 掌握了编写高质量系统提示词的三大原则：具体明确、定义边界、规范输出</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 3 章：模型 Models — 连接大语言模型</h3>
+        <p>在下一章中，我们将深入探索 LangChain.js 的<strong>模型系统</strong>。你将学习：</p>
+        <ul>
+          <li>如何连接 OpenAI、Anthropic Claude、Google Gemini 等主流 LLM 提供商</li>
+          <li>模型参数配置：temperature、maxTokens、topP 等核心参数的含义和调优</li>
+          <li>模型的直接调用方式：invoke、batch 和 stream</li>
+          <li>错误处理和重试策略：如何优雅地处理 API 限流和超时</li>
+          <li>模型切换的最佳实践：如何设计代码以便轻松切换不同的模型提供商</li>
+        </ul>
+        <a href="03-models.html" class="btn btn-primary">继续学习第 3 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="01-introduction.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 2 章 / 共 10 章</span>
+        <a href="03-models.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

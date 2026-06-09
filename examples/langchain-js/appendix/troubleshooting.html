@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>常见错误排错指南 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="troubleshooting">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="../chapters/01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="../chapters/02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="../chapters/03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="../chapters/04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="../chapters/05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="../chapters/06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="../chapters/07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="../chapters/08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="../chapters/09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="../chapters/10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="cheatsheet.html">📋 API 速查表</a>
+      <a href="troubleshooting.html" class="active">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <h1>附录 B · 常见错误排错指南</h1>
+      <p class="subtitle">LangChain.js 开发中 18 个高频错误的原因分析与解决方案</p>
+
+      <div class="callout info">
+        <div class="callout-title">📋 使用说明</div>
+        本文档收录了 LangChain.js TypeScript 开发中最常遇到的错误和问题。每个条目包含错误信息、原因分析、解决步骤和示例代码，帮助你快速定位并解决问题。建议使用浏览器的 <code>Ctrl+F</code> 搜索错误关键字来快速定位。
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类一：环境与安装 -->
+      <!-- ============================================================ -->
+      <h2>🔧 环境与安装</h2>
+
+      <!-- 错误 1 -->
+      <div class="card">
+        <h3>❌ Node.js 版本过低导致 ERR_REQUIRE_ESM</h3>
+        <p><strong>错误信息：</strong><code>Error [ERR_REQUIRE_ESM]: Must use import to load ES Module</code></p>
+        <p><strong>原因分析：</strong>LangChain.js 从 v0.1.0 起全面采用 ESM 模块系统，要求 Node.js 版本 >= 18。当你的 Node.js 版本过低（如 v14 或 v16），或者在 CommonJS 项目中直接 <code>require()</code> LangChain 模块时，就会触发此错误。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>确认 Node.js 版本 >= 18.18.0，推荐使用 v20 LTS</li>
+          <li>如果项目需要 CommonJS，在 <code>tsconfig.json</code> 中配置 <code>"module": "NodeNext"</code> 并使用 <code>.mts</code> 扩展名</li>
+          <li>或在 <code>package.json</code> 中声明 <code>"type": "module"</code></li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// tsconfig.json — 推荐配置
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "outDir": "./dist"
+  },
+  "include": ["src"]
+}
+
+// package.json — 确保声明为 ESM 项目
+{
+  "name": "my-langchain-app",
+  "type": "module",
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 2 -->
+      <div class="card">
+        <h3>❌ npm install 报错 peer dependency conflicts</h3>
+        <p><strong>错误信息：</strong><code>npm ERR! ERESOLVE unable to resolve dependency tree</code></p>
+        <p><strong>原因分析：</strong>LangChain 生态由多个包组成（<code>@langchain/core</code>、<code>@langchain/openai</code>、<code>langchain</code> 等），它们之间有严格的版本对齐要求。当项目中已有其他依赖与 LangChain 的 peer dependency 冲突时，npm 会拒绝安装。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>使用 <code>--legacy-peer-deps</code> 跳过 peer dependency 检查（快速方案）</li>
+          <li>锁定整个 LangChain 生态的版本范围，使用 <code>overrides</code> 字段统一管理</li>
+          <li>推荐使用 pnpm 或 yarn 管理依赖，它们对 monorepo 结构的兼容性更好</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">Bash</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-bash"># 方案一：跳过 peer dependency 检查
+npm install langchain @langchain/core @langchain/openai --legacy-peer-deps
+
+# 方案二：在 package.json 中使用 overrides 强制统一版本
+# "overrides": {
+#   "@langchain/core": "^0.3.0"
+# }
+
+# 方案三（推荐）：使用 pnpm
+npm install -g pnpm
+pnpm add langchain @langchain/core @langchain/openai</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 3 -->
+      <div class="card">
+        <h3>❌ TypeScript 编译错误：模块解析失败</h3>
+        <p><strong>错误信息：</strong><code>TS2307: Cannot find module '@langchain/openai' or its corresponding type declarations</code></p>
+        <p><strong>原因分析：</strong>TypeScript 的 <code>moduleResolution</code> 配置不正确。LangChain 的各个包使用 <code>exports</code> 字段映射子路径，需要 <code>"NodeNext"</code> 或 <code>"Bundler"</code> 模式才能正确解析。如果使用旧版的 <code>"Node"</code> 模式则无法识别。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>在 <code>tsconfig.json</code> 中设置 <code>"moduleResolution": "NodeNext"</code></li>
+          <li>确认 <code>@types/node</code> 版本 >= 18</li>
+          <li>删除 <code>node_modules</code> 和 <code>tsconfig.tsbuildinfo</code> 后重新安装</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// tsconfig.json — 正确配置
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",  // 关键：必须是 NodeNext 或 Bundler
+    "target": "ES2022",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true
+  }
+}
+
+// 然后重新安装依赖
+// rm -rf node_modules package-lock.json tsconfig.tsbuildinfo
+// npm install</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类二：API 密钥与认证 -->
+      <!-- ============================================================ -->
+      <h2>🔑 API 密钥与认证</h2>
+
+      <!-- 错误 4 -->
+      <div class="card">
+        <h3>❌ OpenAI API Key 未设置</h3>
+        <p><strong>错误信息：</strong><code>OpenAI API key not set. Set the OPENAI_API_KEY environment variable or pass apiKey to the constructor.</code></p>
+        <p><strong>原因分析：</strong>LangChain 的 OpenAI 模型默认从环境变量 <code>OPENAI_API_KEY</code> 读取密钥。如果你没有在环境中设置此变量，也没有在代码中显式传入 <code>apiKey</code> 参数，就会触发此错误。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>推荐：使用 <code>.env</code> 文件配合 <code>dotenv</code> 管理密钥</li>
+          <li>或在代码中直接传入 <code>apiKey</code> 参数（不推荐用于生产环境）</li>
+          <li>确保 <code>.env</code> 文件已加入 <code>.gitignore</code>，避免泄露密钥</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// 方案一（推荐）：通过 .env 文件
+// .env 文件内容：
+// OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+
+import "dotenv/config"; // 在入口文件最顶部引入
+import { ChatOpenAI } from "@langchain/openai";
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+// 方案二：直接传入参数
+const model2 = new ChatOpenAI({
+  model: "gpt-4o",
+  apiKey: "sk-xxxxxxxxxxxxxxxxxxxxxxxx", // 不推荐硬编码
+});</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 5 -->
+      <div class="card">
+        <h3>❌ API Key 无效 — 401 Unauthorized</h3>
+        <p><strong>错误信息：</strong><code>AuthenticationError: 401 Incorrect API key provided: sk-***xxx</code></p>
+        <p><strong>原因分析：</strong>传入的 API Key 格式不正确、已过期、被撤销，或者复制时多出了空格/换行符。有时在 Windows 系统中，<code>.env</code> 文件可能包含隐藏的 BOM 字符，导致密钥读取异常。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>到 OpenAI 控制台重新生成一个 API Key</li>
+          <li>确认 <code>.env</code> 文件中的密钥没有多余的空格或引号</li>
+          <li>在代码中打印密钥的前缀和长度进行调试</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// 调试：检查密钥是否正确加载
+const key = process.env.OPENAI_API_KEY;
+console.log(`Key prefix: ${key?.slice(0, 7)}...`);
+console.log(`Key length: ${key?.length}`); // 通常应该是 51 或 56
+
+// .env 文件正确格式（注意：不要加引号！）
+// OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxx
+//
+// 错误示范：
+// OPENAI_API_KEY="sk-proj-xxxxxxxxxxxxxxxxxxxx"  ← 不要加引号
+// OPENAI_API_KEY = sk-proj-xxxxxxxxxxxxxxxxxxxx   ← 等号两边不要空格</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 6 -->
+      <div class="card">
+        <h3>❌ 速率限制 — 429 Too Many Requests</h3>
+        <p><strong>错误信息：</strong><code>RateLimitError: 429 You exceeded your current quota, please check your plan and billing details</code></p>
+        <p><strong>原因分析：</strong>你的 API 调用频率或 Token 消耗速度超过了 OpenAI 账户的速率限制（Rate Limit）。免费账户和低级别账户的限制更为严格。在开发调试时，如果循环调用或并发请求过多，很容易触发此错误。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>在 ChatOpenAI 构造函数中配置 <code>maxRetries</code> 和 <code>maxConcurrency</code></li>
+          <li>使用 LangChain 内置的速率限制器（<code>RateLimiter</code>）</li>
+          <li>升级 OpenAI 账户的使用层级以获得更高的速率限制</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { InMemoryRateLimiter } from "@langchain/core/utils/async_caller";
+
+// 配置自动重试与并发控制
+const model = new ChatOpenAI({
+  model: "gpt-4o",
+  maxRetries: 3,          // 失败后最多重试 3 次（自带指数退避）
+  maxConcurrency: 2,      // 同时最多 2 个并发请求
+});
+
+// 或使用独立的速率限制器
+const rateLimiter = new InMemoryRateLimiter({
+  requestsPerSecond: 5,   // 每秒最多 5 次请求
+});
+
+// 在批量处理时添加延迟
+for (const input of batchInputs) {
+  await rateLimiter.acquire();
+  const result = await model.invoke(input);
+  // 处理结果...
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类三：模型调用 -->
+      <!-- ============================================================ -->
+      <h2>🤖 模型调用</h2>
+
+      <!-- 错误 7 -->
+      <div class="card">
+        <h3>❌ 模型名称错误 — Model Not Found</h3>
+        <p><strong>错误信息：</strong><code>NotFoundError: 404 The model 'gpt-5-turbo' does not exist</code></p>
+        <p><strong>原因分析：</strong>指定的模型名称拼写错误，或者使用了当前 API 提供商尚不可用的模型。OpenAI 的模型名称是区分大小写且经常更新的，错误的名称会直接返回 404。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>查阅 OpenAI 官方文档确认当前可用的模型列表</li>
+          <li>确认你使用的 API 版本支持该模型</li>
+          <li>检查是否混用了不同提供商的模型名称（如把 Anthropic 的名称传给了 OpenAI）</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+
+// 常见的正确模型名称（截至 2025 年）
+const model = new ChatOpenAI({
+  model: "gpt-4o",           // GPT-4o 多模态模型
+  // model: "gpt-4o-mini",   // GPT-4o Mini（经济型）
+  // model: "gpt-4-turbo",   // GPT-4 Turbo
+  // model: "o1",            // o1 推理模型
+  // model: "o3-mini",       // o3-mini 推理模型
+});
+
+// 不要使用错误名称：
+// model: "gpt-5"            ← 不存在
+// model: "gpt4o"            ← 少了连字符
+// model: "GPT-4o"           ← 大小写不对</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 8 -->
+      <div class="card">
+        <h3>❌ 请求超时 — Timeout</h3>
+        <p><strong>错误信息：</strong><code>TimeoutError: Request timed out after 60000ms</code> 或 <code>ConnectionError: Request failed with status code 408</code></p>
+        <p><strong>原因分析：</strong>模型推理耗时超过了默认超时时间（通常为 60 秒）。这在使用大型模型处理长文本、复杂推理任务，或者网络状况不佳时容易出现。某些模型（如 o1 系列）的推理时间本身就较长。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>增大 <code>timeout</code> 参数</li>
+          <li>减少单次请求的输入长度</li>
+          <li>对于长时间任务，考虑使用流式传输来保持连接活性</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+
+// 增大超时时间
+const model = new ChatOpenAI({
+  model: "o1",
+  timeout: 300_000,  // 5 分钟超时
+});
+
+// 对于推理模型，建议配合流式传输
+const streamingModel = new ChatOpenAI({
+  model: "gpt-4o",
+  timeout: 120_000,
+  streaming: true,
+});
+
+// 流式调用，可以逐步看到输出，避免长时间无响应
+const stream = await streamingModel.stream("请详细分析这段代码...");
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content.toString());
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 9 -->
+      <div class="card">
+        <h3>❌ Token 超限 — Context Length Exceeded</h3>
+        <p><strong>错误信息：</strong><code>BadRequestError: 400 This model's maximum context length is 128000 tokens. However, your messages resulted in 150000 tokens.</code></p>
+        <p><strong>原因分析：</strong>发送给模型的消息总长度（包括系统提示、历史消息和用户输入）超过了该模型的最大上下文窗口限制。例如 GPT-4o 的上下文窗口为 128K tokens，当累积的对话历史过长时就会触发。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>使用 <code>Tiktoken</code> 在发送前估算 Token 数量</li>
+          <li>使用 <code>trimMessages</code> 工具自动裁剪历史消息</li>
+          <li>考虑使用更长上下文窗口的模型</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import {
+  trimMessages,
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
+
+// 配置消息裁剪器
+const trimmer = trimMessages({
+  maxTokens: 10000,                  // 保留最近 10000 tokens 的消息
+  strategy: "last",                  // 从最新的消息开始保留
+  tokenCounter: (msgs) => msgs.length * 4, // 简单估算；生产环境用 tiktoken
+  includeSystem: true,               // 始终保留 SystemMessage
+  allowPartial: false,               // 不允许截断单条消息
+});
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+const messages = [
+  new SystemMessage("你是一个有帮助的助手。"),
+  ...historyMessages,  // 历史消息可能很长
+  new HumanMessage("我的问题是什么？"),
+];
+
+// 裁剪后再发送
+const trimmed = await trimmer.invoke(messages);
+const response = await model.invoke(trimmed);</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类四：Agent 与工具 -->
+      <!-- ============================================================ -->
+      <h2>🕷️ Agent 与工具</h2>
+
+      <!-- 错误 10 -->
+      <div class="card">
+        <h3>❌ Agent 无限循环 — Max Iterations Exceeded</h3>
+        <p><strong>错误信息：</strong><code>GraphRecursionError: Recursion limit of 25 reached without hitting a stop condition</code></p>
+        <p><strong>原因分析：</strong>Agent 在执行过程中反复调用同一个工具或在几个工具之间来回跳转，始终无法得到最终答案。这通常是因为工具的描述不明确、返回结果不符合预期，或者任务本身需要的步骤超过了默认的迭代上限（25 次）。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>优化工具描述（description），让 Agent 能准确判断何时使用</li>
+          <li>在 <code>createReactAgent</code> 中配置 <code>recursionLimit</code></li>
+          <li>为工具添加明确的错误提示，帮助 Agent 自我修正</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 工具描述要清晰、具体，避免歧义
+const searchTool = tool(
+  async ({ query }) => {
+    // 搜索逻辑...
+    return JSON.stringify({ results: [...] });
+  },
+  {
+    name: "web_search",
+    description:
+      "搜索互联网获取实时信息。当用户询问时事新闻、实时数据、" +
+      "你不知道的信息时使用此工具。不要用于数学计算或代码生成。",
+    schema: z.object({
+      query: z.string().describe("搜索关键词，建议使用英文"),
+    }),
+  }
+);
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+const agent = createReactAgent({
+  llm: model,
+  tools: [searchTool],
+  // 不要在 prompt 中设置 recursionLimit，而是在调用时指定
+});
+
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "今天天气如何？" }] },
+  { recursionLimit: 15 }  // 将默认的 25 降低到 15
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 11 -->
+      <div class="card">
+        <h3>❌ 工具 Schema 不匹配 — Zod Validation Error</h3>
+        <p><strong>错误信息：</strong><code>ZodError: [ { "code": "invalid_type", "expected": "string", "received": "number", "path": ["temperature"] } ]</code></p>
+        <p><strong>原因分析：</strong>LLM 返回的工具调用参数类型与 Zod schema 定义的类型不一致。例如 schema 要求 <code>temperature</code> 是 <code>z.number()</code>，但模型返回了字符串 <code>"36.5"</code>。这是 LLM 工具调用中最常见的问题之一。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>在 Zod schema 中使用 <code>.describe()</code> 为每个字段添加清晰的描述</li>
+          <li>对于可能为多种类型的字段，使用 <code>z.coerce</code> 进行类型强制转换</li>
+          <li>在工具函数内部添加类型检查和转换逻辑</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 错误示范：类型定义过于严格
+const badTool = tool(
+  async ({ temp }) => `温度是 ${temp}°C`,
+  {
+    name: "get_weather",
+    description: "查询天气",
+    schema: z.object({
+      temp: z.number(),  // LLM 可能传入字符串 "36.5"
+    }),
+  }
+);
+
+// 正确示范：使用 coerce 和详细的 describe
+const weatherTool = tool(
+  async ({ city, unit }) => {
+    // 即使类型防御如此，也建议在内部做检查
+    const temp = 25; // 模拟查询结果
+    return `${city} 当前温度: ${temp}°${unit === "celsius" ? "C" : "F"}`;
+  },
+  {
+    name: "get_weather",
+    description: "查询指定城市的当前天气信息",
+    schema: z.object({
+      city: z.string().describe("城市名称，如 'Beijing'、'Shanghai'"),
+      unit: z
+        .enum(["celsius", "fahrenheit"])
+        .default("celsius")
+        .describe("温度单位，默认摄氏度"),
+    }),
+  }
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 12 -->
+      <div class="card">
+        <h3>❌ 工具函数报错未捕获导致 Agent 崩溃</h3>
+        <p><strong>错误信息：</strong><code>ToolException: Error: connect ECONNREFUSED 127.0.0.1:5432</code> 或整个 Agent 直接抛出未处理异常</p>
+        <p><strong>原因分析：</strong>工具函数内部抛出了异常（如数据库连接失败、API 调用出错、文件不存在等），但没有被捕获处理。默认情况下，未捕获的工具异常会导致整个 Agent 执行中断。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>在工具函数内部使用 try-catch 捕获所有异常</li>
+          <li>返回结构化的错误信息，让 Agent 有机会理解失败原因并重试</li>
+          <li>使用 <code>returnDirect</code> 或自定义错误处理策略</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 错误示范：不捕获异常
+const badTool = tool(
+  async ({ query }) => {
+    const res = await fetch(`https://api.example.com/search?q=${query}`);
+    return await res.text(); // 如果 fetch 失败，整个 Agent 崩溃
+  },
+  { name: "search", description: "搜索", schema: z.object({ query: z.string() }) }
+);
+
+// 正确示范：捕获异常并返回有用信息
+const safeTool = tool(
+  async ({ query }) => {
+    try {
+      const res = await fetch(`https://api.example.com/search?q=${query}`);
+      if (!res.ok) {
+        return `搜索失败：服务器返回状态码 ${res.status}。请尝试换个关键词重试。`;
+      }
+      const data = await res.json();
+      return JSON.stringify(data);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return `搜索工具执行出错：${msg}。请检查网络连接后重试。`;
+    }
+  },
+  {
+    name: "safe_search",
+    description: "安全搜索工具",
+    schema: z.object({
+      query: z.string().describe("搜索关键词"),
+    }),
+  }
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类五：消息与上下文 -->
+      <!-- ============================================================ -->
+      <h2>💬 消息与上下文</h2>
+
+      <!-- 错误 13 -->
+      <div class="card">
+        <h3>❌ 消息格式错误</h3>
+        <p><strong>错误信息：</strong><code>TypeError: Cannot read properties of undefined (reading 'content')</code> 或 <code>ValidationError: Invalid message format</code></p>
+        <p><strong>原因分析：</strong>传入 <code>model.invoke()</code> 的消息格式不符合 LangChain 的要求。常见问题包括：直接传入纯字符串数组而不是消息对象、角色名称拼写错误、缺少必需的 <code>content</code> 字段等。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>使用 LangChain 提供的消息类（<code>HumanMessage</code>、<code>AIMessage</code>、<code>SystemMessage</code>）</li>
+          <li>如果使用 OpenAI 格式的对象，确保 <code>role</code> 和 <code>content</code> 字段都存在</li>
+          <li>使用 <code>convertToOpenAIMessages</code> 工具进行格式转换</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+// 错误示范
+// await model.invoke("你好");                           ← 纯字符串在某些版本可能不工作
+// await model.invoke([{ role: "user" }]);               ← 缺少 content
+// await model.invoke([{ type: "human", text: "你好" }]); ← 字段名错误
+
+// 正确示范：使用消息类（推荐）
+await model.invoke([
+  new SystemMessage("你是一个有帮助的助手。"),
+  new HumanMessage("你好！"),
+]);
+
+// 正确示范：使用 OpenAI 格式对象
+await model.invoke([
+  { role: "system", content: "你是一个有帮助的助手。" },
+  { role: "user", content: "你好！" },
+]);
+
+// 正确示范：链式构建对话
+const chatHistory = [
+  new HumanMessage("你好，请问你能做什么？"),
+  new AIMessage("你好！我是一个 AI 助手，可以帮助你解答问题。"),
+  new HumanMessage("那太好了，请给我介绍一下 LangChain。"),
+];
+const response = await model.invoke(chatHistory);</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 14 -->
+      <div class="card">
+        <h3>❌ 上下文溢出 — Context Window Full</h3>
+        <p><strong>错误信息：</strong><code>BadRequestError: 400 This model's maximum context length is 128000 tokens</code> 或 Agent 在多轮对话后输出质量严重下降</p>
+        <p><strong>原因分析：</strong>在多轮对话或 Agent 交互中，历史消息不断累积，最终超过了模型的上下文窗口。即使没有触发硬限制，过长的上下文也会导致模型注意力分散，输出质量下降。这在使用 Agent + 工具时尤为明显，因为工具的返回结果也会占用上下文。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>实现消息摘要机制，将旧消息压缩为摘要</li>
+          <li>使用 <code>trimMessages</code> 限制历史长度</li>
+          <li>在 Agent 的系统提示中明确要求简洁回答</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import {
+  trimMessages,
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  type BaseMessage,
+} from "@langchain/core/messages";
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+// 策略一：保留系统消息 + 最近 N 轮对话
+const trimmer = trimMessages({
+  maxTokens: 8000,
+  strategy: "last",
+  tokenCounter: (msgs) => msgs.length * 4,
+  includeSystem: true,
+  startOn: "human",   // 确保裁剪后第一条是用户消息
+});
+
+// 策略二：消息摘要压缩
+async function summarizeHistory(
+  messages: BaseMessage[]
+): Promise<BaseMessage[]> {
+  if (messages.length <= 6) return messages;
+
+  const oldMessages = messages.slice(0, -4);  // 取较早的消息
+  const recentMessages = messages.slice(-4);  // 保留最近 4 条
+
+  const summaryResult = await model.invoke([
+    new SystemMessage(
+      "请将以下对话历史总结为简洁的摘要，保留关键信息。"
+    ),
+    new HumanMessage(
+      oldMessages.map((m) => `${m.constructor.name}: ${m.content}`).join("\n")
+    ),
+  ]);
+
+  return [
+    new SystemMessage(`对话摘要：${summaryResult.content}`),
+    ...recentMessages,
+  ];
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类六：流式传输 -->
+      <!-- ============================================================ -->
+      <h2>📡 流式传输</h2>
+
+      <!-- 错误 15 -->
+      <div class="card">
+        <h3>❌ 流式传输中断或丢数据</h3>
+        <p><strong>错误信息：</strong><code>Error: stream was destroyed</code> 或流式输出中途截断，只有部分内容</p>
+        <p><strong>原因分析：</strong>流式传输过程中连接被意外中断。常见原因包括：请求超时、客户端在流完成前关闭了连接、在 Express/Fastify 等框架中忘记正确处理流式响应、或在异步迭代中未正确使用 <code>for await...of</code>。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>使用 <code>model.stream()</code> 获取 AsyncIterator，并用 <code>for await...of</code> 正确迭代</li>
+          <li>在 Web 框架中正确设置响应头和流式写入</li>
+          <li>添加错误处理和流完成检测</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { HumanMessage } from "@langchain/core/messages";
+
+const model = new ChatOpenAI({ model: "gpt-4o", streaming: true });
+
+// 基础用法：正确迭代流
+async function streamChat(userInput: string) {
+  const stream = await model.stream([
+    new HumanMessage(userInput),
+  ]);
+
+  try {
+    for await (const chunk of stream) {
+      const content = chunk.content;
+      if (typeof content === "string") {
+        process.stdout.write(content);
+      }
+    }
+    console.log(); // 换行
+  } catch (error) {
+    console.error("流式传输中断:", error);
+  }
+}
+
+// Express 框架中正确使用流式传输
+// app.post("/chat", async (req, res) => {
+//   res.setHeader("Content-Type", "text/event-stream");
+//   res.setHeader("Cache-Control", "no-cache");
+//   res.setHeader("Connection", "keep-alive");
+//
+//   const stream = await model.stream([
+//     new HumanMessage(req.body.message),
+//   ]);
+//
+//   for await (const chunk of stream) {
+//     res.write(`data: ${JSON.stringify(chunk.content)}\n\n`);
+//   }
+//   res.write("data: [DONE]\n\n");
+//   res.end();
+// });</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类七：结构化输出 -->
+      <!-- ============================================================ -->
+      <h2>📋 结构化输出</h2>
+
+      <!-- 错误 16 -->
+      <div class="card">
+        <h3>❌ 结构化输出 Schema 验证失败</h3>
+        <p><strong>错误信息：</strong><code>LLM output does not match the expected schema</code> 或 <code>ZodError: Expected string, received undefined at "name"</code></p>
+        <p><strong>原因分析：</strong>使用 <code>withStructuredOutput()</code> 方法时，模型返回的 JSON 不符合定义的 Zod schema。常见原因有：schema 过于复杂导致模型生成困难、缺少 <code>.describe()</code> 说明、或使用了模型不支持的 Zod 类型（如 <code>z.record()</code>）。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>简化 schema 结构，优先使用基础类型（string、number、enum）</li>
+          <li>为每个字段添加 <code>.describe()</code> 描述，帮助模型理解预期</li>
+          <li>使用 <code>z.enum()</code> 替代自由文本字段来减少错误</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+// 错误示范：schema 太复杂且缺少描述
+// const badSchema = z.object({
+//   meta: z.record(z.unknown()),
+//   nested: z.object({ deep: z.object({ value: z.any() }) }),
+// });
+
+// 正确示范：清晰、简洁的 schema
+const movieSchema = z.object({
+  title: z.string().describe("电影名称"),
+  year: z.number().describe("上映年份，如 2024"),
+  rating: z
+    .number()
+    .min(0)
+    .max(10)
+    .describe("评分，0-10 之间"),
+  genre: z
+    .enum(["动作", "喜剧", "剧情", "科幻", "恐怖", "动画", "其他"])
+    .describe("电影类型"),
+  summary: z.string().describe("一句话简介，不超过 50 字"),
+});
+
+const model = new ChatOpenAI({
+  model: "gpt-4o",
+  temperature: 0,  // 结构化输出时建议降低温度
+});
+
+// withStructuredOutput 会自动处理 JSON 解析和验证
+const structuredModel = model.withStructuredOutput(movieSchema);
+
+const result = await structuredModel.invoke(
+  "请分析电影《盗梦空间》的基本信息"
+);
+
+console.log(result.title);   // "盗梦空间"
+console.log(result.year);    // 2010
+console.log(result.rating);  // 9.3
+console.log(result.genre);   // "科幻"</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类八：记忆系统 -->
+      <!-- ============================================================ -->
+      <h2>🧠 记忆系统</h2>
+
+      <!-- 错误 17 -->
+      <div class="card">
+        <h3>❌ Checkpointer 未配置导致 Agent 无状态</h3>
+        <p><strong>错误信息：</strong>没有明确报错，但每次对话 Agent 都忘记了之前的上下文，表现得像"失忆"</p>
+        <p><strong>原因分析：</strong>LangGraph 的 Agent 默认是无状态的。每次调用 <code>agent.invoke()</code> 都是一次独立的执行，不会自动保留对话历史。如果你没有配置 <code>checkpointer</code>（检查点存储），Agent 就无法在多次调用之间保持状态。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>配置 <code>MemorySaver</code>（内存存储，适合开发测试）</li>
+          <li>在每次调用时传入相同的 <code>thread_id</code> 来关联同一对话</li>
+          <li>生产环境建议使用 <code>@langchain/langgraph-checkpoint-postgres</code> 等持久化方案</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { MemorySaver } from "@langchain/langgraph";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+const greetTool = tool(
+  async ({ name }) => `你好，${name}！很高兴认识你。`,
+  {
+    name: "greet",
+    description: "向指定的人打招呼",
+    schema: z.object({ name: z.string() }),
+  }
+);
+
+// 关键：创建 checkpointer
+const checkpointer = new MemorySaver();
+
+const agent = createReactAgent({
+  llm: model,
+  tools: [greetTool],
+  checkpointer,  // 注入 checkpointer
+});
+
+// 关键：每次调用传入相同的 thread_id
+const config = { configurable: { thread_id: "user-123" } };
+
+// 第一轮对话
+await agent.invoke(
+  { messages: [{ role: "user", content: "我叫小明" }] },
+  config
+);
+
+// 第二轮对话 — Agent 能记住你的名字
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "我叫什么名字？" }] },
+  config  // 使用同一个 config
+);
+
+// Agent 会回答"你叫小明"（如果没有 checkpointer 则不知道）</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 18 -->
+      <div class="card">
+        <h3>❌ thread_id 冲突导致状态混乱</h3>
+        <p><strong>错误信息：</strong>没有明确报错，但对话中出现了不属于当前用户的上下文信息，或者 Agent 行为不一致</p>
+        <p><strong>原因分析：</strong>多个用户或多个对话会话复用了同一个 <code>thread_id</code>，导致不同会话的状态发生了交叉。例如所有用户都使用硬编码的 <code>thread_id: "default"</code>，或者在多线程环境下 <code>thread_id</code> 生成逻辑有竞态条件。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>为每个用户/会话生成唯一的 <code>thread_id</code></li>
+          <li>使用 UUID 或用户 ID + 时间戳的组合</li>
+          <li>在 Web 应用中，将 <code>thread_id</code> 与用户会话绑定</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { MemorySaver } from "@langchain/langgraph";
+import { randomUUID } from "node:crypto";
+
+const model = new ChatOpenAI({ model: "gpt-4o" });
+const checkpointer = new MemorySaver();
+
+const agent = createReactAgent({
+  llm: model,
+  tools: [],
+  checkpointer,
+});
+
+// 错误示范：所有会话使用同一个 thread_id
+// const badConfig = { configurable: { thread_id: "default" } };
+
+// 正确示范：为每个会话生成唯一 ID
+function createSession(userId: string) {
+  const sessionId = randomUUID();
+  return {
+    threadId: `${userId}-${sessionId}`,
+    config: {
+      configurable: {
+        thread_id: `${userId}-${sessionId}`,
+      },
+    },
+  };
+}
+
+// 使用示例
+const user1Session = createSession("user-001");
+const user2Session = createSession("user-002");
+
+// 用户1的对话
+await agent.invoke(
+  { messages: [{ role: "user", content: "我的爱好是编程" }] },
+  user1Session.config
+);
+
+// 用户2的对话（完全独立的状态）
+await agent.invoke(
+  { messages: [{ role: "user", content: "我的爱好是绘画" }] },
+  user2Session.config
+);
+
+// 用户1询问时，只会知道"编程"，不会知道"绘画"
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "我的爱好是什么？" }] },
+  user1Session.config
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 快速诊断清单 -->
+      <!-- ============================================================ -->
+      <h2>🔍 快速诊断清单</h2>
+
+      <p>遇到问题时，按以下顺序逐步排查：</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>排查步骤</th>
+            <th>检查内容</th>
+            <th>常见命令</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. 环境检查</td>
+            <td>Node.js 版本、TypeScript 配置</td>
+            <td><code>node -v</code>、<code>npx tsc --showConfig</code></td>
+          </tr>
+          <tr>
+            <td>2. 依赖检查</td>
+            <td>包版本是否对齐、是否有重复安装</td>
+            <td><code>npm ls @langchain/core</code></td>
+          </tr>
+          <tr>
+            <td>3. 密钥检查</td>
+            <td>环境变量是否正确加载</td>
+            <td><code>console.log(process.env.OPENAI_API_KEY?.slice(0,7))</code></td>
+          </tr>
+          <tr>
+            <td>4. 网络检查</td>
+            <td>是否能访问 API 端点</td>
+            <td><code>curl https://api.openai.com/v1/models</code></td>
+          </tr>
+          <tr>
+            <td>5. 消息格式</td>
+            <td>消息对象是否使用正确的类构造</td>
+            <td><code>console.log(JSON.stringify(messages, null, 2))</code></td>
+          </tr>
+          <tr>
+            <td>6. 模型调用</td>
+            <td>模型名称、参数是否正确</td>
+            <td>在 <a href="https://platform.openai.com/playground" target="_blank">OpenAI Playground</a> 中先测试</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 通用排错技巧</div>
+        <ul>
+          <li>始终在入口文件顶部添加 <code>import "dotenv/config"</code> 确保环境变量最先加载</li>
+          <li>使用 <code>console.dir(result, { depth: null })</code> 查看完整的对象结构</li>
+          <li>开启 LangChain 的调试日志：<code>process.env.LANGCHAIN_VERBOSE = "true"</code></li>
+          <li>使用 <code>LangSmith</code> 进行请求追踪，可以直观看到每一步的输入输出</li>
+          <li>缩小问题范围：先单独测试模型调用，再加入工具和 Agent</li>
+        </ul>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 安全提醒</div>
+        <p>在排错过程中，请注意不要将 API Key 粘贴到公共论坛、GitHub Issue 或聊天记录中。如果误泄露了 Key，请立即到对应平台的控制台撤销并重新生成。</p>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../script.js"></script>
+</body>
+</html>

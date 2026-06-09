@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API 速查表 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    .cheatsheet-section {
+      margin-bottom: 40px;
+    }
+    .cheatsheet-section h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cheatsheet-section h2 .icon {
+      font-size: 1.4rem;
+    }
+    .cheatsheet-section > p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    table code {
+      background: var(--bg-code);
+      color: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    td code {
+      word-break: break-all;
+    }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      margin: 20px 0 32px;
+    }
+    .toc-grid a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+    .toc-grid a:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+    .toc-grid a .toc-icon {
+      font-size: 1.2rem;
+    }
+    @media (max-width: 768px) {
+      .toc-grid {
+        grid-template-columns: 1fr;
+      }
+      table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+  </style>
+</head>
+<body data-page="cheatsheet">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="../chapters/01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="../chapters/02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="../chapters/03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="../chapters/04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="../chapters/05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="../chapters/06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="../chapters/07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="../chapters/08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="../chapters/09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="../chapters/10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="cheatsheet.html" class="active">📋 API 速查表</a>
+      <a href="troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="../chapters/10-capstone.html" class="nav-link">← 第 10 章</a>
+        <span class="chapter-progress">附录 A</span>
+        <a href="troubleshooting.html" class="nav-link">常见错误排错 →</a>
+      </div>
+
+      <h1>附录 A · API 速查表</h1>
+      <p class="subtitle">LangChain.js TypeScript 核心 API 快速参考，按功能分类汇总常用函数、参数与示例</p>
+
+      <div class="callout info">
+        <div class="callout-title">📋 使用说明</div>
+        本速查表基于 LangChain v1.x <code>createAgent</code> 架构。所有示例均为 TypeScript，可直接复制使用。建议配合各章节深入学习。
+      </div>
+
+      <!-- 目录导航 -->
+      <div class="toc-grid">
+        <a href="#install"><span class="toc-icon">📦</span> 安装与导入</a>
+        <a href="#agent"><span class="toc-icon">🤖</span> Agent</a>
+        <a href="#models"><span class="toc-icon">🧠</span> 模型 Models</a>
+        <a href="#messages"><span class="toc-icon">💬</span> 消息 Messages</a>
+        <a href="#tools"><span class="toc-icon">🔧</span> 工具 Tools</a>
+        <a href="#streaming"><span class="toc-icon">📡</span> 流式传输 Streaming</a>
+        <a href="#structured"><span class="toc-icon">📐</span> 结构化输出</a>
+        <a href="#middleware"><span class="toc-icon">🔗</span> 中间件 Middleware</a>
+        <a href="#memory"><span class="toc-icon">🧩</span> 记忆系统</a>
+        <a href="#env"><span class="toc-icon">⚙️</span> 环境变量</a>
+      </div>
+
+      <!-- ==================== 1. 安装与导入 ==================== -->
+      <section class="cheatsheet-section" id="install">
+        <h2><span class="icon">📦</span> 安装与导入</h2>
+        <p>LangChain 采用模块化包结构，按需安装所需的功能包。核心包和各集成包相互独立。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>包名 / 操作</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>@langchain/core</code></td>
+              <td>核心抽象层：消息、工具、输出解析器等基础类型</td>
+              <td><code>npm install @langchain/core</code></td>
+            </tr>
+            <tr>
+              <td><code>@langchain/langgraph</code></td>
+              <td>Agent 运行时、状态图、检查点、Store 等</td>
+              <td><code>npm install @langchain/langgraph</code></td>
+            </tr>
+            <tr>
+              <td><code>@langchain/openai</code></td>
+              <td>OpenAI / Azure OpenAI 集成</td>
+              <td><code>npm install @langchain/openai</code></td>
+            </tr>
+            <tr>
+              <td><code>@langchain/anthropic</code></td>
+              <td>Anthropic Claude 集成</td>
+              <td><code>npm install @langchain/anthropic</code></td>
+            </tr>
+            <tr>
+              <td><code>@langchain/google-genai</code></td>
+              <td>Google Gemini 集成</td>
+              <td><code>npm install @langchain/google-genai</code></td>
+            </tr>
+            <tr>
+              <td><code>initChatModel</code> 导入</td>
+              <td>统一模型初始化工厂，支持多 provider</td>
+              <td><code>import { initChatModel } from "@langchain/langgraph"</code></td>
+            </tr>
+            <tr>
+              <td><code>createAgent</code> 导入</td>
+              <td>创建 Agent 的核心函数</td>
+              <td><code>import { createAgent } from "@langchain/langgraph"</code></td>
+            </tr>
+            <tr>
+              <td>消息类型导入</td>
+              <td>各类消息构造函数</td>
+              <td><code>import { SystemMessage, HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages"</code></td>
+            </tr>
+            <tr>
+              <td>工具定义导入</td>
+              <td>定义工具的 <code>tool()</code> 函数与 <code>z</code> 校验</td>
+              <td><code>import { tool } from "@langchain/core/tools"</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 2. Agent ==================== -->
+      <section class="cheatsheet-section" id="agent">
+        <h2><span class="icon">🤖</span> Agent</h2>
+        <p><code>createAgent</code> 是 LangChain v1.x 创建 Agent 的标准方式。Agent = Model + Harness，负责管理模型调用、工具选择和对话流程。</p>
+
+        <h3>createAgent 参数</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>参数</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>model</code></td>
+              <td>语言模型实例或模型标识字符串</td>
+              <td><code>model: "openai:gpt-4o"</code></td>
+            </tr>
+            <tr>
+              <td><code>tools</code></td>
+              <td>Agent 可调用的工具数组</td>
+              <td><code>tools: [searchTool, calculatorTool]</code></td>
+            </tr>
+            <tr>
+              <td><code>systemPrompt</code></td>
+              <td>系统提示词，定义 Agent 的角色和行为</td>
+              <td><code>systemPrompt: "你是一个天气助手"</code></td>
+            </tr>
+            <tr>
+              <td><code>checkpointer</code></td>
+              <td>检查点存储，用于持久化会话状态</td>
+              <td><code>checkpointer: new MemorySaver()</code></td>
+            </tr>
+            <tr>
+              <td><code>middleware</code></td>
+              <td>中间件数组，在模型调用前后执行逻辑</td>
+              <td><code>middleware: [summarizationMiddleware()]</code></td>
+            </tr>
+            <tr>
+              <td><code>responseFormat</code></td>
+              <td>结构化输出格式定义</td>
+              <td><code>responseFormat: z.object({ answer: z.string() })</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Agent 方法</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>方法</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>agent.invoke()</code></td>
+              <td>同步调用 Agent，等待完整响应后返回</td>
+              <td><code>const result = await agent.invoke({ messages: [new HumanMessage("你好")] })</code></td>
+            </tr>
+            <tr>
+              <td><code>agent.stream()</code></td>
+              <td>流式调用 Agent，逐步返回事件流</td>
+              <td><code>for await (const event of agent.stream(input, { streamMode: "updates" })) { ... }</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>快速创建示例</h3>
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">import { createAgent } from "@langchain/langgraph";
+import { MemorySaver } from "@langchain/langgraph";
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [myTool],
+  systemPrompt: "你是一个有用的助手",
+  checkpointer: new MemorySaver(),
+});
+
+// 调用
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "你好" }] },
+  { configurable: { thread_id: "session-1" } }
+);</code></pre></div>
+      </section>
+
+      <!-- ==================== 3. 模型 Models ==================== -->
+      <section class="cheatsheet-section" id="models">
+        <h2><span class="icon">🧠</span> 模型 Models</h2>
+        <p>LangChain 使用 <code>initChatModel</code> 统一初始化不同提供商的模型，也支持直接实例化具体模型类。</p>
+
+        <h3>初始化与调用</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>API / 函数</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>initChatModel()</code></td>
+              <td>统一工厂函数，通过字符串标识切换 provider</td>
+              <td><code>const model = await initChatModel("openai:gpt-4o")</code></td>
+            </tr>
+            <tr>
+              <td><code>model.invoke()</code></td>
+              <td>同步调用，发送消息数组并返回完整 AI 消息</td>
+              <td><code>const response = await model.invoke([new HumanMessage("你好")])</code></td>
+            </tr>
+            <tr>
+              <td><code>model.stream()</code></td>
+              <td>流式调用，返回 AsyncIterable 逐步生成 token</td>
+              <td><code>for await (const chunk of model.stream(messages)) { process.stdout.write(chunk.content) }</code></td>
+            </tr>
+            <tr>
+              <td><code>model.batch()</code></td>
+              <td>批量调用，一次发送多组消息并行处理</td>
+              <td><code>const results = await model.batch([[msg1], [msg2], [msg3]])</code></td>
+            </tr>
+            <tr>
+              <td><code>model.withConfig()</code></td>
+              <td>创建带有额外配置的新模型实例（不修改原实例）</td>
+              <td><code>const cold = model.withConfig({ temperature: 0 })</code></td>
+            </tr>
+            <tr>
+              <td><code>model.bindTools()</code></td>
+              <td>将工具绑定到模型，使其能够生成工具调用</td>
+              <td><code>const modelWithTools = model.bindTools([myTool])</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>常用模型参数</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>参数</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>temperature</code></td>
+              <td>输出随机性，0 = 确定性，1 = 更随机</td>
+              <td><code>temperature: 0.7</code></td>
+            </tr>
+            <tr>
+              <td><code>maxTokens</code></td>
+              <td>最大输出 token 数</td>
+              <td><code>maxTokens: 4096</code></td>
+            </tr>
+            <tr>
+              <td><code>timeout</code></td>
+              <td>请求超时时间（毫秒）</td>
+              <td><code>timeout: 30000</code></td>
+            </tr>
+            <tr>
+              <td><code>maxRetries</code></td>
+              <td>请求失败后最大重试次数</td>
+              <td><code>maxRetries: 3</code></td>
+            </tr>
+            <tr>
+              <td><code>apiKey</code></td>
+              <td>API 密钥（通常用环境变量，此为覆盖方式）</td>
+              <td><code>apiKey: "sk-..."</code></td>
+            </tr>
+            <tr>
+              <td><code>model</code></td>
+              <td>具体模型名称</td>
+              <td><code>model: "gpt-4o"</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 4. 消息 Messages ==================== -->
+      <section class="cheatsheet-section" id="messages">
+        <h2><span class="icon">💬</span> 消息 Messages</h2>
+        <p>消息是 Agent 与模型交互的基本单位。每条消息都有 <code>role</code>（角色）和 <code>content</code>（内容），不同类型的消息在对话中扮演不同角色。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>消息类型</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>SystemMessage</code></td>
+              <td>系统消息，定义 AI 的角色和行为规则，通常放在对话开头</td>
+              <td><code>new SystemMessage("你是一个翻译助手，只翻译不解释")</code></td>
+            </tr>
+            <tr>
+              <td><code>HumanMessage</code></td>
+              <td>用户消息，代表用户发送的输入内容</td>
+              <td><code>new HumanMessage("今天天气怎么样？")</code></td>
+            </tr>
+            <tr>
+              <td><code>AIMessage</code></td>
+              <td>AI 消息，代表模型生成的回复，可能包含工具调用</td>
+              <td><code>new AIMessage("今天天气晴朗，温度 25 度。")</code></td>
+            </tr>
+            <tr>
+              <td><code>ToolMessage</code></td>
+              <td>工具消息，包含工具执行的结果，需指定 <code>tool_call_id</code></td>
+              <td><code>new ToolMessage({ content: "晴天 25°C", tool_call_id: "call_123" })</code></td>
+            </tr>
+            <tr>
+              <td><code>message.content</code></td>
+              <td>消息的文本内容，可以是字符串或结构化内容块</td>
+              <td><code>const text = response.content // string | ContentBlock[]</code></td>
+            </tr>
+            <tr>
+              <td><code>message.tool_calls</code></td>
+              <td>AI 消息中的工具调用请求数组（AIMessage 特有）</td>
+              <td><code>aiMsg.tool_calls // [{ name: "search", args: { q: "..." }, id: "..." }]</code></td>
+            </tr>
+            <tr>
+              <td><code>role</code> 属性</td>
+              <td>消息角色标识符</td>
+              <td><code>message.role // "system" | "human" | "ai" | "tool"</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>快捷构造（对象形式）</h3>
+        <p>除了使用类构造函数外，也可以直接用对象字面量构建消息数组：</p>
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">const messages = [
+  { role: "system", content: "你是一个助手" },
+  { role: "user", content: "你好" },
+  { role: "assistant", content: "你好！有什么我能帮你的？" },
+  { role: "user", content: "今天天气如何？" },
+];</code></pre></div>
+      </section>
+
+      <!-- ==================== 5. 工具 Tools ==================== -->
+      <section class="cheatsheet-section" id="tools">
+        <h2><span class="icon">🔧</span> 工具 Tools</h2>
+        <p>工具让 Agent 能够执行具体操作。通过 <code>tool()</code> 函数定义工具，使用 Zod Schema 描述参数，Agent 会在需要时自动选择和调用合适的工具。</p>
+
+        <h3>tool() 函数</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>API / 参数</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>tool(fn, options)</code></td>
+              <td>定义一个工具，第一个参数是执行函数，第二个是配置</td>
+              <td><code>const myTool = tool(async (input) => ..., { name: "...", schema: z.object({...}) })</code></td>
+            </tr>
+            <tr>
+              <td><code>name</code></td>
+              <td>工具名称，模型通过此名称引用工具</td>
+              <td><code>name: "search_web"</code></td>
+            </tr>
+            <tr>
+              <td><code>description</code></td>
+              <td>工具功能描述，帮助模型决定何时使用此工具</td>
+              <td><code>description: "搜索互联网获取最新信息"</code></td>
+            </tr>
+            <tr>
+              <td><code>schema</code></td>
+              <td>Zod Schema，定义工具接受的输入参数及类型</td>
+              <td><code>schema: z.object({ query: z.string().describe("搜索关键词") })</code></td>
+            </tr>
+            <tr>
+              <td><code>returnDirect</code></td>
+              <td>设为 true 时，工具结果直接返回给用户，不经模型总结</td>
+              <td><code>returnDirect: true</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>runtime 上下文</h3>
+        <p>工具函数的第二个参数 <code>runtime</code> 提供了运行时上下文访问能力：</p>
+        <table>
+          <thead>
+            <tr>
+              <th>属性 / 方法</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>runtime.context</code></td>
+              <td>外部注入的上下文数据（如用户信息、配置等）</td>
+              <td><code>const userId = runtime.context.userId</code></td>
+            </tr>
+            <tr>
+              <td><code>runtime.store</code></td>
+              <td>持久化 KV 存储，跨会话保存数据</td>
+              <td><code>await runtime.store.put(["user", id], "prefs", data)</code></td>
+            </tr>
+            <tr>
+              <td><code>runtime.writer</code></td>
+              <td>流式写入器，工具执行过程中可实时推送中间结果</td>
+              <td><code>runtime.writer({ status: "正在搜索..." })</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>完整工具定义示例</h3>
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+const weatherTool = tool(
+  async ({ city }, runtime) => {
+    // 可通过 runtime 访问上下文和存储
+    const apiKey = runtime.context.weatherApiKey;
+    const response = await fetch(`/api/weather?city=${city}&key=${apiKey}`);
+    const data = await response.json();
+    return `${city}：${data.condition}，温度 ${data.temp}°C`;
+  },
+  {
+    name: "get_weather",
+    description: "查询指定城市的当前天气",
+    schema: z.object({
+      city: z.string().describe("城市名称，如 北京、上海"),
+    }),
+    returnDirect: false,
+  }
+);</code></pre></div>
+      </section>
+
+      <!-- ==================== 6. 流式传输 Streaming ==================== -->
+      <section class="cheatsheet-section" id="streaming">
+        <h2><span class="icon">📡</span> 流式传输 Streaming</h2>
+        <p>流式传输允许逐步接收 Agent 的输出，避免长时间等待。LangChain 支持多种 streamMode 和事件类型，适用于不同场景。</p>
+
+        <h3>streamMode 选项</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>streamMode 值</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>"updates"</code></td>
+              <td>节点级别的完整更新（默认），每个节点完成时发出</td>
+              <td><code>agent.stream(input, { streamMode: "updates" })</code></td>
+            </tr>
+            <tr>
+              <td><code>"messages"</code></td>
+              <td>Token 级流式输出，逐 token 推送 AI 回复</td>
+              <td><code>agent.stream(input, { streamMode: "messages" })</code></td>
+            </tr>
+            <tr>
+              <td><code>"events"</code></td>
+              <td>最细粒度事件流，包含所有内部事件</td>
+              <td><code>agent.stream(input, { streamMode: "events" })</code></td>
+            </tr>
+            <tr>
+              <td><code>"values"</code></td>
+              <td>每次更新返回完整的状态快照</td>
+              <td><code>agent.stream(input, { streamMode: "values" })</code></td>
+            </tr>
+            <tr>
+              <td>多模式组合</td>
+              <td>可同时使用多种模式</td>
+              <td><code>agent.stream(input, { streamMode: ["updates", "messages"] })</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>事件迭代模式</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>模式</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>for await 基础迭代</td>
+              <td>使用 for await...of 遍历事件流</td>
+              <td><code>for await (const event of stream) { console.log(event) }</code></td>
+            </tr>
+            <tr>
+              <td>Token 输出</td>
+              <td>messages 模式下逐 token 输出到终端</td>
+              <td><code>for await (const [msg, metadata] of stream) { if (msg.content) process.stdout.write(String(msg.content)) }</code></td>
+            </tr>
+            <tr>
+              <td>按节点过滤</td>
+              <td>在 updates 模式下按节点名过滤事件</td>
+              <td><code>for await (const event of stream) { if (event.agent) { /* agent 节点事件 */ } }</code></td>
+            </tr>
+            <tr>
+              <td>中断与消费</td>
+              <td>可随时 break 中断流消费</td>
+              <td><code>for await (const event of stream) { if (done) break; }</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 7. 结构化输出 ==================== -->
+      <section class="cheatsheet-section" id="structured">
+        <h2><span class="icon">📐</span> 结构化输出</h2>
+        <p>结构化输出让模型返回符合预定义 Schema 的 JSON 数据，而非自由文本。LangChain 提供两种策略：基于工具调用和基于 provider 原生能力。</p>
+
+        <h3>策略选择</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>策略</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>toolStrategy()</code></td>
+              <td>利用工具调用机制实现结构化输出，兼容所有模型（默认策略）</td>
+              <td><code>responseFormat: toolStrategy(mySchema)</code></td>
+            </tr>
+            <tr>
+              <td><code>providerStrategy()</code></td>
+              <td>使用 provider 原生结构化输出能力（如 OpenAI response_format），性能更优</td>
+              <td><code>responseFormat: providerStrategy(mySchema)</code></td>
+            </tr>
+            <tr>
+              <td><code>responseFormat</code> 参数</td>
+              <td>在 createAgent 中直接传入 Zod Schema，自动选择最佳策略</td>
+              <td><code>responseFormat: z.object({ sentiment: z.enum(["pos", "neg"]) })</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Zod Schema 基础</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Zod 类型</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>z.string()</code></td>
+              <td>字符串类型</td>
+              <td><code>z.string().describe("用户姓名")</code></td>
+            </tr>
+            <tr>
+              <td><code>z.number()</code></td>
+              <td>数值类型</td>
+              <td><code>z.number().min(0).max(100)</code></td>
+            </tr>
+            <tr>
+              <td><code>z.boolean()</code></td>
+              <td>布尔类型</td>
+              <td><code>z.boolean().default(false)</code></td>
+            </tr>
+            <tr>
+              <td><code>z.enum()</code></td>
+              <td>枚举类型，限定可选值</td>
+              <td><code>z.enum(["positive", "negative", "neutral"])</code></td>
+            </tr>
+            <tr>
+              <td><code>z.array()</code></td>
+              <td>数组类型</td>
+              <td><code>z.array(z.string())</code></td>
+            </tr>
+            <tr>
+              <td><code>z.object()</code></td>
+              <td>对象类型，组合多个字段</td>
+              <td><code>z.object({ name: z.string(), age: z.number() })</code></td>
+            </tr>
+            <tr>
+              <td><code>.describe()</code></td>
+              <td>为字段添加描述，帮助模型理解预期内容</td>
+              <td><code>z.string().describe("一段简短的情感分析总结")</code></td>
+            </tr>
+            <tr>
+              <td><code>.optional()</code></td>
+              <td>标记字段为可选</td>
+              <td><code>z.string().optional()</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>完整示例</h3>
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">import { z } from "zod";
+import { createAgent } from "@langchain/langgraph";
+
+const AnalysisSchema = z.object({
+  sentiment: z.enum(["positive", "negative", "neutral"]).describe("情感倾向"),
+  confidence: z.number().min(0).max(1).describe("置信度"),
+  summary: z.string().describe("一句话总结"),
+  keywords: z.array(z.string()).describe("关键词列表"),
+});
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [],
+  responseFormat: AnalysisSchema,
+});
+
+const result = await agent.invoke({
+  messages: [{ role: "user", content: "分析这段文本的情感..." }],
+});
+// result.structuredResponse 符合 AnalysisSchema 类型</code></pre></div>
+      </section>
+
+      <!-- ==================== 8. 中间件 Middleware ==================== -->
+      <section class="cheatsheet-section" id="middleware">
+        <h2><span class="icon">🔗</span> 中间件 Middleware</h2>
+        <p>中间件在模型调用前后插入自定义逻辑，常用于消息压缩、人机协作、日志记录等场景。多个中间件按数组顺序依次执行。</p>
+
+        <h3>内置中间件</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>中间件</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>summarizationMiddleware</code></td>
+              <td>当消息过长时自动压缩历史消息为摘要，避免超出上下文窗口</td>
+              <td><code>summarizationMiddleware({ maxTokens: 4000 })</code></td>
+            </tr>
+            <tr>
+              <td><code>humanInTheLoopMiddleware</code></td>
+              <td>在工具执行前暂停，等待人工审批后继续（需配合 checkpointer）</td>
+              <td><code>humanInTheLoopMiddleware({ tools: ["sensitive_tool"] })</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>自定义中间件模式</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>模式</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>beforeModel 钩子</td>
+              <td>在模型调用前执行，可修改消息列表</td>
+              <td><code>beforeModel: async (state) => { logMessages(state.messages); return state; }</code></td>
+            </tr>
+            <tr>
+              <td>afterModel 钩子</td>
+              <td>在模型响应后执行，可修改或过滤 AI 回复</td>
+              <td><code>afterModel: async (state) => { validateResponse(state.messages); return state; }</code></td>
+            </tr>
+            <tr>
+              <td>中间件注册</td>
+              <td>通过 createAgent 的 middleware 数组注册</td>
+              <td><code>createAgent({ model, tools, middleware: [myMiddleware] })</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>使用示例</h3>
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">import { createAgent } from "@langchain/langgraph";
+import {
+  summarizationMiddleware,
+  humanInTheLoopMiddleware,
+} from "@langchain/langgraph";
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [sensitiveTool, safeTool],
+  systemPrompt: "你是一个数据库助手",
+  checkpointer: new MemorySaver(),
+  middleware: [
+    summarizationMiddleware({ maxTokens: 4000 }),
+    humanInTheLoopMiddleware({
+      tools: ["sensitiveTool"],  // 仅对敏感工具暂停审批
+    }),
+  ],
+});</code></pre></div>
+      </section>
+
+      <!-- ==================== 9. 记忆 ==================== -->
+      <section class="cheatsheet-section" id="memory">
+        <h2><span class="icon">🧩</span> 记忆系统</h2>
+        <p>记忆系统让 Agent 能够跨多轮对话保持上下文。LangChain 通过 <code>checkpointer</code> 实现会话级别的状态持久化，通过 <code>Store</code> 实现跨会话的长期存储。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API / 概念</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>MemorySaver</code></td>
+              <td>内存检查点存储，适合开发调试，重启后数据丢失</td>
+              <td><code>import { MemorySaver } from "@langchain/langgraph"</code></td>
+            </tr>
+            <tr>
+              <td><code>checkpointer</code> 参数</td>
+              <td>传入 createAgent 启用会话持久化</td>
+              <td><code>createAgent({ ..., checkpointer: new MemorySaver() })</code></td>
+            </tr>
+            <tr>
+              <td><code>thread_id</code></td>
+              <td>会话线程 ID，不同 ID 对应独立的对话上下文</td>
+              <td><code>{ configurable: { thread_id: "user-123" } }</code></td>
+            </tr>
+            <tr>
+              <td><code>InMemoryStore</code></td>
+              <td>内存 KV 存储，用于跨会话持久化数据（如用户偏好）</td>
+              <td><code>import { InMemoryStore } from "@langchain/langgraph"</code></td>
+            </tr>
+            <tr>
+              <td><code>store.put()</code></td>
+              <td>在 Store 中写入数据</td>
+              <td><code>await store.put(["users", userId], "preferences", { lang: "zh" })</code></td>
+            </tr>
+            <tr>
+              <td><code>store.get()</code></td>
+              <td>从 Store 中读取数据</td>
+              <td><code>const prefs = await store.get(["users", userId], "preferences")</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>会话记忆示例</h3>
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">import { createAgent } from "@langchain/langgraph";
+import { MemorySaver } from "@langchain/langgraph";
+
+// 创建带记忆的 Agent
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [myTools],
+  checkpointer: new MemorySaver(),
+});
+
+// 第一轮对话
+await agent.invoke(
+  { messages: [{ role: "user", content: "我叫小明" }] },
+  { configurable: { thread_id: "session-1" } }
+);
+
+// 第二轮对话 —— Agent 记得"小明"
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "我叫什么名字？" }] },
+  { configurable: { thread_id: "session-1" } }  // 同一 thread_id
+);</code></pre></div>
+      </section>
+
+      <!-- ==================== 10. 环境变量 ==================== -->
+      <section class="cheatsheet-section" id="env">
+        <h2><span class="icon">⚙️</span> 环境变量</h2>
+        <p>LangChain 通过环境变量配置 API 密钥和调试选项。推荐使用 <code>.env</code> 文件配合 <code>dotenv</code> 包管理敏感信息。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>环境变量</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>OPENAI_API_KEY</code></td>
+              <td>OpenAI API 密钥，使用 GPT 系列模型时必需</td>
+              <td><code>OPENAI_API_KEY=sk-proj-xxxx</code></td>
+            </tr>
+            <tr>
+              <td><code>ANTHROPIC_API_KEY</code></td>
+              <td>Anthropic API 密钥，使用 Claude 系列模型时必需</td>
+              <td><code>ANTHROPIC_API_KEY=sk-ant-xxxx</code></td>
+            </tr>
+            <tr>
+              <td><code>GOOGLE_API_KEY</code></td>
+              <td>Google AI API 密钥，使用 Gemini 系列模型时必需</td>
+              <td><code>GOOGLE_API_KEY=AIzaSy-xxxx</code></td>
+            </tr>
+            <tr>
+              <td><code>LANGSMITH_TRACING</code></td>
+              <td>启用 LangSmith 调试追踪，设为 <code>"true"</code> 开启</td>
+              <td><code>LANGSMITH_TRACING=true</code></td>
+            </tr>
+            <tr>
+              <td><code>LANGSMITH_API_KEY</code></td>
+              <td>LangSmith 平台 API 密钥，用于追踪和调试</td>
+              <td><code>LANGSMITH_API_KEY=lsv2_pt-xxxx</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>.env 文件配置</h3>
+<div class="code-block"><div class="code-header"><span>.env</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-bash"># 模型 API 密钥（至少配置一个）
+OPENAI_API_KEY=sk-proj-your-key-here
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+
+# LangSmith 调试（可选但推荐）
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_pt-your-key-here</code></pre></div>
+
+<div class="code-block"><div class="code-header"><span>TypeScript</span><button class="copy-btn">📋 复制</button></div><pre><code class="language-typescript">// 在项目入口文件顶部加载 .env
+import "dotenv/config";
+// 之后 process.env.OPENAI_API_KEY 等即可使用</code></pre></div>
+      </section>
+
+      <!-- 小结 -->
+      <div class="chapter-summary">
+        <h2>📋 速查表使用建议</h2>
+        <ul>
+          <li><strong>按需查阅</strong> — 不必记住所有 API，需要时回来查即可</li>
+          <li><strong>复制即用</strong> — 所有示例代码均可直接复制到项目中使用</li>
+          <li><strong>结合章节</strong> — 对某个主题有疑问时，回到对应章节深入理解</li>
+          <li><strong>善用搜索</strong> — 使用浏览器 <code>Ctrl+F</code> 快速定位所需 API</li>
+        </ul>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Prism.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../script.js"></script>
+</body>
+</html>

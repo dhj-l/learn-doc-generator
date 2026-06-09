@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第6章 流式传输 Streaming - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch06">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html" class="active"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="05-tools.html" class="nav-link">← 第5章 工具 Tools</a>
+        <span class="chapter-progress">第6章 / 共10章</span>
+        <a href="07-structured-output.html" class="nav-link">第7章 结构化输出 →</a>
+      </div>
+
+      <h1>流式传输 Streaming — 实时响应</h1>
+      <p class="subtitle">让用户体验从"等待焦虑"变为"实时互动"，掌握 LangChain.js 中最强大的交互增强技术</p>
+
+      <span class="tag tag-intermediate">进阶</span>
+      <span style="margin-left: 8px; color: var(--text-muted); font-size: 0.85rem;">⏱️ 预计学习时间：约 1 小时</span>
+
+      <!-- ==================== 1. 本章目标 ==================== -->
+      <div class="objectives">
+        <div class="objectives-title">🎯 本章目标</div>
+        <ul>
+          <li>理解流式传输的核心概念，以及为什么它是构建优秀用户体验的关键技术</li>
+          <li>掌握 LangChain v1.3 推荐的事件流式传输（Event Streaming）API 及其类型投影机制</li>
+          <li>能够使用 <code>streamMode: "updates"</code> 实时观察 Agent 的推理和工具调用过程</li>
+          <li>能够使用 <code>streamMode: "messages"</code> 实现逐 Token 的流式文本输出</li>
+          <li>学会组合多种 streamMode，同时获取状态更新和 Token 流</li>
+          <li>掌握在工具函数中使用 <code>config.writer</code> 发射自定义流式进度信息</li>
+          <li>了解如何过滤和处理推理 Token（reasoning tokens）以及禁用流式传输的方法</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 2. 前置知识 ==================== -->
+      <h2 id="prerequisites">📚 前置知识</h2>
+      <div class="prerequisites">
+        <p>在学习本章之前，请确保你已经掌握以下内容：</p>
+        <ul>
+          <li><strong>第2章 Agent 基础</strong> — 了解 <code>createAgent</code> 的基本用法和 Agent 的工作流程</li>
+          <li><strong>第3章 模型 Models</strong> — 熟悉 ChatModel 的创建和配置方式</li>
+          <li><strong>第5章 工具 Tools</strong> — 掌握如何用 <code>tool()</code> 创建自定义工具函数</li>
+          <li><strong>JavaScript 异步编程</strong> — 熟悉 <code>async/await</code> 和 <code>for await...of</code> 循环语法</li>
+          <li><strong>生成器与迭代器</strong> — 了解 AsyncGenerator 的基本工作原理（可选但有帮助）</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 3. 为什么需要流式传输 ==================== -->
+      <h2 id="why-streaming">🤔 为什么需要流式传输</h2>
+
+      <p>想象你在餐厅点餐：如果厨师做完所有菜才一起端上来，你可能要饿等半小时。流式传输就像厨师做好一盘端一盘，你立刻就能开始享用。在 AI 应用的世界里，这个比喻再贴切不过了。</p>
+
+      <p>大语言模型（LLM）生成回复时，需要逐个 Token 进行预测和输出。一个完整的回复可能需要 3 到 15 秒才能生成完毕。如果没有流式传输，用户必须盯着空白屏幕等待全部内容生成完毕后才能看到任何东西——这种体验就是我们常说的"等待焦虑"。</p>
+
+      <h3>传统模式 vs 流式模式</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>对比维度</th>
+            <th>传统阻塞模式</th>
+            <th>流式传输模式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>首次响应时间</td>
+            <td>等待完整生成（3-15秒）</td>
+            <td>首个 Token 即刻显示（~200ms）</td>
+          </tr>
+          <tr>
+            <td>用户感知延迟</td>
+            <td>高，容易产生焦虑</td>
+            <td>低，交互感觉流畅自然</td>
+          </tr>
+          <tr>
+            <td>过程透明度</td>
+            <td>黑盒，用户不知道发生了什么</td>
+            <td>可实时展示 Agent 推理和工具调用过程</td>
+          </tr>
+          <tr>
+            <td>中断能力</td>
+            <td>无法中途取消</td>
+            <td>可随时中断生成过程</td>
+          </tr>
+          <tr>
+            <td>适用场景</td>
+            <td>后台任务、批量处理</td>
+            <td>聊天界面、实时助手、交互式应用</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout info">
+        <div class="callout-title">💡 核心理念</div>
+        流式传输不仅仅是"快"——它让用户能够<strong>实时感知</strong>系统的运行状态。当你看到 Agent 正在"思考"、正在"调用工具"、正在"组织语言"，你就知道系统正在为你工作，而不是卡住了。这种透明度是构建可信 AI 应用的基石。
+      </div>
+
+      <p>在 LangChain.js 中，流式传输是一个贯穿整个框架的核心特性。无论你使用的是简单的 ChatModel 对话，还是复杂的多步骤 Agent 工作流，都可以通过统一的 API 来获取实时数据流。LangChain v1.3 引入了全新的<strong>事件流式传输</strong>架构，让流式传输变得更加灵活和强大。</p>
+
+      <!-- ==================== 4. 事件流式传输 ==================== -->
+      <h2 id="event-streaming">📡 事件流式传输（Event Streaming）</h2>
+
+      <p>在 LangChain.js v1.3 中，推荐的流式传输方式是<strong>事件流式传输（Event Streaming）</strong>。这是一种基于 <code>AsyncGenerator</code> 的架构，能够以类型安全的方式实时获取 Agent 运行过程中的各种事件。</p>
+
+      <h3>核心 API 概览</h3>
+
+      <p>事件流式传输的核心方法是 <code>agent.stream()</code>，它返回一个异步生成器（AsyncGenerator），你可以用 <code>for await...of</code> 循环逐个处理事件。每个事件都有明确的类型信息，这就是所谓的<strong>类型投影（Typed Projection）</strong>。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain";
+
+// 创建 Agent（与前面章节相同）
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [weatherTool, calculatorTool],
+});
+
+// 使用 stream() 方法获取事件流
+// 返回值是 AsyncGenerator，每个元素都是一个带类型的事件对象
+const eventStream = agent.stream(
+  { messages: [{ role: "user", content: "今天北京天气怎么样？" }] },
+  { streamMode: "updates" }  // 指定流模式为 "updates"
+);
+
+// 用 for await...of 逐个处理事件
+for await (const event of eventStream) {
+  // 每个 event 都包含类型标记和对应的数据
+  console.log("事件类型:", Object.keys(event));
+  console.log("事件数据:", event);
+}</code></pre>
+      </div>
+
+      <h3>类型投影机制</h3>
+
+      <p>LangChain.js 的事件流式传输采用了<strong>类型投影</strong>设计。这意味着当你指定 <code>streamMode</code> 时，返回的事件类型会被精确映射到对应的 TypeScript 类型。例如，当你使用 <code>"updates"</code> 模式时，每个事件都对应 Agent 执行过程中的一个状态更新快照。使用 <code>"messages"</code> 模式时，事件则对应 LLM 输出的单个 Token。这种设计让你在编写代码时就能获得完善的类型检查和 IDE 自动补全支持，大幅提升了开发效率和代码安全性。</p>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 与旧版 API 的区别</div>
+        在 LangChain 早期版本中，流式传输主要通过 <code>callbacks</code> 回调实现（如 <code>handleLLMNewToken</code>）。v1.3 的事件流式传输是全新的推荐方式，它更直观、类型更安全、组合性更强。如果你在旧教程中看到基于回调的流式传输代码，建议迁移到新的事件流式传输 API。
+      </div>
+
+      <!-- ==================== 5. Stream Modes 详解 ==================== -->
+      <h2 id="stream-modes">🔧 Stream Modes 详解</h2>
+
+      <p>LangChain.js 的流式传输支持多种模式（stream modes），每种模式专注于不同类型的数据流。你可以单独使用某一种模式，也可以同时组合多种模式来获取丰富的实时信息。下面我们逐一详细介绍。</p>
+
+      <h3 id="mode-updates">5.1 <code>updates</code> — 状态更新流</h3>
+
+      <p>当设置 <code>streamMode: "updates"</code> 时，Agent 每完成一个执行步骤后都会发射一个事件。这些事件构成了一条<strong>状态更新流</strong>，让你能够实时跟踪 Agent 的推理过程、工具调用情况和中间结果。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// updates 模式：Agent 每步完成后发射事件
+const stream = agent.stream(
+  { messages: [{ role: "user", content: "计算 (15 + 27) * 3 的结果" }] },
+  { streamMode: "updates" }
+);
+
+for await (const event of stream) {
+  // event 的结构示例：
+  // 当 LLM 生成回复时：{ agent: { messages: [...] } }
+  // 当工具被调用时：  { tools: { messages: [...] } }
+  // 当 Agent 结束时：  { agent: { messages: [...], returnValues: {...} } }
+
+  if (event.agent) {
+    console.log("[Agent] LLM 生成了新的消息");
+    // 查看是否有工具调用
+    const lastMsg = event.agent.messages[event.agent.messages.length - 1];
+    if (lastMsg.tool_calls && lastMsg.tool_calls.length > 0) {
+      console.log("[Agent] 决定调用工具:", lastMsg.tool_calls.map(tc => tc.name));
+    }
+  }
+
+  if (event.tools) {
+    console.log("[Tools] 工具执行完毕，返回结果");
+    const toolMsg = event.tools.messages[event.tools.messages.length - 1];
+    console.log("[Tools] 工具返回:", toolMsg.content);
+  }
+}</code></pre>
+      </div>
+
+      <p><code>updates</code> 模式非常适合用来在界面上显示 Agent 的工作进度。例如，你可以在用户界面中展示"正在思考..."、"正在查询天气工具..."、"正在整理回复..."等状态信息，让用户清楚地知道 Agent 正在做什么。</p>
+
+      <h3 id="mode-messages">5.2 <code>messages</code> — Token 流</h3>
+
+      <p>当设置 <code>streamMode: "messages"</code> 时，你会收到 LLM 实时输出的每一个 Token。这是实现<strong>打字机效果</strong>的标准方式——文字一个一个地出现在屏幕上，就像 Agent 正在实时打字一样。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// messages 模式：逐 Token 流式输出
+const stream = agent.stream(
+  { messages: [{ role: "user", content: "用一段话介绍什么是量子计算" }] },
+  { streamMode: "messages" }
+);
+
+let fullResponse = "";
+
+for await (const [messageChunk, metadata] of stream) {
+  // messages 模式的每个事件是一个元组 [messageChunk, metadata]
+  // messageChunk: LLM 输出的 Token 片段
+  // metadata: 包含消息来源等附加信息
+
+  if (messageChunk.content) {
+    const token = typeof messageChunk.content === "string"
+      ? messageChunk.content
+      : "";
+
+    // 实时输出每个 Token（模拟终端打字效果）
+    process.stdout.write(token);
+    fullResponse += token;
+  }
+}
+
+console.log("\n\n完整回复:", fullResponse);</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">📌 关于元组结构</div>
+        <code>messages</code> 模式返回的每个事件是一个<strong>二元组</strong>（tuple），第一个元素是消息片段（AIMessageChunk），第二个元素是元数据对象（包含 <code>langgraph_node</code> 等运行时信息）。这种设计让你不仅能看到 Token 内容，还能知道这个 Token 是由哪个节点产生的。
+      </div>
+
+      <h3 id="mode-custom">5.3 <code>custom</code> — 自定义数据流</h3>
+
+      <p><code>streamMode: "custom"</code> 允许你在工具函数或 Agent 节点中发射任意自定义数据。这对于展示工具执行的中间进度特别有用。例如，你的工具可能需要处理大量数据，你可以通过自定义流来报告处理进度百分比。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "langchain";
+import { z } from "zod";
+
+// 在工具中使用 config.writer 发射自定义数据
+const dataAnalysisTool = tool(
+  async (input, config) => {
+    // 从 config 中获取 writer 函数
+    const writer = config.writer;
+
+    // 发射自定义进度信息
+    writer?.({ step: "开始", progress: 0, message: "正在获取数据..." });
+
+    // 模拟数据处理步骤
+    const data = await fetchLargeDataset(input.query);
+
+    writer?.({ step: "分析中", progress: 30, message: "数据获取完成，开始分析..." });
+
+    const analysis = analyzeData(data);
+
+    writer?.({ step: "分析中", progress: 70, message: "分析完成，正在生成报告..." });
+
+    const report = generateReport(analysis);
+
+    writer?.({ step: "完成", progress: 100, message: "报告生成完毕！" });
+
+    return report;
+  },
+  {
+    name: "data_analysis",
+    description: "分析数据并生成报告",
+    schema: z.object({
+      query: z.string().describe("查询条件"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3 id="multi-mode">5.4 多模式组合</h3>
+
+      <p>你可以将多种流模式组合在一起使用，同时获取不同类型的数据流。只需将 <code>streamMode</code> 设置为一个数组即可。这是构建丰富实时界面的推荐做法。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 同时使用 updates 和 messages 两种模式
+const stream = agent.stream(
+  { messages: [{ role: "user", content: "帮我分析一下特斯拉股票" }] },
+  {
+    streamMode: ["updates", "messages", "custom"],
+    // 三种模式同时启用：
+    // - "updates"  : 获取 Agent 步骤级状态更新
+    // - "messages" : 获取逐 Token 输出
+    // - "custom"   : 获取工具发出的自定义进度数据
+  }
+);
+
+for await (const event of stream) {
+  // 使用事件上的 streamMode 属性来区分事件类型
+  switch (event.streamMode) {
+    case "updates":
+      console.log("[状态更新]", Object.keys(event.data));
+      break;
+
+    case "messages":
+      const [chunk] = event.data;
+      if (typeof chunk.content === "string") {
+        process.stdout.write(chunk.content);
+      }
+      break;
+
+    case "custom":
+      console.log("[自定义]", event.data);
+      break;
+  }
+}</code></pre>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Stream Mode</th>
+            <th>触发时机</th>
+            <th>事件内容</th>
+            <th>典型用途</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>"updates"</code></td>
+            <td>Agent 每步完成后</td>
+            <td>包含 messages 的状态快照</td>
+            <td>展示 Agent 推理过程、工具调用进度</td>
+          </tr>
+          <tr>
+            <td><code>"messages"</code></td>
+            <td>LLM 每输出一个 Token</td>
+            <td>[AIMessageChunk, metadata] 元组</td>
+            <td>打字机效果、实时文本显示</td>
+          </tr>
+          <tr>
+            <td><code>"custom"</code></td>
+            <td>工具中调用 writer() 时</td>
+            <td>任意自定义数据对象</td>
+            <td>工具执行进度、中间计算结果</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ==================== 6. 实战：流式输出 Agent 进度 ==================== -->
+      <h2 id="practice-updates">🛠️ 实战：流式输出 Agent 进度</h2>
+
+      <p>让我们通过一个完整的实战案例来演示如何使用 <code>updates</code> 模式实时追踪 Agent 的工作流程。我们将构建一个可以查询天气和执行数学运算的 Agent，并在终端中实时展示它的推理和工具调用过程。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain";
+import { tool } from "langchain";
+import { z } from "zod";
+
+// ===========================================
+// 第一步：定义工具
+// ===========================================
+
+// 天气查询工具
+const weatherTool = tool(
+  async ({ city }) => {
+    // 模拟天气 API 调用
+    const weatherData: Record&lt;string, { temp: number; desc: string }&gt; = {
+      "北京": { temp: 28, desc: "晴" },
+      "上海": { temp: 32, desc: "多云" },
+      "广州": { temp: 35, desc: "雷阵雨" },
+    };
+
+    const result = weatherData[city];
+    if (result) {
+      return `${city}当前天气：${result.desc}，气温 ${result.temp}°C`;
+    }
+    return `暂无 ${city} 的天气数据`;
+  },
+  {
+    name: "get_weather",
+    description: "查询指定城市的当前天气信息",
+    schema: z.object({
+      city: z.string().describe("城市名称，如 北京、上海"),
+    }),
+  }
+);
+
+// 数学计算工具
+const calculatorTool = tool(
+  async ({ expression }) => {
+    // 安全的数学表达式计算（仅允许数字和基本运算符）
+    const sanitized = expression.replace(/[^0-9+\-*/().]/g, "");
+    try {
+      const result = Function(`"use strict"; return (${sanitized})`)();
+      return `计算结果：${expression} = ${result}`;
+    } catch {
+      return `计算错误：无法解析表达式 "${expression}"`;
+    }
+  },
+  {
+    name: "calculator",
+    description: "执行数学计算，支持加减乘除和括号",
+    schema: z.object({
+      expression: z.string().describe("数学表达式，如 (15 + 27) * 3"),
+    }),
+  }
+);
+
+// ===========================================
+// 第二步：创建 Agent 并启用流式传输
+// ===========================================
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [weatherTool, calculatorTool],
+});
+
+async function runWithProgress() {
+  console.log("🤖 Agent 开始工作...\n");
+
+  // 使用 updates 模式获取 Agent 的每步状态
+  const stream = agent.stream(
+    {
+      messages: [
+        { role: "user", content: "北京今天天气怎么样？如果气温乘以2是多少度？" },
+      ],
+    },
+    { streamMode: "updates" }
+  );
+
+  let stepCount = 0;
+
+  for await (const event of stream) {
+    stepCount++;
+
+    if (event.agent) {
+      // ---- Agent 节点事件：LLM 进行推理 ----
+      const messages = event.agent.messages;
+      const lastMessage = messages[messages.length - 1];
+
+      console.log(`📝 步骤 ${stepCount} [Agent - LLM 推理]`);
+
+      // 检查 LLM 是否决定调用工具
+      if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+        for (const tc of lastMessage.tool_calls) {
+          console.log(`   🔧 决定调用工具: ${tc.name}`);
+          console.log(`   📋 参数: ${JSON.stringify(tc.args)}`);
+        }
+      } else if (lastMessage.content) {
+        // LLM 生成了最终文本回复
+        console.log(`   💬 回复: ${lastMessage.content}`);
+      }
+    }
+
+    if (event.tools) {
+      // ---- Tools 节点事件：工具执行完毕 ----
+      const messages = event.tools.messages;
+      const toolResult = messages[messages.length - 1];
+
+      console.log(`📝 步骤 ${stepCount} [工具执行完毕]`);
+      console.log(`   ✅ 结果: ${toolResult.content}`);
+    }
+
+    console.log("   " + "─".repeat(50));
+  }
+
+  console.log(`\n✅ Agent 完成任务！共执行了 ${stepCount} 个步骤。`);
+}
+
+runWithProgress();</code></pre>
+      </div>
+
+      <div class="code-output">🤖 Agent 开始工作...
+
+📝 步骤 1 [Agent - LLM 推理]
+   🔧 决定调用工具: get_weather
+   📋 参数: {"city":"北京"}
+   ──────────────────────────────────────────────────
+📝 步骤 2 [工具执行完毕]
+   ✅ 结果: 北京当前天气：晴，气温 28°C
+   ──────────────────────────────────────────────────
+📝 步骤 3 [Agent - LLM 推理]
+   🔧 决定调用工具: calculator
+   📋 参数: {"expression":"28 * 2"}
+   ──────────────────────────────────────────────────
+📝 步骤 4 [工具执行完毕]
+   ✅ 结果: 计算结果：28 * 2 = 56
+   ──────────────────────────────────────────────────
+📝 步骤 5 [Agent - LLM 推理]
+   💬 回复: 北京今天天气晴朗，气温28°C。如果气温乘以2，就是56度。
+   ──────────────────────────────────────────────────
+
+✅ Agent 完成任务！共执行了 5 个步骤。</div>
+
+      <p>从输出中可以清楚地看到 Agent 的完整推理链路：LLM 先决定查天气 → 天气工具返回结果 → LLM 再决定算乘法 → 计算器返回结果 → LLM 综合生成最终回复。整个过程就像看一位助手在你面前一步步操作，完全透明。</p>
+
+      <!-- ==================== 7. 实战：实时 Token 流式传输 ==================== -->
+      <h2 id="practice-tokens">⚡ 实战：实时 Token 流式传输</h2>
+
+      <p>接下来，我们使用 <code>messages</code> 模式来实现逐 Token 的流式输出。这种方式在 Web 应用中特别有价值——你可以将 Token 通过 WebSocket 或 Server-Sent Events 实时推送到前端，实现 ChatGPT 般的打字机效果。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain";
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [],  // 纯聊天场景，不需要工具
+});
+
+async function streamTokens() {
+  console.log("🤖 正在生成回复...\n");
+
+  // 使用 messages 模式获取逐 Token 输出
+  const stream = agent.stream(
+    {
+      messages: [
+        {
+          role: "user",
+          content: "用三句话解释什么是机器学习，语言要通俗易懂",
+        },
+      ],
+    },
+    { streamMode: "messages" }
+  );
+
+  // 收集完整回复以统计信息
+  let fullText = "";
+  let tokenCount = 0;
+  const startTime = Date.now();
+
+  for await (const [messageChunk, metadata] of stream) {
+    // messageChunk 是 AIMessageChunk 对象
+    // metadata 包含 langgraph_node 等运行时信息
+
+    // 只处理文本内容，过滤掉工具调用等非文本内容
+    if (messageChunk.content && typeof messageChunk.content === "string") {
+      const token = messageChunk.content;
+
+      // 实时输出到终端（不换行，模拟打字效果）
+      process.stdout.write(token);
+
+      fullText += token;
+      tokenCount++;
+    }
+  }
+
+  const elapsed = Date.now() - startTime;
+  const tokensPerSecond = ((tokenCount / elapsed) * 1000).toFixed(1);
+
+  console.log("\n\n--- 生成统计 ---");
+  console.log(`总 Token 数: ${tokenCount}`);
+  console.log(`总耗时: ${elapsed}ms`);
+  console.log(`生成速度: ${tokensPerSecond} tokens/s`);
+}
+
+streamTokens();</code></pre>
+      </div>
+
+      <div class="code-output">🤖 正在生成回复...
+
+机器学习就像是教小孩认东西——你给电脑看成千上万张猫和狗的照片，它自己就能学会区分两者。它的核心是让机器从大量数据中找到规律，而不需要人类一步步编写具体的规则。当你在网上看到的推荐视频、手机上的人脸解锁，背后都是机器学习在发挥作用。
+
+--- 生成统计 ---
+总 Token 数: 87
+总耗时: 2840ms
+生成速度: 30.6 tokens/s</div>
+
+      <h3>在 Web 应用中使用 Token 流</h3>
+
+      <p>在实际的 Web 应用中，你通常会将 Token 流通过 HTTP 响应流发送给前端。以下是一个使用 Express 框架的示例：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import express from "express";
+import { createAgent } from "langchain";
+
+const app = express();
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [/* 你的工具列表 */],
+});
+
+// SSE（Server-Sent Events）流式端点
+app.post("/api/chat", async (req, res) => {
+  const { message } = req.body;
+
+  // 设置 SSE 响应头
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const stream = agent.stream(
+    { messages: [{ role: "user", content: message }] },
+    { streamMode: "messages" }
+  );
+
+  try {
+    for await (const [chunk, metadata] of stream) {
+      if (chunk.content && typeof chunk.content === "string") {
+        // 以 SSE 格式发送每个 Token
+        res.write(`data: ${JSON.stringify({ token: chunk.content })}\n\n`);
+      }
+    }
+    // 发送完成信号
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+  } catch (error) {
+    res.write(`data: ${JSON.stringify({ error: "生成失败" })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
+app.listen(3000, () => {
+  console.log("流式 API 服务运行在 http://localhost:3000");
+});</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 注意事项</div>
+        <p>在使用 SSE 或 WebSocket 发送 Token 流时，需要注意以下几点：</p>
+        <ul>
+          <li>确保在客户端断开连接时正确终止流，避免资源泄漏</li>
+          <li>对 Token 内容进行 JSON 序列化以处理特殊字符（如引号、换行符）</li>
+          <li>考虑添加超时机制，防止长时间无响应的请求占用服务器资源</li>
+          <li>在生产环境中建议添加速率限制和并发控制</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 8. 自定义流式更新 ==================== -->
+      <h2 id="custom-streaming">🎨 自定义流式更新</h2>
+
+      <p>有时候你需要在工具执行过程中向用户报告进度信息。例如，一个搜索工具可能需要几秒钟来查询数据库，或者一个文件处理工具需要逐块读取和分析文件。通过 <code>config.writer</code>，你可以在工具函数内部发射任意自定义数据，前端可以接收这些数据并展示进度条、状态消息等。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain";
+import { tool } from "langchain";
+import { z } from "zod";
+
+// ===========================================
+// 带进度报告的文件分析工具
+// ===========================================
+
+const fileAnalysisTool = tool(
+  async ({ filePath }, config) => {
+    // 从 config 中获取 writer 函数
+    // writer 会将数据发射到 "custom" 类型的流事件中
+    const writer = config?.writer;
+
+    // 第 1 步：读取文件
+    writer?.({
+      stage: "reading",
+      progress: 10,
+      message: `正在读取文件: ${filePath}`,
+    });
+    const content = await readFile(filePath);
+
+    // 第 2 步：分析字数
+    writer?.({
+      stage: "analyzing",
+      progress: 40,
+      message: "正在统计字数和段落...",
+    });
+    const wordCount = content.split(/\s+/).length;
+    const paragraphCount = content.split(/\n\n+/).length;
+
+    // 第 3 步：提取关键词
+    writer?.({
+      stage: "extracting",
+      progress: 70,
+      message: "正在提取关键词...",
+    });
+    const keywords = extractKeywords(content);
+
+    // 第 4 步：生成摘要
+    writer?.({
+      stage: "summarizing",
+      progress: 90,
+      message: "正在生成摘要...",
+    });
+    const summary = generateSummary(content);
+
+    // 完成
+    writer?.({
+      stage: "complete",
+      progress: 100,
+      message: "分析完成！",
+    });
+
+    return JSON.stringify({
+      wordCount,
+      paragraphCount,
+      keywords,
+      summary,
+    });
+  },
+  {
+    name: "analyze_file",
+    description: "分析文件内容，统计字数、提取关键词并生成摘要",
+    schema: z.object({
+      filePath: z.string().describe("要分析的文件路径"),
+    }),
+  }
+);
+
+// ===========================================
+// 消费自定义流式数据
+// ===========================================
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [fileAnalysisTool],
+});
+
+async function analyzeWithProgress() {
+  const stream = agent.stream(
+    {
+      messages: [
+        { role: "user", content: "帮我分析 report.txt 文件的内容" },
+      ],
+    },
+    { streamMode: ["updates", "custom"] }  // 同时获取更新和自定义数据
+  );
+
+  for await (const event of stream) {
+    // 处理自定义进度数据
+    if (event.streamMode === "custom") {
+      const { stage, progress, message } = event.data;
+      // 在终端中渲染进度条
+      const bar = "█".repeat(Math.floor(progress / 5)) +
+                  "░".repeat(20 - Math.floor(progress / 5));
+      process.stdout.write(`\r[${bar}] ${progress}% ${message}`);
+    }
+
+    // 处理状态更新
+    if (event.streamMode === "updates" && event.data.agent) {
+      console.log(""); // 换行
+      console.log("[Agent] 收到分析结果，正在组织回复...");
+    }
+  }
+
+  console.log("\n✅ 分析完成！");
+}
+
+analyzeWithProgress();</code></pre>
+      </div>
+
+      <div class="code-output">[██░░░░░░░░░░░░░░░░░░] 10% 正在读取文件: report.txt
+[████████░░░░░░░░░░░░] 40% 正在统计字数和段落...
+[█████████████░░░░░░░] 70% 正在提取关键词...
+[█████████████████░░░] 90% 正在生成摘要...
+[Agent] 收到分析结果，正在组织回复...
+[████████████████████] 100% 分析完成！
+✅ 分析完成！</div>
+
+      <p>通过 <code>config.writer</code> 发射的自定义数据会以 <code>streamMode === "custom"</code> 的形式出现在事件流中。你可以用它来报告任何你想要的中间状态——进度百分比、正在处理的文件名、数据库查询的中间结果等等。这为构建具有丰富反馈的应用打开了无限可能。</p>
+
+      <!-- ==================== 9. 推理 Token 流式传输 ==================== -->
+      <h2 id="reasoning-tokens">🧠 推理 Token 流式传输</h2>
+
+      <p>部分模型（如 OpenAI o1、DeepSeek-R1 等）支持<strong>推理 Token（Reasoning Tokens）</strong>。这些 Token 是模型在生成最终回复之前进行"思考"的过程记录，通常以 <code>contentBlocks</code> 的形式出现在流中，类型标记为 <code>"reasoning"</code>。</p>
+
+      <p>在 <code>messages</code> 模式下，你可以通过过滤 <code>contentBlocks</code> 来单独提取推理过程，或者将其展示给用户以增强透明度。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain";
+
+// 使用支持推理的模型
+const agent = createAgent({
+  model: "openai:o3-mini",  // 支持推理 Token 的模型
+  tools: [],
+});
+
+async function streamWithReasoning() {
+  const stream = agent.stream(
+    {
+      messages: [
+        { role: "user", content: "一个水池有两个水管，A管每小时注入3升，B管每小时排出1升。水池容量是20升，从空池开始，多久能注满？" },
+      ],
+    },
+    { streamMode: "messages" }
+  );
+
+  let isReasoning = false;
+  let isFinalAnswer = false;
+  let reasoningText = "";
+  let answerText = "";
+
+  for await (const [chunk, metadata] of stream) {
+    if (typeof chunk.content === "string") {
+      // 普通文本 Token（最终回复部分）
+      if (!isFinalAnswer) {
+        console.log("\n📝 模型回复：");
+        isFinalAnswer = true;
+      }
+      process.stdout.write(chunk.content);
+      answerText += chunk.content;
+    }
+
+    // 检查 contentBlocks 中是否有推理类型的内容
+    // 某些模型的推理 Token 会以特殊块的形式出现
+    if (Array.isArray(chunk.content)) {
+      for (const block of chunk.content) {
+        if (block.type === "reasoning") {
+          if (!isReasoning) {
+            console.log("🧠 模型推理过程：");
+            isReasoning = true;
+          }
+          // 输出推理 Token
+          if (block.text) {
+            process.stdout.write(block.text);
+            reasoningText += block.text;
+          }
+        }
+      }
+    }
+  }
+
+  console.log("\n\n--- 统计 ---");
+  console.log(`推理部分长度: ${reasoningText.length} 字符`);
+  console.log(`回复部分长度: ${answerText.length} 字符`);
+}
+
+streamWithReasoning();</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">📌 推理 Token 的显示策略</div>
+        <p>关于是否向用户展示推理 Token，取决于你的应用场景：</p>
+        <ul>
+          <li><strong>教育/编程辅助场景</strong>：推荐展示推理过程，帮助用户理解模型的思考方式</li>
+          <li><strong>客服/对话场景</strong>：通常隐藏推理过程，只展示最终回复，保持界面简洁</li>
+          <li><strong>调试/开发场景</strong>：推荐展示，有助于发现和修复模型行为异常</li>
+        </ul>
+        <p>无论哪种场景，你都可以通过过滤 <code>contentBlocks</code> 来灵活控制显示内容。</p>
+      </div>
+
+      <!-- ==================== 10. 禁用流式传输 ==================== -->
+      <h2 id="disable-streaming">🚫 禁用流式传输</h2>
+
+      <p>虽然流式传输通常是推荐的做法，但在某些场景下你可能需要禁用它。例如，在后台批处理任务中，你不需要实时输出；在单元测试中，你可能希望获得完整的确定性结果。LangChain.js 提供了简洁的方式来禁用流式传输。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain";
+
+const agent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [/* 工具列表 */],
+});
+
+// 方式一：在调用时禁用流式传输
+// 使用 invoke() 方法代替 stream()，直接获取完整结果
+const result = await agent.invoke({
+  messages: [{ role: "user", content: "你好" }],
+});
+// result 包含完整的最终状态，没有任何流式事件
+
+// 方式二：通过配置参数禁用
+const stream = agent.stream(
+  { messages: [{ role: "user", content: "你好" }] },
+  {
+    streamMode: "updates",
+    // 在特定模型节点上禁用流式传输
+    // 这在某些不支持流式 API 的模型提供商中很有用
+  }
+);
+
+// 方式三：在创建 Agent 时全局禁用
+const batchAgent = createAgent({
+  model: "openai:gpt-4o",
+  tools: [],
+  // 全局配置：禁用流式传输
+  // 适用于纯后台批处理场景
+});
+
+// 使用 invoke() 获取完整结果（推荐的非流式调用方式）
+const batchResult = await batchAgent.invoke({
+  messages: [{ role: "user", content: "总结以下文本..." }],
+});
+console.log("完整结果:", batchResult);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 何时禁用流式传输</div>
+        <ul>
+          <li><strong>后台批处理</strong>：批量处理大量请求时，不需要实时输出</li>
+          <li><strong>单元测试</strong>：测试时通常需要完整的确定性结果</li>
+          <li><strong>不支持流式的 API</strong>：某些第三方模型提供商可能不支持流式 API</li>
+          <li><strong>服务器资源有限</strong>：流式连接会占用更多并发资源，在资源受限时可考虑禁用</li>
+          <li><strong>简单的内部工具</strong>：不需要用户界面的内部自动化脚本</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 11. 知识检查点 ==================== -->
+      <h2 id="quiz">🧠 知识检查点</h2>
+
+      <p>通过以下问题检验你对本章内容的掌握程度。点击"显示答案"查看参考解答。</p>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">问题 1：在 LangChain.js v1.3 中，推荐的流式传输 API 是什么？它与旧版基于 callbacks 的方式有什么区别？</div>
+          <button class="reveal-btn" onclick="toggleAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p>推荐使用<strong>事件流式传输（Event Streaming）</strong>API，即 <code>agent.stream()</code> 方法配合 <code>streamMode</code> 参数。与旧版 callbacks 方式的主要区别：</p>
+            <ul>
+              <li><strong>更直观</strong>：使用 <code>for await...of</code> 循环遍历事件，代码逻辑清晰</li>
+              <li><strong>类型安全</strong>：通过类型投影（Typed Projection）机制，根据 streamMode 返回精确的类型</li>
+              <li><strong>组合性强</strong>：可以同时组合多种 streamMode，如 <code>["updates", "messages"]</code></li>
+              <li><strong>无需手动注册回调</strong>：不需要在创建时传入复杂的 callbacks 对象</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">问题 2：<code>streamMode: "updates"</code> 和 <code>streamMode: "messages"</code> 的核心区别是什么？分别适用于什么场景？</div>
+          <button class="reveal-btn" onclick="toggleAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p><strong><code>"updates"</code></strong>：以 Agent 的执行步骤为粒度发射事件。Agent 每完成一个完整步骤（如 LLM 推理一步、执行一次工具调用）后，发射一个包含完整状态快照的事件。适用于<strong>展示 Agent 工作流程</strong>，如显示正在调用哪个工具、工具返回了什么结果等。</p>
+            <p><strong><code>"messages"</code></strong>：以 Token 为粒度发射事件。LLM 每输出一个 Token，就立即发射一个事件，事件内容是 [AIMessageChunk, metadata] 元组。适用于<strong>实时文本输出</strong>（打字机效果），常见于聊天界面。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">问题 3：如何在工具函数中发射自定义的流式进度数据？需要使用哪个 API？</div>
+          <button class="reveal-btn" onclick="toggleAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p>在工具函数中，通过 <code>config.writer</code> 发射自定义数据。具体步骤：</p>
+            <ol>
+              <li>工具函数的第二个参数 <code>config</code> 中包含 <code>writer</code> 函数</li>
+              <li>在工具执行过程中调用 <code>writer(data)</code> 发射任意数据</li>
+              <li>消费端在 <code>streamMode</code> 中包含 <code>"custom"</code></li>
+              <li>自定义数据会以 <code>event.streamMode === "custom"</code> 的形式出现在事件流中</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">问题 4：如何同时获取 Agent 的状态更新（updates）和 Token 流（messages）？</div>
+          <button class="reveal-btn" onclick="toggleAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p>将 <code>streamMode</code> 设置为包含多个模式的数组：</p>
+            <pre><code class="language-typescript">const stream = agent.stream(
+  { messages: [...input] },
+  { streamMode: ["updates", "messages", "custom"] }
+);</code></pre>
+            <p>然后在 <code>for await</code> 循环中通过 <code>event.streamMode</code> 属性来区分不同类型的事件，分别进行处理。这种方式可以让你同时展示 Agent 的工作进度和实时文本输出。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 12. 常见错误 ==================== -->
+      <h2 id="errors">🐛 常见错误</h2>
+
+      <h3>错误 1：混淆 <code>invoke()</code> 和 <code>stream()</code> 的返回值</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：把 stream() 的返回值当成普通对象使用
+const result = agent.stream(
+  { messages: [{ role: "user", content: "你好" }] },
+  { streamMode: "updates" }
+);
+// result 是一个 AsyncGenerator，不是结果对象！
+console.log(result.messages); // ❌ undefined — 没有 messages 属性
+
+// ✅ 正确：使用 for await 循环遍历
+const stream = agent.stream(
+  { messages: [{ role: "user", content: "你好" }] },
+  { streamMode: "updates" }
+);
+
+for await (const event of stream) {
+  console.log(event); // ✅ 每个事件都包含完整的状态数据
+}
+
+// ✅ 或者使用 invoke() 获取完整结果（非流式）
+const result = await agent.invoke({
+  messages: [{ role: "user", content: "你好" }],
+});
+console.log(result.messages); // ✅ 直接访问完整的消息列表</code></pre>
+      </div>
+
+      <h3>错误 2：<code>messages</code> 模式下错误地访问事件内容</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：把 messages 模式的事件当成 updates 模式的格式
+const stream = agent.stream(input, { streamMode: "messages" });
+for await (const event of stream) {
+  // messages 模式返回的是元组 [chunk, metadata]，不是 { agent: ... } 格式
+  console.log(event.agent); // ❌ undefined
+}
+
+// ✅ 正确：解构元组
+const stream = agent.stream(input, { streamMode: "messages" });
+for await (const [chunk, metadata] of stream) {
+  // chunk 是 AIMessageChunk，metadata 包含运行时信息
+  if (chunk.content && typeof chunk.content === "string") {
+    process.stdout.write(chunk.content); // ✅ 正确获取 Token 文本
+  }
+  // metadata.langgraph_node 告诉你这个 Token 来自哪个节点
+  console.log("来自节点:", metadata.langgraph_node);
+}</code></pre>
+      </div>
+
+      <h3>错误 3：忘记处理异步迭代器的错误和终止</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：没有错误处理，网络中断或 API 错误会直接崩溃
+async function badStreamExample() {
+  const stream = agent.stream(input, { streamMode: "messages" });
+  for await (const [chunk] of stream) {
+    process.stdout.write(chunk.content); // 如果中途出错，进程直接崩溃
+  }
+}
+
+// ✅ 正确：添加 try-catch 和清理逻辑
+async function goodStreamExample() {
+  let stream;
+  try {
+    stream = agent.stream(input, { streamMode: "messages" });
+
+    for await (const [chunk, metadata] of stream) {
+      if (chunk.content && typeof chunk.content === "string") {
+        process.stdout.write(chunk.content);
+      }
+    }
+  } catch (error) {
+    console.error("\n❌ 流式传输中断:", error.message);
+    // 可以在这里添加重试逻辑或降级处理
+  } finally {
+    // 确保流被正确关闭，释放资源
+    if (stream && typeof stream.return === "function") {
+      await stream.return(undefined);
+    }
+    console.log("\n✅ 流已关闭");
+  }
+}</code></pre>
+      </div>
+
+      <!-- ==================== 13. 本章小结 ==================== -->
+      <h2 id="summary">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>第 6 章要点回顾</h2>
+        <p>在本章中，我们深入学习了 LangChain.js 中的流式传输机制。以下是核心要点：</p>
+        <ul>
+          <li><strong>流式传输的价值</strong>：不仅减少用户感知延迟，更重要的是提供过程透明度，让用户实时了解 Agent 的工作状态</li>
+          <li><strong>事件流式传输</strong>：LangChain v1.3 推荐的 <code>agent.stream()</code> API，基于 AsyncGenerator，支持类型投影</li>
+          <li><strong>三种流模式</strong>：<code>updates</code>（步骤级状态更新）、<code>messages</code>（Token 级文本流）、<code>custom</code>（工具自定义数据）</li>
+          <li><strong>多模式组合</strong>：通过 <code>streamMode: ["updates", "messages", "custom"]</code> 同时获取多种数据流</li>
+          <li><strong>自定义进度报告</strong>：在工具中使用 <code>config.writer</code> 发射任意进度数据</li>
+          <li><strong>推理 Token</strong>：通过过滤 <code>contentBlocks</code> 提取模型的推理过程</li>
+          <li><strong>禁用流式</strong>：使用 <code>invoke()</code> 方法获取完整结果，适用于批处理和测试场景</li>
+        </ul>
+        <p>掌握流式传输技术后，你就能构建出媲美 ChatGPT 的流畅交互体验。在下一章中，我们将学习<strong>结构化输出</strong>——如何精确控制 LLM 的输出格式，让它返回符合特定 Schema 的结构化数据。</p>
+      </div>
+
+      <!-- ==================== 14. 下一章预告 ==================== -->
+      <h2 id="next-chapter">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>第 7 章：结构化输出 — 让 LLM 返回精确格式的数据</h3>
+        <p>在实际应用中，我们往往不只是需要 LLM 返回自然语言文本。例如：</p>
+        <ul>
+          <li>从一段描述中<strong>提取结构化的联系人信息</strong>（姓名、电话、邮箱）</li>
+          <li>让 LLM 返回<strong>符合 JSON Schema 的 API 参数</strong></li>
+          <li>让模型输出<strong>带分类标签的情感分析结果</strong></li>
+        </ul>
+        <p>下一章将介绍如何使用 LangChain.js 的 <code>withStructuredOutput()</code> 方法，配合 Zod schema 来精确控制 LLM 的输出格式，确保返回的数据可以直接被程序解析和使用。这是将 LLM 从"聊天工具"转变为"可靠的生产组件"的关键一步。</p>
+        <a href="07-structured-output.html" class="btn btn-primary">🚀 开始学习第 7 章</a>
+      </div>
+
+      <hr>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script>
+    // 复制代码功能
+    function copyCode(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre code');
+      const text = pre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
+      });
+    }
+
+    // 显示/隐藏答案
+    function toggleAnswer(btn) {
+      const answer = btn.nextElementSibling;
+      answer.classList.toggle('visible');
+      btn.textContent = answer.classList.contains('visible') ? '隐藏答案' : '显示答案';
+    }
+
+    // 阅读进度条
+    window.addEventListener('scroll', () => {
+      const bar = document.querySelector('.progress-bar');
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      bar.style.width = progress + '%';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第5章 工具 Tools - LangChain.js 教程</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch05">
+
+  <!-- 进度条 -->
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html" class="active"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+    <!-- 章节导航 -->
+    <div class="chapter-nav">
+      <a href="04-messages.html" class="nav-link">← 上一章</a>
+      <span class="chapter-progress">第 5 章 / 共 10 章</span>
+      <a href="06-streaming.html" class="nav-link">下一章 →</a>
+    </div>
+
+    <h1>第5章：工具（Tools）— 让代理拥有超能力</h1>
+
+    <!-- ==================== 1. 本章目标 ==================== -->
+    <section class="section" id="objectives">
+      <h2>🎯 本章目标</h2>
+      <div class="objectives">
+        <div class="objectives-title">🎯 本章学习目标</div>
+        <ul>
+          <li><strong>理解工具的本质</strong> —— 掌握 LangChain.js 中工具（Tool）的概念模型，明确工具是连接大语言模型与外部世界的桥梁，让模型从"只会说话"进化为"能做事"。</li>
+          <li><strong>熟练使用 <code>tool()</code> 函数</strong> —— 能够使用 LangChain.js 提供的 <code>tool()</code> 工厂函数，从一个普通的 TypeScript 函数快速创建出模型可以调用的工具，并正确配置名称、描述与参数结构。</li>
+          <li><strong>掌握 Zod Schema 定义</strong> —— 能够使用 Zod 库为工具的输入参数定义精确的类型约束与结构描述，确保模型传入的参数合法有效。</li>
+          <li><strong>灵活运用工具返回值</strong> —— 了解工具可以返回字符串、对象、Command 以及 returnDirect 等不同类型的结果，并理解每种类型的适用场景。</li>
+          <li><strong>访问工具运行上下文</strong> —— 学会通过 <code>runtime</code> 对象访问上下文配置、持久化存储、流式写入器等高级功能，为构建复杂工具奠定基础。</li>
+          <li><strong>构建多工具 Agent</strong> —— 能够将多个工具组合到一个 Agent 中，实现动态工具选择与权限过滤，最终搭建一个具备实际功能的多工具智能代理系统。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ==================== 2. 前置知识 ==================== -->
+    <section class="section" id="prerequisites">
+      <h2>📚 前置知识</h2>
+      <p>在开始学习本章之前，你应该已经完成了以下章节的学习，并对相关概念有基本的了解：</p>
+      <div class="prerequisites">
+        <strong>📋 前置要求：</strong>
+        <ul>
+          <li><strong>第2章 Agent 基础</strong> — 了解 Agent 的基本工作流程和 ReAct 循环模式</li>
+          <li><strong>第3章 模型 Models</strong> — 熟悉模型初始化、配置和工具绑定（bindTools）机制</li>
+          <li><strong>第4章 消息 Messages</strong> — 理解四种消息类型及其在对话流程中的传递方式</li>
+        </ul>
+      </div>
+      <div class="callout tip">
+        <div class="callout-title">💡 提示</div>
+        如果你还没有学习前面的章节，建议先回到对应章节完成学习。本章中的许多代码示例都会假设你已经具备上述基础知识。此外，建议你具备基本的 TypeScript 开发经验，了解泛型、类型推断和模块导入等语法。
+      </div>
+    </section>
+
+    <!-- ==================== 3. 什么是工具 ==================== -->
+    <section class="section" id="what-is-tool">
+      <h2>🔧 什么是工具</h2>
+      <p>在现实世界中，一个人的能力不仅取决于他的知识储备，更取决于他能使用什么工具。一个医生如果只有医学知识但没有听诊器、手术刀和各种检测设备，那他的诊断和治疗能力将大打折扣。大语言模型（LLM）也是如此——虽然它拥有海量知识，但如果没有工具，它就无法与外部世界交互，无法获取实时数据，无法执行实际操作。</p>
+      <p>在 LangChain.js 中，<strong>工具（Tool）就是赋予 Agent 与外部世界交互能力的函数</strong>。工具就像给你的助手配备的各种专业设备——计算器、数据库终端、搜索引擎、文件系统、API 接口等等。Agent 通过工具来执行具体的任务：查询天气、搜索网络、读写文件、调用第三方 API、操作数据库……这些都是通过工具来实现的。</p>
+
+      <h3>工具的核心组成</h3>
+      <p>每一个工具都由以下三个核心部分组成：</p>
+      <ul>
+        <li><strong>名称（name）</strong>：工具的唯一标识符，模型通过名称来识别和调用工具。按照惯例使用蛇形命名法（snake_case），例如 <code>search_web</code>、<code>read_file</code>、<code>calculate_math</code>。</li>
+        <li><strong>描述（description）</strong>：一段自然语言描述，告诉模型这个工具的用途和使用场景。模型会根据描述来决定何时调用哪个工具，因此描述的质量直接影响工具被正确调用的概率。</li>
+        <li><strong>输入模式（schema）</strong>：定义工具接受哪些输入参数、每个参数的类型和含义。LangChain.js 推荐使用 Zod 库来定义输入模式，这样可以在运行时自动进行参数验证。</li>
+      </ul>
+
+      <div class="diagram-box">
+        <pre>
+┌──────────────────────────────────────────────────┐
+│                    Agent                          │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐   │
+│  │ 工具 A    │    │ 工具 B    │    │ 工具 C    │   │
+│  │ 天气查询  │    │ 文件读取  │    │ API 调用  │   │
+│  └─────┬────┘    └─────┬────┘    └─────┬────┘   │
+│        │               │               │        │
+│  ┌─────▼───────────────▼───────────────▼────┐   │
+│  │           语言模型 (LLM)                  │   │
+│  │     理解意图 → 选择工具 → 解析结果        │   │
+│  └──────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────┘
+        </pre>
+      </div>
+
+      <p>在上面的示意图中，Agent 拥有多个工具，语言模型根据用户的请求理解意图，从可用工具中选择最合适的工具，然后用正确的参数调用它，最后解析工具的返回结果并生成最终回答。整个过程是自动化的——你只需要定义好工具并注册到 Agent 中，剩下的推理和调用过程完全由模型完成。</p>
+
+      <h3>为什么工具如此重要</h3>
+      <p>没有工具的 LLM 就像一个只能在脑海中模拟的思考者。它可以推理、可以分析，但无法验证——它不知道今天北京的天气如何，不知道数据库里有什么数据，不知道最新的新闻是什么。工具的引入彻底改变了这一局面：</p>
+      <ul>
+        <li><strong>实时性</strong>：通过搜索引擎或 API 调用获取最新数据，突破模型训练数据的时间限制。</li>
+        <li><strong>精确性</strong>：通过计算器和专用算法进行精确计算，避免模型"口算"时可能出现的错误。</li>
+        <li><strong>可操作性</strong>：通过数据库操作、文件读写、API 调用等工具，让模型不仅能"想"还能"做"。</li>
+        <li><strong>可靠性</strong>：通过 Zod Schema 的参数验证和错误处理机制，保证工具调用的可靠性和安全性。</li>
+      </ul>
+    </section>
+
+    <!-- ==================== 4. tool() 函数详解 ==================== -->
+    <section class="section" id="tool-function">
+      <h2>⚡ tool() 函数详解</h2>
+      <p>LangChain.js 提供了一个简洁而强大的工厂函数 <code>tool()</code>，用于将普通的 TypeScript/JavaScript 函数转换为模型可以调用的工具。这个函数是创建工具的主要方式，理解它的每一个参数都非常重要。</p>
+
+      <h3>基本导入</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">导入 tool 函数</span>
+        </div>
+        <pre><code class="language-typescript">// 从 @langchain/core/tools 导入 tool 工厂函数
+import { tool } from "@langchain/core/tools";
+
+// 通常还需要导入 Zod 来定义输入 schema
+import { z } from "zod";</code></pre>
+      </div>
+
+      <h3>函数签名与参数说明</h3>
+      <p><code>tool()</code> 函数接受一个函数和一个配置对象作为参数，返回一个 Tool 实例。其核心参数如下：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">tool() 函数的完整参数</span>
+        </div>
+        <pre><code class="language-typescript">const myTool = tool(
+  // 第一个参数：工具实际执行的函数
+  async (input, config) => {
+    // input: 根据 schema 定义的类型化输入对象
+    // config: 运行时配置，包含 callbacks 等信息
+    return "工具返回的结果";
+  },
+  {
+    // 第二个参数：工具的元数据配置对象
+
+    // name: 工具名称，模型通过此名称调用工具
+    // 惯例使用 snake_case 命名，简洁且具有描述性
+    name: "my_custom_tool",
+
+    // description: 工具功能描述，直接影响模型是否选择此工具
+    // 描述应该清晰、完整，说明工具的用途、输入和输出
+    description: "这是一个自定义工具，用于执行特定的任务。请在需要执行该任务时调用它。",
+
+    // schema: 输入参数的 Zod Schema 定义
+    // 用于验证和约束模型传入的参数
+    schema: z.object({
+      query: z.string().describe("搜索查询关键词"),
+      limit: z.number().optional().describe("返回结果数量限制，默认为10"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>参数详解</h3>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>参数</th>
+            <th>类型</th>
+            <th>必填</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>fn</code></td>
+            <td>(input, config) =&gt; Promise&lt;string&gt;</td>
+            <td>是</td>
+            <td>工具执行的函数体。第一个参数是经过 schema 验证后的类型化输入对象，第二个参数是运行时配置。</td>
+          </tr>
+          <tr>
+            <td><code>name</code></td>
+            <td>string</td>
+            <td>是</td>
+            <td>工具的唯一名称标识。建议使用 snake_case 命名，名称应简洁且能准确描述工具的功能。</td>
+          </tr>
+          <tr>
+            <td><code>description</code></td>
+            <td>string</td>
+            <td>是</td>
+            <td>工具的自然语言描述。模型会根据此描述判断何时调用该工具，描述质量直接影响调用准确率。</td>
+          </tr>
+          <tr>
+            <td><code>schema</code></td>
+            <td>ZodSchema</td>
+            <td>是</td>
+            <td>输入参数的 Zod Schema，用于类型推断和运行时验证。也可以是 JSON Schema 对象。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>命名规范：蛇形命名法（snake_case）</h3>
+      <p>在 LangChain.js 中，工具名称推荐使用蛇形命名法（snake_case），这是一种广泛采用的命名惯例。相比驼峰命名法（camelCase），蛇形命名法在工具场景中有几个优势：</p>
+      <ul>
+        <li><strong>可读性更好</strong>：下划线分隔的名称在模型的 JSON 输出中更容易被正确解析，不会因为大小写问题引起混淆。</li>
+        <li><strong>兼容性更强</strong>：许多外部系统（如数据库、命令行工具）本身使用蛇形命名法，保持一致的命名风格可以降低认知负担。</li>
+        <li><strong>模型友好</strong>：大语言模型在训练数据中经常见到蛇形命名法，使用它可以提高模型正确生成工具调用名称的概率。</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">命名规范示例</span>
+        </div>
+        <pre><code class="language-typescript">// ✅ 推荐：使用 snake_case
+{ name: "search_web", ... }
+{ name: "read_file", ... }
+{ name: "query_database", ... }
+{ name: "get_weather_forecast", ... }
+{ name: "calculate_math_expression", ... }
+
+// ❌ 不推荐：使用 camelCase 或其他命名方式
+{ name: "searchWeb", ... }
+{ name: "SearchWeb", ... }
+{ name: "search-web", ... }  // 连字符在某些上下文中可能导致解析问题</code></pre>
+      </div>
+
+      <h3>第一个完整示例</h3>
+      <p>下面是一个完整的工具创建示例，帮助你将所有参数串联起来理解：</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">my-first-tool.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 创建一个简单的字符串反转工具
+const reverseStringTool = tool(
+  // 工具的执行函数
+  async ({ text }) => {
+    // 将输入字符串反转后返回
+    const reversed = text.split("").reverse().join("");
+    return `原始字符串: "${text}"\n反转结果: "${reversed}"`;
+  },
+  {
+    // 使用 snake_case 命名
+    name: "reverse_string",
+    // 清晰的描述帮助模型理解何时使用此工具
+    description: "将用户提供的字符串进行反转操作。当用户要求反转、倒序排列某个字符串时使用此工具。",
+    // Zod schema 定义输入参数的结构和类型
+    schema: z.object({
+      text: z.string().describe("需要被反转的原始字符串"),
+    }),
+  }
+);
+
+// 工具创建完成后，可以绑定到模型上使用
+import { ChatOpenAI } from "@langchain/openai";
+
+const model = new ChatOpenAI({ modelName: "gpt-4o" });
+const modelWithTools = model.bindTools([reverseStringTool]);
+
+console.log("工具创建成功！");
+console.log("工具名称:", reverseStringTool.name);
+// 输出: 工具名称: reverse_string</code></pre>
+      </div>
+    </section>
+
+    <!-- ==================== 5. 用 Zod 定义输入 Schema ==================== -->
+    <section class="section" id="zod-schema">
+      <h2>📐 用 Zod 定义输入 Schema</h2>
+      <p>在 LangChain.js 中，每个工具都需要定义一个输入模式（schema），用于描述工具接受哪些参数、每个参数的类型是什么、是否有默认值等信息。LangChain.js 推荐使用 <strong>Zod</strong> 库来定义这些 schema。</p>
+
+      <h3>为什么选择 Zod</h3>
+      <p>Zod 是一个 TypeScript 优先的 schema 声明和验证库。在 LangChain.js 生态中，选择 Zod 有以下几个重要原因：</p>
+      <ul>
+        <li><strong>类型安全</strong>：Zod 可以从 schema 自动推断 TypeScript 类型，保证编译时类型检查和运行时验证的一致性。</li>
+        <li><strong>简洁的 API</strong>：Zod 提供了链式 API，代码可读性强，定义一个复杂的 schema 只需要几行代码。</li>
+        <li><strong>内置验证</strong>：Zod 在运行时自动进行数据验证，如果模型传入的参数不符合 schema 定义，会抛出明确的错误信息。</li>
+        <li><strong>JSON Schema 转换</strong>：Zod schema 可以自动转换为 JSON Schema 格式，而 JSON Schema 是大语言模型理解工具参数的标准格式。</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash</span>
+          <span class="code-file">安装 Zod</span>
+        </div>
+        <pre><code class="language-bash"># 使用 npm 安装
+npm install zod
+
+# 或使用 yarn
+yarn add zod
+
+# 或使用 pnpm
+pnpm add zod</code></pre>
+      </div>
+
+      <h3>常用 Zod 类型</h3>
+      <p>Zod 提供了丰富的类型定义，以下是工具开发中最常用的类型：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">常用 Zod 类型一览</span>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+
+// 字符串类型
+z.string()                     // 必填字符串
+z.string().optional()          // 可选字符串，默认 undefined
+z.string().default("默认值")    // 带默认值的字符串
+
+// 数字类型
+z.number()                     // 必填数字（整数或浮点数）
+z.number().int()               // 必须是整数
+z.number().min(0)              // 最小值为 0
+z.number().max(100)            // 最大值为 100
+z.number().positive()          // 必须为正数
+
+// 布尔类型
+z.boolean()                    // 必填布尔值
+z.boolean().default(false)     // 默认为 false
+
+// 枚举类型
+z.enum(["small", "medium", "large"])  // 枚举值，只能是其中之一
+
+// 数组类型
+z.array(z.string())            // 字符串数组
+z.array(z.number()).min(1)     // 至少包含一个数字的数组
+
+// 联合类型
+z.union([z.string(), z.number()])  // 可以是字符串或数字</code></pre>
+      </div>
+
+      <h3>使用 .describe() 为参数添加描述</h3>
+      <p><code>.describe()</code> 方法是 Zod schema 中最重要也是最容易被忽略的细节。它为每个参数添加自然语言描述，这些描述会被传递给语言模型，帮助模型理解每个参数的含义、格式要求和约束条件。描述的质量直接影响模型生成正确参数的能力。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">schema-with-describe.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+
+// ❌ 不好的做法：缺少 .describe() 描述
+const badSchema = z.object({
+  city: z.string(),
+  unit: z.enum(["celsius", "fahrenheit"]),
+  days: z.number(),
+});
+// 模型不知道 city 是什么格式（中文？英文？拼音？）
+// 不知道 unit 是什么意思
+// 不知道 days 是指未来几天
+
+// ✅ 好的做法：每个字段都有清晰的 .describe()
+const goodSchema = z.object({
+  city: z
+    .string()
+    .describe("要查询天气的城市名称，使用中文，如 '北京'、'上海'、'广州'"),
+  unit: z
+    .enum(["celsius", "fahrenheit"])
+    .optional()
+    .default("celsius")
+    .describe("温度单位，摄氏度(celsius)或华氏度(fahrenheit)，默认为摄氏度"),
+  days: z
+    .number()
+    .int()
+    .min(1)
+    .max(7)
+    .default(3)
+    .describe("查询未来几天的天气预报，范围 1-7 天，默认为 3 天"),
+});
+// 模型现在能清楚地知道每个参数的含义和约束</code></pre>
+      </div>
+
+      <div class="warning-box">
+        <strong>⚠️ 重要提醒：</strong>永远不要省略 <code>.describe()</code> 方法。没有描述的参数会让模型"猜测"其含义，这会导致工具调用失败或传入错误的参数值。一个好的描述应该包含：参数的含义、可接受的值范围、格式示例以及默认行为。
+      </div>
+
+      <h3>完整的 Schema 定义示例</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">complete-schema-example.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+import { tool } from "@langchain/core/tools";
+
+// 一个复杂的数据库查询工具的 schema 定义
+const queryDbSchema = z.object({
+  table: z
+    .string()
+    .describe("要查询的数据表名称，例如 'users'、'orders'、'products'"),
+  columns: z
+    .array(z.string())
+    .optional()
+    .describe("要查询的列名数组，不传则查询所有列。示例: ['id', 'name', 'email']"),
+  where: z
+    .string()
+    .optional()
+    .describe("WHERE 条件表达式（SQL 语法），例如 \"age > 18 AND status = 'active'\""),
+  orderBy: z
+    .string()
+    .optional()
+    .describe("排序字段和方向，例如 'created_at DESC' 或 'name ASC'"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .default(100)
+    .describe("返回结果的最大行数，范围 1-1000，默认为 100"),
+});
+
+// TypeScript 会自动从 schema 推断出输入类型
+// 类型为: { table: string; columns?: string[]; where?: string; orderBy?: string; limit: number }
+type QueryDbInput = z.infer<typeof queryDbSchema>;
+
+const queryDbTool = tool(
+  async ({ table, columns, where, orderBy, limit }) => {
+    // 在实际项目中，这里会连接数据库执行查询
+    const cols = columns?.join(", ") || "*";
+    const whereClause = where ? ` WHERE ${where}` : "";
+    const orderClause = orderBy ? ` ORDER BY ${orderBy}` : "";
+    const sql = `SELECT ${cols} FROM ${table}${whereClause}${orderClause} LIMIT ${limit}`;
+    return `已执行查询: ${sql}\n结果: 模拟返回 ${limit} 条记录`;
+  },
+  {
+    name: "query_database",
+    description:
+      "查询数据库中的数据。支持指定表名、列名、WHERE 条件、排序方式和结果数量限制。" +
+      "适用于需要从数据库中检索信息的场景。返回查询结果的 JSON 格式数据。",
+    schema: queryDbSchema,
+  }
+);</code></pre>
+      </div>
+    </section>
+
+    <!-- ==================== 6. 工具返回值类型 ==================== -->
+    <section class="section" id="return-types">
+      <h2>📦 工具返回值类型</h2>
+      <p>工具执行完毕后，需要将结果返回给 Agent。LangChain.js 支持多种返回值类型，每种类型适用于不同的场景。理解这些类型的区别，可以帮助你构建更加灵活和强大的工具。</p>
+
+      <h3>类型一：字符串返回（String）</h3>
+      <p>最常见、最简单的返回类型。工具直接返回一个字符串，这个字符串会被封装为 ToolMessage 传递给模型。适用于大多数简单的工具场景。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">字符串返回示例</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 最简单的返回类型：返回字符串
+const greetTool = tool(
+  async ({ name }) => {
+    // 直接返回字符串，会自动包装为 ToolMessage
+    return `你好，${name}！欢迎使用 LangChain.js 教程系统。今天的学习进展非常顺利！`;
+  },
+  {
+    name: "greet_user",
+    description: "向指定用户发送问候语",
+    schema: z.object({
+      name: z.string().describe("用户的姓名"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>类型二：对象返回（Object）</h3>
+      <p>工具也可以返回一个对象。LangChain.js 会自动将对象序列化为 JSON 字符串。适用于返回结构化数据的场景。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">对象返回示例</span>
+        </div>
+        <pre><code class="language-typescript">// 返回对象类型 —— 会被自动序列化为 JSON 字符串
+const getUserInfoTool = tool(
+  async ({ userId }) => {
+    // 模拟从数据库获取用户信息
+    const user = {
+      id: userId,
+      name: "张三",
+      email: "zhangsan@example.com",
+      role: "开发者",
+      lastLogin: "2026-06-08T10:30:00Z",
+    };
+    // 返回对象，LangChain.js 会自动将其 JSON.stringify
+    return user;
+  },
+  {
+    name: "get_user_info",
+    description: "根据用户 ID 获取用户的详细信息",
+    schema: z.object({
+      userId: z.string().describe("用户的唯一标识符"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>类型三：Command 返回</h3>
+      <p>Command 是一种高级返回类型，允许工具对 Agent 的执行流程进行精确控制。通过 Command，工具可以更新 Agent 的状态、添加消息、甚至直接结束执行。这在需要工具对对话流程有更强控制力时非常有用。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">Command 返回示例</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { Command } from "@langchain/langgraph";
+import { z } from "zod";
+
+// 返回 Command 类型，可以精确控制 Agent 的后续行为
+const routeToHumanTool = tool(
+  async ({ reason, priority }) => {
+    // 返回一个 Command，更新 Agent 的状态并结束执行
+    return new Command({
+      update: {
+        // 更新 Agent 状态中的值
+        escalated: true,
+        escalationReason: reason,
+        priority: priority,
+      },
+      // 指定下一步操作（跳转到人工处理节点）
+      goto: "human_review",
+    });
+  },
+  {
+    name: "escalate_to_human",
+    description: "当问题超出 AI 能力范围时，将请求升级给人工处理",
+    schema: z.object({
+      reason: z.string().describe("需要升级到人工处理的原因说明"),
+      priority: z
+        .enum(["low", "medium", "high", "urgent"])
+        .describe("请求的优先级别"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>类型四：returnDirect 模式</h3>
+      <p>通常情况下，工具的返回值会经过模型的再次处理（总结、润色等）后才呈现给用户。但有时候你希望工具的结果直接返回给用户，跳过模型的二次处理。这时可以使用 <code>returnDirect</code> 选项。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">returnDirect 模式示例</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// returnDirect 模式：工具结果直接返回给用户，不经过模型二次处理
+const generateReportTool = tool(
+  async ({ topic, format }) => {
+    // 生成一份格式化的报告
+    const report = `
+# ${topic} - 分析报告
+
+## 概述
+本报告由 AI 系统自动生成，基于最新的数据分析结果。
+
+## 关键发现
+1. 当前趋势显示稳步增长
+2. 用户满意度达到 95%
+3. 系统可用性为 99.9%
+
+## 建议
+- 持续优化用户体验
+- 扩大服务覆盖范围
+- 加强数据安全措施
+
+---
+报告生成时间: ${new Date().toISOString()}
+格式: ${format}
+    `.trim();
+
+    return report;
+  },
+  {
+    name: "generate_report",
+    description: "根据指定主题生成格式化的分析报告",
+    schema: z.object({
+      topic: z.string().describe("报告的主题名称"),
+      format: z
+        .enum(["markdown", "html", "plain"])
+        .default("markdown")
+        .describe("报告输出格式"),
+    }),
+    // 设置 returnDirect 为 true，工具结果直接输出给用户
+    returnDirect: true,
+  }
+);
+// 当 Agent 调用此工具时，生成的报告将直接展示给用户，
+// 而不是被模型重新改写或总结</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 何时使用 returnDirect</div>
+        当你希望工具的输出原样呈现给用户时使用。典型场景包括：生成代码、生成报告、返回格式化数据等。如果工具的结果需要模型做进一步的解释或总结，则不应使用 returnDirect。
+      </div>
+    </section>
+
+    <!-- ==================== 7. 访问工具上下文 ==================== -->
+    <section class="section" id="runtime-context">
+      <h2>🔌 访问工具上下文</h2>
+      <p>在实际应用中，工具经常需要访问一些运行时信息，例如用户的配置偏好、持久化的会话数据、流式输出的写入器等。LangChain.js 通过工具函数的第二个参数 <code>config</code> 提供了对这些上下文信息的访问能力。</p>
+
+      <h3>runtime.context — 不可变配置</h3>
+      <p><code>runtime.context</code> 提供了在调用时传入的只读配置数据。这些数据在整个执行过程中保持不变，非常适合传递用户身份信息、API 密钥、配置选项等。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">context 使用示例</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 一个需要用户身份信息的工具
+const getUserProfileTool = tool(
+  async ({ detail }, config) => {
+    // 通过 config 访问不可变的上下文配置
+    // 这里的 config.configurable 包含调用时传入的配置数据
+    const userId = config.configurable?.userId;
+    const authToken = config.configurable?.authToken;
+
+    if (!userId || !authToken) {
+      return "错误：缺少用户身份信息，无法获取用户资料。";
+    }
+
+    // 使用上下文中的用户 ID 和认证令牌来查询用户信息
+    return `用户 ${userId} 的资料：姓名 - 张三，详情级别 - ${detail}。认证令牌已验证。`;
+  },
+  {
+    name: "get_user_profile",
+    description: "获取当前已登录用户的个人资料信息",
+    schema: z.object({
+      detail: z
+        .enum(["basic", "full"])
+        .default("basic")
+        .describe("信息详情级别：basic 返回基本资料，full 返回完整资料"),
+    }),
+  }
+);
+
+// 调用时传入上下文配置
+const result = await getUserProfileTool.invoke(
+  { detail: "full" },
+  {
+    configurable: {
+      userId: "user_12345",
+      authToken: "bearer_token_xyz",
+    },
+  }
+);</code></pre>
+      </div>
+
+      <h3>runtime.store — 长期记忆</h3>
+      <p><code>runtime.store</code> 提供了一个持久化的键值存储接口，工具可以在多次调用之间共享和持久化数据。这对于需要跨会话保存状态的工具非常有用。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">store 使用示例</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 一个带记忆功能的笔记工具
+const saveNoteTool = tool(
+  async ({ key, content }, config) => {
+    // 通过 store 保存长期数据
+    // store 是一个跨会话的持久化存储
+    const store = config.store;
+    if (store) {
+      await store.put(["notes"], key, {
+        content,
+        createdAt: new Date().toISOString(),
+        // metadata 可以存储额外的索引信息
+      });
+      return `笔记已保存！键名: "${key}"，内容: "${content}"`;
+    }
+    return "警告：存储服务不可用，笔记仅在当前会话中有效。";
+  },
+  {
+    name: "save_note",
+    description: "保存一条笔记到长期存储中。可以用来记录用户的偏好、重要信息等需要跨会话保存的内容。",
+    schema: z.object({
+      key: z.string().describe("笔记的唯一键名，用于后续检索，例如 'user_preference_language'"),
+      content: z.string().describe("笔记的内容文本"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>runtime.writer — 流式更新写入器</h3>
+      <p><code>runtime.writer</code> 允许工具在执行过程中向客户端发送中间状态更新。这对于执行时间较长的工具尤为重要，可以让用户实时看到工具的进展。</p>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">writer 使用示例</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 一个长时间运行的工具，通过 writer 发送进度更新
+const analyzeDataTool = tool(
+  async ({ dataset }, config) => {
+    // writer 用于发送流式进度更新给客户端
+    const writer = config.writer;
+
+    if (writer) {
+      writer(`📊 开始分析数据集: ${dataset}...`);
+    }
+
+    // 模拟耗时的数据处理过程
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (writer) {
+      writer("🔍 正在进行数据清洗...");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (writer) {
+      writer("📈 正在计算统计指标...");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (writer) {
+      writer("✅ 分析完成！正在生成报告...");
+    }
+
+    return `数据集 "${dataset}" 分析完成：共处理 10,000 条记录，发现 3 个异常值，平均值为 42.5，标准差为 12.3。`;
+  },
+  {
+    name: "analyze_dataset",
+    description: "对指定的数据集进行统计分析，包括数据清洗、指标计算和异常检测。",
+    schema: z.object({
+      dataset: z.string().describe("数据集的名称或路径"),
+    }),
+  }
+);</code></pre>
+      </div>
+
+      <h3>runtime.execution_info — 执行信息</h3>
+      <p>通过 <code>runtime.execution_info</code> 可以获取当前工具调用的执行上下文信息，例如调用 ID、Agent 的运行状态等，便于进行调试和日志记录。</p>
+    </section>
+
+    <!-- ==================== 8. 实战：天气查询工具 ==================== -->
+    <section class="section" id="weather-tool">
+      <h2>🌤️ 实战：天气查询工具</h2>
+      <p>让我们从第一个实战工具开始——创建一个天气查询工具。这个工具模拟调用天气 API 来获取指定城市的天气信息。在实际项目中，你可以将模拟数据替换为真实的 API 调用。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">weather-tool.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 定义天气查询工具
+const getWeatherTool = tool(
+  async ({ city, unit }) => {
+    // 在实际项目中，这里会调用真实的天气 API
+    // 例如：const response = await fetch(`https://api.weather.com/v1/current?city=${city}`);
+    // 模拟天气数据
+    const weatherData: Record&lt;string, { temp: number; condition: string; humidity: number }&gt; = {
+      "北京": { temp: 28, condition: "晴", humidity: 45 },
+      "上海": { temp: 26, condition: "多云", humidity: 72 },
+      "广州": { temp: 32, condition: "雷阵雨", humidity: 88 },
+      "深圳": { temp: 31, condition: "阴", humidity: 78 },
+      "成都": { temp: 24, condition: "小雨", humidity: 82 },
+    };
+
+    const data = weatherData[city];
+    if (!data) {
+      return `抱歉，暂时无法获取 "${city}" 的天气数据。目前支持的城市有：${Object.keys(weatherData).join("、")}。`;
+    }
+
+    // 根据用户选择的单位转换温度
+    const displayTemp =
+      unit === "fahrenheit"
+        ? `${(data.temp * 9) / 5 + 32}°F`
+        : `${data.temp}°C`;
+
+    return [
+      `📍 ${city} 当前天气：`,
+      `🌡️ 温度: ${displayTemp}`,
+      `☁️ 天气状况: ${data.condition}`,
+      `💧 湿度: ${data.humidity}%`,
+      `⏰ 更新时间: ${new Date().toLocaleString("zh-CN")}`,
+    ].join("\n");
+  },
+  {
+    name: "get_weather",
+    description:
+      "查询指定城市的当前天气信息，包括温度、天气状况和湿度。" +
+      "当用户询问某个地方的天气情况时使用此工具。支持中国主要城市。",
+    schema: z.object({
+      city: z
+        .string()
+        .describe("要查询天气的城市名称，使用中文，如 '北京'、'上海'、'广州'"),
+      unit: z
+        .enum(["celsius", "fahrenheit"])
+        .optional()
+        .default("celsius")
+        .describe("温度显示单位：celsius(摄氏度) 或 fahrenheit(华氏度)，默认摄氏度"),
+    }),
+  }
+);
+
+// 测试工具
+async function testWeatherTool() {
+  const result = await getWeatherTool.invoke({
+    city: "北京",
+    unit: "celsius",
+  });
+  console.log(result);
+}
+
+testWeatherTool();
+// 输出：
+// 📍 北京 当前天气：
+// 🌡️ 温度: 28°C
+// ☁️ 天气状况: 晴
+// 💧 湿度: 45%
+// ⏰ 更新时间: 2026/6/9 10:30:00</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 扩展建议</div>
+        在实际项目中，你可以将模拟数据替换为真实的天气 API 调用，例如和风天气（QWeather）、OpenWeatherMap 等。只需在工具函数中添加 <code>fetch</code> 请求即可。记得处理 API 调用失败的情况，返回友好的错误信息。
+      </div>
+    </section>
+
+    <!-- ==================== 9. 实战：文件读取工具 ==================== -->
+    <section class="section" id="file-tool">
+      <h2>📁 实战：文件读取工具</h2>
+      <p>文件读取是 Agent 最常用的操作之一。下面的示例创建了一个安全的文件读取工具，它会读取指定路径的文件内容，并返回给模型进行分析。注意我们在工具中加入了路径安全检查，防止 Agent 访问敏感文件。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">file-read-tool.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+import * as fs from "fs/promises";
+import * as path from "path";
+
+// 定义允许访问的根目录，防止路径穿越攻击
+const ALLOWED_ROOT = process.cwd();
+
+const readFileTool = tool(
+  async ({ filePath, encoding }) => {
+    try {
+      // 安全检查：解析并验证文件路径
+      const resolvedPath = path.resolve(ALLOWED_ROOT, filePath);
+
+      // 防止路径穿越——确保解析后的路径在允许的根目录下
+      if (!resolvedPath.startsWith(ALLOWED_ROOT)) {
+        return `安全错误：不允许访问根目录之外的文件。请求的路径 "${filePath}" 超出了允许的范围。`;
+      }
+
+      // 检查文件是否存在
+      try {
+        await fs.access(resolvedPath);
+      } catch {
+        return `文件未找到："${filePath}" 不存在或没有读取权限。`;
+      }
+
+      // 获取文件信息
+      const stats = await fs.stat(resolvedPath);
+      if (stats.isDirectory()) {
+        // 如果是目录，列出目录内容
+        const entries = await fs.readdir(resolvedPath);
+        return `📁 "${filePath}" 是一个目录，包含以下文件和子目录：\n${entries.map((e) => `  - ${e}`).join("\n")}`;
+      }
+
+      // 限制读取文件大小，防止内存溢出（最大 1MB）
+      const MAX_SIZE = 1024 * 1024;
+      if (stats.size > MAX_SIZE) {
+        return `文件过大："${filePath}" 的大小为 ${(stats.size / 1024).toFixed(1)}KB，超过了 1MB 的读取限制。请指定文件的具体行范围。`;
+      }
+
+      // 读取文件内容
+      const content = await fs.readFile(resolvedPath, {
+        encoding: encoding as BufferEncoding,
+      });
+
+      return [
+        `📄 文件: ${filePath}`,
+        `📏 大小: ${stats.size} 字节`,
+        `📝 编码: ${encoding}`,
+        `--- 文件内容开始 ---`,
+        content,
+        `--- 文件内容结束 ---`,
+      ].join("\n");
+    } catch (error) {
+      return `读取文件时发生错误: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+  {
+    name: "read_file",
+    description:
+      "读取项目目录中的文件内容。支持文本文件（如 .ts、.json、.md、.txt 等）。" +
+      "如果指定的路径是目录，则列出该目录下的文件和子目录。路径相对于项目根目录。",
+    schema: z.object({
+      filePath: z
+        .string()
+        .describe("文件路径（相对于项目根目录），例如 'src/index.ts' 或 'README.md'"),
+      encoding: z
+        .enum(["utf-8", "ascii", "base64"])
+        .optional()
+        .default("utf-8")
+        .describe("文件编码格式，默认为 utf-8"),
+    }),
+  }
+);
+
+export { readFileTool };</code></pre>
+      </div>
+
+      <div class="warning-box">
+        <strong>⚠️ 安全警告：</strong>在生产环境中使用文件操作工具时，务必进行严格的路径验证和权限控制。永远不要让 Agent 可以任意读取服务器上的文件。上面的示例通过 <code>ALLOWED_ROOT</code> 限制了可访问的目录范围，这是最基本的安全措施。
+      </div>
+    </section>
+
+    <!-- ==================== 10. 实战：API 调用工具 ==================== -->
+    <section class="section" id="api-tool">
+      <h2>🌐 实战：API 调用工具</h2>
+      <p>在实际应用中，Agent 经常需要调用外部 REST API 来获取数据或执行操作。下面的示例创建了一个通用的 API 调用工具，可以向指定的 API 端点发送请求并返回结果。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">api-call-tool.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 定义 API 调用工具
+const callApiTool = tool(
+  async ({ url, method, headers, body, timeout }) => {
+    try {
+      // 构建请求选项
+      const options: RequestInit = {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...Object.fromEntries(
+            // 将头部字符串数组解析为键值对
+            (headers || []).map((h) => {
+              const [key, ...rest] = h.split(":");
+              return [key.trim(), rest.join(":").trim()];
+            })
+          ),
+        },
+        // 设置请求超时时间
+        signal: AbortSignal.timeout(timeout * 1000),
+      };
+
+      // 如果有请求体且不是 GET 请求，添加 body
+      if (body && method !== "GET") {
+        options.body = JSON.stringify(body);
+      }
+
+      console.log(`🌐 正在调用 API: ${method} ${url}`);
+
+      // 发送请求
+      const response = await fetch(url, options);
+      const statusCode = response.status;
+
+      // 尝试解析响应为 JSON
+      let responseData;
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
+
+      // 返回结构化的结果
+      return JSON.stringify(
+        {
+          success: response.ok,
+          statusCode,
+          headers: Object.fromEntries(response.headers.entries()),
+          data: responseData,
+        },
+        null,
+        2
+      );
+    } catch (error) {
+      // 处理各种错误情况
+      if (error instanceof DOMException && error.name === "TimeoutError") {
+        return `错误：API 调用超时（超过 ${timeout} 秒）。请检查 URL 是否正确或稍后重试。`;
+      }
+      return `错误：API 调用失败 — ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+  {
+    name: "call_api",
+    description:
+      "调用外部 REST API。支持 GET、POST、PUT、DELETE 等 HTTP 方法。" +
+      "返回 API 的响应状态码、响应头和响应体。适用于需要获取外部服务数据或执行远程操作的场景。",
+    schema: z.object({
+      url: z
+        .string()
+        .url()
+        .describe("完整的 API 端点 URL，例如 'https://api.example.com/data'"),
+      method: z
+        .enum(["GET", "POST", "PUT", "DELETE", "PATCH"])
+        .default("GET")
+        .describe("HTTP 请求方法，默认为 GET"),
+      headers: z
+        .array(z.string())
+        .optional()
+        .describe("额外的请求头数组，格式为 'Key: Value'，例如 ['Authorization: Bearer token123']"),
+      body: z
+        .record(z.unknown())
+        .optional()
+        .describe("请求体对象（JSON 格式），仅对 POST/PUT/PATCH 方法有效"),
+      timeout: z
+        .number()
+        .int()
+        .min(1)
+        .max(60)
+        .default(10)
+        .describe("请求超时时间（秒），范围 1-60，默认 10 秒"),
+    }),
+  }
+);
+
+export { callApiTool };</code></pre>
+      </div>
+    </section>
+
+    <!-- ==================== 11. 动态工具选择 ==================== -->
+    <section class="section" id="dynamic-tools">
+      <h2>🎛️ 动态工具选择</h2>
+      <p>在真实应用中，不同的用户可能有不同的权限级别。一个管理员可以调用所有工具，而普通用户可能只能调用部分工具。LangChain.js 允许你在运行时根据用户角色或权限动态过滤可用工具列表。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">dynamic-tool-selection.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { tool, type Tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 定义工具的权限级别
+type PermissionLevel = "public" | "user" | "admin";
+
+// 自定义工具元数据扩展
+interface ToolMetadata {
+  tool: Tool;
+  requiredPermission: PermissionLevel;
+  category: string;
+}
+
+// 权限等级的数值映射，用于比较
+const PERMISSION_RANK: Record&lt;PermissionLevel, number&gt; = {
+  public: 0,
+  user: 1,
+  admin: 2,
+};
+
+// 创建一系列带权限标记的工具
+const searchPublicDocsTool = tool(
+  async ({ query }) => `搜索公开文档: "${query}" — 找到 5 条相关结果。`,
+  {
+    name: "search_public_docs",
+    description: "搜索公开的文档和知识库",
+    schema: z.object({
+      query: z.string().describe("搜索关键词"),
+    }),
+  }
+);
+
+const manageUsersTool = tool(
+  async ({ action, userId }) =>
+    `管理操作执行: ${action} 用户 ${userId} — 操作成功。`,
+  {
+    name: "manage_users",
+    description: "管理员功能：管理用户账户（启用、禁用、删除等）",
+    schema: z.object({
+      action: z.enum(["enable", "disable", "delete"]).describe("要执行的操作"),
+      userId: z.string().describe("目标用户 ID"),
+    }),
+  }
+);
+
+const viewAnalyticsTool = tool(
+  async ({ dateRange }) =>
+    `分析数据 (${dateRange})：日活用户 1,234，新增用户 56，会话时长平均 8.5 分钟。`,
+  {
+    name: "view_analytics",
+    description: "查看系统分析数据和统计报告",
+    schema: z.object({
+      dateRange: z.string().describe("时间范围，例如 'last7days'、'thisMonth'"),
+    }),
+  }
+);
+
+// 工具注册表：将工具与权限关联
+const toolRegistry: ToolMetadata[] = [
+  {
+    tool: searchPublicDocsTool,
+    requiredPermission: "public",
+    category: "文档",
+  },
+  {
+    tool: viewAnalyticsTool,
+    requiredPermission: "user",
+    category: "分析",
+  },
+  {
+    tool: manageUsersTool,
+    requiredPermission: "admin",
+    category: "管理",
+  },
+];
+
+// 根据用户权限级别过滤可用工具
+function getToolsForUser(userPermission: PermissionLevel): Tool[] {
+  const userRank = PERMISSION_RANK[userPermission];
+
+  return toolRegistry
+    .filter((entry) => PERMISSION_RANK[entry.requiredPermission] <= userRank)
+    .map((entry) => entry.tool);
+}
+
+// 使用示例
+const publicTools = getToolsForUser("public");
+console.log(`公开用户可用工具: ${publicTools.map((t) => t.name).join(", ")}`);
+// 输出: 公开用户可用工具: search_public_docs
+
+const userTools = getToolsForUser("user");
+console.log(`普通用户可用工具: ${userTools.map((t) => t.name).join(", ")}`);
+// 输出: 普通用户可用工具: search_public_docs, view_analytics
+
+const adminTools = getToolsForUser("admin");
+console.log(`管理员可用工具: ${adminTools.map((t) => t.name).join(", ")}`);
+// 输出: 管理员可用工具: search_public_docs, view_analytics, manage_users</code></pre>
+      </div>
+
+      <p>通过这种模式，你可以将工具的定义和权限管理分离，让 Agent 的工具集真正实现动态化。在实际项目中，权限信息通常来自用户的 JWT Token 或 Session 数据，可以在创建 Agent 时根据当前用户的权限级别来组装对应的工具列表。</p>
+    </section>
+
+    <!-- ==================== 12. 多工具 Agent 综合示例 ==================== -->
+    <section class="section" id="multi-tool-agent">
+      <h2>🤖 多工具 Agent 综合示例</h2>
+      <p>现在让我们把前面学到的知识整合起来，构建一个拥有多个工具的完整 Agent。这个 Agent 可以查询天气、读取文件、调用 API，是真正具备实用价值的智能助手。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span class="code-file">multi-tool-agent.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+import * as fs from "fs/promises";
+
+// ===== 工具1：天气查询 =====
+const getWeatherTool = tool(
+  async ({ city }) => {
+    const weatherDb: Record&lt;string, string&gt; = {
+      "北京": "晴天，28°C，湿度 45%，适合外出",
+      "上海": "多云，26°C，湿度 72%，可能有阵雨",
+      "广州": "雷阵雨，32°C，湿度 88%，建议带伞",
+    };
+    return weatherDb[city] || `暂时没有 ${city} 的天气数据。`;
+  },
+  {
+    name: "get_weather",
+    description: "查询指定城市的当前天气信息",
+    schema: z.object({
+      city: z.string().describe("城市名称，如 '北京'、'上海'"),
+    }),
+  }
+);
+
+// ===== 工具2：计算器 =====
+const calculatorTool = tool(
+  async ({ expression }) => {
+    try {
+      // 安全的数学表达式求值：只允许数字和基本运算符
+      const sanitized = expression.replace(/[^0-9+\-*/().%\s]/g, "");
+      if (sanitized !== expression) {
+        return "错误：表达式包含不允许的字符。仅支持数字和运算符 (+, -, *, /, %, 括号)。";
+      }
+      // 使用 Function 构造器安全求值
+      const result = new Function(`"use strict"; return (${sanitized})`)();
+      return `${expression} = ${result}`;
+    } catch {
+      return `错误：无法计算表达式 "${expression}"，请检查语法是否正确。`;
+    }
+  },
+  {
+    name: "calculator",
+    description: "计算数学表达式。支持加减乘除、括号和百分比运算。例如: '2 + 3 * 4' 或 '(100 - 20) * 0.8'",
+    schema: z.object({
+      expression: z.string().describe("要计算的数学表达式，如 '2 + 3 * 4'"),
+    }),
+  }
+);
+
+// ===== 工具3：读取项目文件 =====
+const readFileTool = tool(
+  async ({ filePath }) => {
+    try {
+      const content = await fs.readFile(filePath, "utf-8");
+      // 限制返回长度，避免过长内容
+      const truncated =
+        content.length > 5000
+          ? content.substring(0, 5000) + "\n\n... (文件内容过长，已截断)"
+          : content;
+      return `📄 ${filePath} 的内容:\n${truncated}`;
+    } catch (error) {
+      return `读取文件失败: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  },
+  {
+    name: "read_file",
+    description: "读取项目中的文件内容。适用于查看配置文件、源代码、文档等。",
+    schema: z.object({
+      filePath: z.string().describe("文件路径，如 'package.json' 或 'src/index.ts'"),
+    }),
+  }
+);
+
+// ===== 工具4：当前日期时间 =====
+const getCurrentTimeTool = tool(
+  async () => {
+    const now = new Date();
+    return [
+      `当前日期和时间: ${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`,
+      `星期: ${["日", "一", "二", "三", "四", "五", "六"][now.getDay()]}`,
+      `Unix 时间戳: ${Math.floor(now.getTime() / 1000)}`,
+    ].join("\n");
+  },
+  {
+    name: "get_current_time",
+    description: "获取当前的日期、时间和星期信息。当用户询问今天是几号、现在几点等时间相关问题时使用。",
+    schema: z.object({}),
+  }
+);
+
+// ===== 创建多工具 Agent =====
+async function main() {
+  // 初始化语言模型
+  const model = new ChatOpenAI({
+    modelName: "gpt-4o",
+    temperature: 0, // 使用确定性输出，提高工具调用的准确性
+  });
+
+  // 创建 Agent，注册所有工具
+  const agent = createReactAgent({
+    llm: model,
+    tools: [getWeatherTool, calculatorTool, readFileTool, getCurrentTimeTool],
+    // 可选：自定义系统提示
+    prompt:
+      "你是一个多才多艺的助手。你可以查询天气、进行数学计算、读取文件和获取当前时间。" +
+      "请根据用户的问题，选择合适的工具来回答。回答时使用中文，保持友好和专业。",
+  });
+
+  // 测试1：查询天气
+  console.log("===== 测试1: 天气查询 =====");
+  const weatherResult = await agent.invoke({
+    messages: [{ role: "user", content: "北京今天天气怎么样？" }],
+  });
+  console.log(
+    "回答:",
+    weatherResult.messages[weatherResult.messages.length - 1].content
+  );
+
+  // 测试2：数学计算
+  console.log("\n===== 测试2: 数学计算 =====");
+  const calcResult = await agent.invoke({
+    messages: [{ role: "user", content: "帮我算一下 (123 + 456) * 789 等于多少" }],
+  });
+  console.log(
+    "回答:",
+    calcResult.messages[calcResult.messages.length - 1].content
+  );
+
+  // 测试3：多工具组合使用
+  console.log("\n===== 测试3: 多工具组合 =====");
+  const combinedResult = await agent.invoke({
+    messages: [
+      {
+        role: "user",
+        content: "现在几点了？另外帮我查一下上海的天气，再算一下 365 * 24 是多少。",
+      },
+    ],
+  });
+  console.log(
+    "回答:",
+    combinedResult.messages[combinedResult.messages.length - 1].content
+  );
+}
+
+main().catch(console.error);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 关键要点</div>
+        在这个综合示例中，Agent 拥有 4 个不同的工具。当你提出包含多个问题的请求时，模型会自动识别并调用所有需要的工具，然后将结果汇总成一个完整的回答。这就是多工具 Agent 的强大之处——它能根据用户的意图自主选择和组合工具。
+      </div>
+    </section>
+
+    <!-- ==================== 13. 知识检查点 ==================== -->
+    <section class="section" id="quiz">
+      <h2>🧠 知识检查点</h2>
+      <p>完成以下问题来检验你对本章内容的理解：</p>
+
+      <div class="quiz">
+        <div class="quiz-question">
+          <h4>问题 1：工具命名</h4>
+          <p>在 LangChain.js 中，工具的名称推荐使用哪种命名规范？以下哪个工具名称是正确的？</p>
+          <div class="quiz-options">
+            <label><input type="radio" name="q1" value="a"> A. <code>{ name: "SearchWeb" }</code></label>
+            <label><input type="radio" name="q1" value="b"> B. <code>{ name: "searchWeb" }</code></label>
+            <label><input type="radio" name="q1" value="c"> C. <code>{ name: "search_web" }</code></label>
+            <label><input type="radio" name="q1" value="d"> D. <code>{ name: "search-web" }</code></label>
+          </div>
+          <details class="quiz-answer">
+            <summary>点击查看答案</summary>
+            <p><strong>正确答案：C</strong></p>
+            <p>LangChain.js 推荐使用蛇形命名法（snake_case）来命名工具。选项 A 使用帕斯卡命名法（PascalCase），选项 B 使用驼峰命名法（camelCase），选项 D 使用连字符命名法（kebab-case），这些都不是推荐的命名方式。snake_case 在模型生成的 JSON 输出中更容易被正确解析，且与许多外部系统保持一致。</p>
+          </details>
+        </div>
+
+        <div class="quiz-question">
+          <h4>问题 2：Zod Schema 的重要性</h4>
+          <p>为什么在定义工具的输入 schema 时，使用 <code>.describe()</code> 方法非常重要？</p>
+          <div class="quiz-options">
+            <label><input type="radio" name="q2" value="a"> A. 仅为了 TypeScript 类型推断</label>
+            <label><input type="radio" name="q2" value="b"> B. 描述会被传递给模型，帮助模型理解参数含义并生成正确值</label>
+            <label><input type="radio" name="q2" value="c"> C. 仅用于生成 API 文档</label>
+            <label><input type="radio" name="q2" value="d"> D. 仅用于调试时的日志输出</label>
+          </div>
+          <details class="quiz-answer">
+            <summary>点击查看答案</summary>
+            <p><strong>正确答案：B</strong></p>
+            <p><code>.describe()</code> 中的描述文本会被转换为 JSON Schema 中的 description 字段，传递给语言模型。模型根据这些描述来理解每个参数的含义、格式要求和约束条件，从而生成正确的参数值。没有描述的参数会让模型"猜测"其含义，降低工具调用的准确率。</p>
+          </details>
+        </div>
+
+        <div class="quiz-question">
+          <h4>问题 3：工具返回值</h4>
+          <p>以下关于工具返回值的说法，哪个是<strong>错误</strong>的？</p>
+          <div class="quiz-options">
+            <label><input type="radio" name="q3" value="a"> A. 工具可以返回字符串，会被自动封装为 ToolMessage</label>
+            <label><input type="radio" name="q3" value="b"> B. 工具返回的对象会被自动序列化为 JSON 字符串</label>
+            <label><input type="radio" name="q3" value="c"> C. 设置 returnDirect 为 true 后，工具结果会直接返回给用户，不经过模型处理</label>
+            <label><input type="radio" name="q3" value="d"> D. 工具必须返回字符串，不支持返回其他类型</label>
+          </div>
+          <details class="quiz-answer">
+            <summary>点击查看答案</summary>
+            <p><strong>正确答案：D</strong></p>
+            <p>这是错误的说法。LangChain.js 的工具支持多种返回值类型：字符串、对象（自动 JSON 序列化）、Command（用于控制 Agent 流程）以及带 returnDirect 标记的直接返回。工具并不局限于只能返回字符串。</p>
+          </details>
+        </div>
+
+        <div class="quiz-question">
+          <h4>问题 4：运行时上下文</h4>
+          <p>在工具函数的 <code>config</code> 参数中，哪个属性用于在多次工具调用之间持久化存储数据？</p>
+          <div class="quiz-options">
+            <label><input type="radio" name="q4" value="a"> A. <code>config.configurable</code></label>
+            <label><input type="radio" name="q4" value="b"> B. <code>config.store</code></label>
+            <label><input type="radio" name="q4" value="c"> C. <code>config.writer</code></label>
+            <label><input type="radio" name="q4" value="d"> D. <code>config.callbacks</code></label>
+          </div>
+          <details class="quiz-answer">
+            <summary>点击查看答案</summary>
+            <p><strong>正确答案：B</strong></p>
+            <p><code>config.store</code> 是一个持久化的键值存储接口，允许工具在多次调用之间保存和检索数据。相比之下，<code>config.configurable</code> 提供的是只读的配置数据，<code>config.writer</code> 用于流式输出，<code>config.callbacks</code> 用于事件回调。</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 14. 常见错误 ==================== -->
+    <section class="section" id="common-errors">
+      <h2>🐛 常见错误</h2>
+
+      <div class="error-card">
+        <h3>错误 1：Schema 类型与函数参数不匹配</h3>
+        <div class="error-symptom">
+          <strong>症状：</strong>模型调用工具时传入的参数类型错误，例如期望字符串却收到数字，或者缺少必填参数。
+        </div>
+        <div class="error-cause">
+          <strong>原因：</strong>Zod schema 中的类型定义与函数体中实际使用的类型不一致。schema 是模型生成参数的"参考手册"，如果定义不准确，模型就无法生成正确类型的参数。
+        </div>
+        <div class="error-fix">
+          <strong>解决方案：</strong>确保 schema 中每个字段的类型、约束和描述与函数体的期望完全一致。始终使用 <code>.describe()</code> 明确说明参数的格式和取值范围。
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">TypeScript</span>
+            <span class="code-file">错误示例 vs 正确示例</span>
+          </div>
+          <pre><code class="language-typescript">// ❌ 错误：schema 定义 limit 为 string，但函数体期望 number
+const badTool = tool(
+  async ({ limit }) => {
+    // 这里期望 limit 是数字，但 schema 定义为 string
+    return Array(limit).fill("item"); // 运行时错误！
+  },
+  {
+    name: "bad_example",
+    description: "示例",
+    schema: z.object({
+      limit: z.string().describe("数量限制"),  // 应该是 z.number()
+    }),
+  }
+);
+
+// ✅ 正确：schema 类型与函数参数一致
+const goodTool = tool(
+  async ({ limit }) => {
+    // limit 现在是 number 类型，与 schema 一致
+    return Array(limit).fill("item");
+  },
+  {
+    name: "good_example",
+    description: "示例",
+    schema: z.object({
+      limit: z.number().int().min(1).max(100).describe("返回结果的数量限制，范围 1-100"),
+    }),
+  }
+);</code></pre>
+        </div>
+      </div>
+
+      <div class="error-card">
+        <h3>错误 2：工具名称冲突</h3>
+        <div class="error-symptom">
+          <strong>症状：</strong>注册多个工具时出现错误，或 Agent 调用了错误的工具。模型的行为变得不可预测。
+        </div>
+        <div class="error-cause">
+          <strong>原因：</strong>多个工具使用了相同的 <code>name</code> 值。在 LangChain.js 中，工具名称是工具的唯一标识符，名称冲突会导致后注册的工具覆盖先注册的工具。
+        </div>
+        <div class="error-fix">
+          <strong>解决方案：</strong>确保每个工具都有唯一的名称。建议采用 <code>动作_对象</code> 的命名模式（如 <code>search_users</code>、<code>delete_files</code>），既能保证唯一性又便于理解。
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">TypeScript</span>
+            <span class="code-file">避免名称冲突</span>
+          </div>
+          <pre><code class="language-typescript">// ❌ 名称冲突！两个工具都叫 "search"
+const searchUsersTool = tool(fn1, { name: "search", ... });
+const searchDocsTool = tool(fn2, { name: "search", ... }); // 覆盖了第一个！
+
+// ✅ 使用具体且唯一的名称
+const searchUsersTool = tool(fn1, { name: "search_users", ... });
+const searchDocsTool = tool(fn2, { name: "search_documents", ... });</code></pre>
+        </div>
+      </div>
+
+      <div class="error-card">
+        <h3>错误 3：工具描述不够清晰</h3>
+        <div class="error-symptom">
+          <strong>症状：</strong>Agent 在应该使用某个工具时没有使用，或者在不应该使用时错误地使用了该工具。模型的工具选择行为不符合预期。
+        </div>
+        <div class="error-cause">
+          <strong>原因：</strong>工具的 <code>description</code> 不够清晰或缺少关键信息。模型完全依赖描述来决定何时调用哪个工具，模糊的描述会导致模型做出错误的判断。
+        </div>
+        <div class="error-fix">
+          <strong>解决方案：</strong>为每个工具编写详细、明确的描述，包含：工具的用途、适用场景、输入要求、输出格式和限制条件。可以包含使用示例来帮助模型理解。
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">TypeScript</span>
+            <span class="code-file">改善工具描述</span>
+          </div>
+          <pre><code class="language-typescript">// ❌ 描述太模糊
+{
+  name: "search",
+  description: "搜索",
+  // 模型不知道搜索什么、搜索范围、返回格式
+}
+
+// ✅ 描述详细明确
+{
+  name: "search_documents",
+  description:
+    "在公司内部知识库中搜索文档。根据关键词进行全文检索，" +
+    "返回最相关的文档标题、摘要和链接。" +
+    "适用于：查找公司政策、技术文档、项目资料等内部信息。" +
+    "不适用于：搜索互联网信息或查询实时数据。",
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="error-card">
+        <h3>错误 4：异步操作未使用 await</h3>
+        <div class="error-symptom">
+          <strong>症状：</strong>工具返回了 <code>[object Promise]</code> 字符串而不是实际结果，或者工具执行"成功"但返回值是未定义的。
+        </div>
+        <div class="error-cause">
+          <strong>原因：</strong>工具函数体中有异步操作（如 fetch 请求、文件读取等），但忘记在返回结果前使用 <code>await</code> 等待异步操作完成。
+        </div>
+        <div class="error-fix">
+          <strong>解决方案：</strong>确保工具函数声明为 <code>async</code>，并且所有异步操作都使用 <code>await</code> 关键字等待完成后再返回结果。
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">TypeScript</span>
+            <span class="code-file">正确处理异步操作</span>
+          </div>
+          <pre><code class="language-typescript">// ❌ 忘记 await，返回的是 Promise 而不是数据
+const badApiTool = tool(
+  async ({ url }) => {
+    const response = fetch(url);          // 缺少 await！
+    const data = response.json();         // 缺少 await！
+    return data;                          // 返回 Promise 对象
+  },
+  { name: "bad_api", description: "...", schema: z.object({ url: z.string() }) }
+);
+
+// ✅ 正确使用 await
+const goodApiTool = tool(
+  async ({ url }) => {
+    const response = await fetch(url);    // await 等待 fetch 完成
+    const data = await response.json();   // await 等待 JSON 解析完成
+    return JSON.stringify(data);          // 返回实际数据
+  },
+  { name: "good_api", description: "...", schema: z.object({ url: z.string() }) }
+);</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 15. 本章小结 ==================== -->
+    <section class="section" id="summary">
+      <h2>📝 本章小结</h2>
+      <div class="summary-box">
+        <p>在本章中，我们深入学习了 LangChain.js 中工具（Tools）的核心概念和实践方法。以下是本章的关键知识点回顾：</p>
+        <ul>
+          <li><strong>工具的本质</strong>：工具是连接大语言模型与外部世界的桥梁。它由名称、描述和输入模式三部分组成，让模型从"只会说话"进化为"能做事"。</li>
+          <li><strong>tool() 函数</strong>：LangChain.js 提供的工厂函数，接受一个执行函数和一个配置对象，快速创建模型可调用的工具。工具名称推荐使用蛇形命名法（snake_case）。</li>
+          <li><strong>Zod Schema</strong>：使用 Zod 定义工具的输入参数类型和约束。<code>.describe()</code> 方法至关重要，它为模型提供参数的自然语言描述，直接影响工具调用的准确性。</li>
+          <li><strong>四种返回值类型</strong>：字符串（最常见）、对象（自动 JSON 序列化）、Command（控制 Agent 流程）、returnDirect（直接输出给用户）。根据使用场景选择合适的返回类型。</li>
+          <li><strong>运行时上下文</strong>：通过 config 参数访问 <code>configurable</code>（只读配置）、<code>store</code>（持久化存储）、<code>writer</code>（流式输出）等运行时信息，支持构建复杂的高级工具。</li>
+          <li><strong>动态工具选择</strong>：可以根据用户权限、角色或其他运行时条件动态过滤可用工具列表，实现精细化的工具访问控制。</li>
+          <li><strong>多工具 Agent</strong>：将多个工具注册到 Agent 中，模型会根据用户请求自主选择和组合工具，实现复杂任务的自动化处理。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ==================== 16. 下一章预告 ==================== -->
+    <section class="section" id="next-chapter">
+      <h2>➡️ 下一章预告</h2>
+      <div class="next-chapter-card">
+        <h3>第6章：流式传输（Streaming）</h3>
+        <p>在下一章中，我们将学习 LangChain.js 中的流式传输机制。当 Agent 调用工具或生成回答时，如果必须等待全部内容生成完毕才能看到结果，用户体验会非常差。流式传输解决了这个问题——它让模型的输出以"打字机效果"逐步呈现给用户。</p>
+        <p>你将学到：</p>
+        <ul>
+          <li>流式传输的基本概念和工作原理</li>
+          <li>使用 <code>.stream()</code> 方法获取模型的流式输出</li>
+          <li>处理流式事件的不同类型（token、tool_call、中间状态等）</li>
+          <li>在 Node.js 和浏览器环境中实现流式响应</li>
+          <li>结合工具使用流式传输，实时展示 Agent 的推理和执行过程</li>
+        </ul>
+        <a href="06-streaming.html" class="next-link">开始学习第6章 →</a>
+      </div>
+    </section>
+
+    <!-- 底部章节导航 -->
+    <div class="chapter-nav">
+      <a href="04-messages.html" class="nav-link">← 上一章</a>
+      <span class="chapter-progress">第 5 章 / 共 10 章</span>
+      <a href="06-streaming.html" class="nav-link">下一章 →</a>
+    </div>
+
+    </div><!-- /.content-wrapper -->
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+
+</body>
+</html>

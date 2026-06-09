@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第8章 中间件 Middleware - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch08">
+
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html" class="active"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <nav class="chapter-nav">
+        <a href="07-structured-output.html" class="nav-link">← 上一章：结构化输出</a>
+        <span class="chapter-progress">第 8 章 / 共 10 章</span>
+        <a href="09-memory.html" class="nav-link">下一章：记忆系统 →</a>
+      </nav>
+
+      <h1>第8章 中间件（Middleware）— 拦截与增强</h1>
+      <p class="subtitle">掌握中间件机制，为 Agent 添加日志、防护栏和人机交互能力</p>
+      <p><span class="tag tag-intermediate">进阶</span> 预计阅读时间：约 1 小时</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <section id="objectives">
+        <h2>🎯 本章目标</h2>
+        <div class="objectives">
+          <div class="objectives-title">学完本章，你将能够：</div>
+          <ul>
+            <li>理解中间件在 LangChain Agent 循环中的工作原理与执行时机</li>
+            <li>掌握 <code>summarizationMiddleware</code> 和 <code>humanInTheLoopMiddleware</code> 两个预构建中间件的使用方法</li>
+            <li>能够编写自定义中间件，实现日志记录、频率限制和个人信息检测等功能</li>
+            <li>构建一个完整的日志中间件，记录每次模型调用的输入、输出和耗时</li>
+            <li>构建一个内容防护栏中间件，自动拦截有害内容并返回安全提示</li>
+            <li>了解中间件与 LangGraph 状态图的集成方式，理解中间件作为节点或子图的嵌入模式</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <section id="prerequisites">
+        <h2>📋 前置知识</h2>
+        <div class="prerequisites">
+          <strong>⚠️ 学习本章前，你需要已完成以下内容：</strong>
+          <ul>
+            <li>第 1-2 章：理解 LangChain 基础概念和 Agent 架构</li>
+            <li>第 3 章：掌握模型（Models）的配置与调用</li>
+            <li>第 4-5 章：熟悉消息系统和工具（Tools）的使用</li>
+            <li>第 6 章：了解流式传输（Streaming）的基本原理</li>
+            <li>对 TypeScript 异步编程（Promise / async-await）有基本了解</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ==================== 什么是中间件 ==================== -->
+      <section id="what-is-middleware">
+        <h2>🔍 什么是中间件</h2>
+
+        <p>中间件就像安检通道——每个进出的包裹（消息）都要经过检查，你可以记录、修改甚至拦截它。在 LangChain 的 Agent 系统中，中间件（Middleware）是一种<strong>拦截器模式</strong>，它允许你在 Agent 执行的关键节点插入自定义逻辑，而无需修改 Agent 本身的核心代码。</p>
+
+        <p>想象一个快递分拣系统：包裹从发件人到收件人的过程中，会经过多个环节——称重、安检、贴标签、分拣。每个环节都可以对包裹进行检查、修改信息，甚至决定是否继续传递。中间件在 Agent 中扮演的角色与此完全一致。</p>
+
+        <p>在传统的 Web 开发中，中间件的概念早已深入人心。例如 Express.js 的 <code>app.use()</code>、Koa 的洋葱模型等。LangChain 借鉴了这一经典设计模式，将其应用到 AI Agent 的执行流程中。这意味着你可以用一种开发者非常熟悉的方式，对 Agent 的行为进行细粒度控制。</p>
+
+        <div class="callout info">
+          <div class="callout-title">📌 中间件的核心价值</div>
+          <p>中间件解决了 AI 应用开发中的一个关键问题：如何在不侵入核心逻辑的前提下，为 Agent 添加横切关注点（Cross-Cutting Concerns），如日志、监控、安全防护、限流等。这遵循了软件工程中的<strong>开闭原则</strong>——对扩展开放，对修改关闭。</p>
+        </div>
+
+        <p>中间件的典型应用场景包括：</p>
+        <ul>
+          <li><strong>日志与审计</strong>：记录每次模型调用的输入输出，便于调试和合规审计</li>
+          <li><strong>安全防护</strong>：检测并过滤有害内容、敏感信息（PII）或违规操作</li>
+          <li><strong>性能优化</strong>：实现调用频率限制、缓存策略，控制 API 成本</li>
+          <li><strong>人机交互</strong>：在关键操作前暂停，等待人工确认后再继续执行</li>
+          <li><strong>对话管理</strong>：自动摘要过长的对话历史，防止上下文窗口溢出</li>
+          <li><strong>错误处理</strong>：统一捕获异常、实现自动重试和降级策略</li>
+        </ul>
+      </section>
+
+      <!-- ==================== Agent 循环与中间件钩子 ==================== -->
+      <section id="agent-loop">
+        <h2>🔄 Agent 循环与中间件钩子</h2>
+
+        <p>要理解中间件的执行时机，首先需要了解 Agent 的核心执行循环。LangChain Agent 采用一个<strong>迭代循环</strong>来处理用户请求，每一轮循环包含以下关键步骤：</p>
+
+        <div class="card">
+          <h3>Agent 执行循环</h3>
+          <ol>
+            <li><strong>模型调用（Model Call）</strong>：将当前消息列表发送给 LLM，获取模型响应</li>
+            <li><strong>工具选择（Tool Selection）</strong>：解析模型响应，判断是否需要调用工具</li>
+            <li><strong>工具执行（Tool Execution）</strong>：如果模型选择调用工具，则执行对应工具并获取结果</li>
+            <li><strong>状态更新（State Update）</strong>：将工具结果追加到消息历史</li>
+            <li><strong>循环判断（Loop Check）</strong>：检查是否满足终止条件（无工具调用或达到最大步数）</li>
+          </ol>
+          <p>如果不满足终止条件，则回到步骤 1 继续下一轮迭代。</p>
+        </div>
+
+        <p>中间件可以在上述循环的<strong>每一个关键节点</strong>插入钩子（Hook）。具体来说，LangChain 提供了以下钩子点：</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>钩子点</th>
+              <th>触发时机</th>
+              <th>典型用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>beforeModel</code></td>
+              <td>每次调用模型之前</td>
+              <td>注入系统提示、添加上下文、记录请求</td>
+            </tr>
+            <tr>
+              <td><code>afterModel</code></td>
+              <td>模型返回响应之后</td>
+              <td>记录响应、检查输出质量、格式化结果</td>
+            </tr>
+            <tr>
+              <td><code>beforeTool</code></td>
+              <td>执行工具之前</td>
+              <td>权限检查、参数验证、频率限制</td>
+            </tr>
+            <tr>
+              <td><code>afterTool</code></td>
+              <td>工具执行完成之后</td>
+              <td>记录工具结果、结果过滤、异常捕获</td>
+            </tr>
+            <tr>
+              <td><code>beforeAgent</code></td>
+              <td>Agent 开始执行前</td>
+              <td>初始化、权限校验、请求预处理</td>
+            </tr>
+            <tr>
+              <td><code>afterAgent</code></td>
+              <td>Agent 执行结束后</td>
+              <td>结果后处理、清理资源、发送通知</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 洋葱模型</div>
+          <p>中间件的执行顺序遵循"洋葱模型"——请求从外向内穿过每一层中间件，响应再从内向外穿回。这意味着每个中间件的"前"钩子按注册顺序执行，"后"钩子按逆序执行。理解这个模型对于正确设计中间件链至关重要。</p>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">// 中间件执行流程的伪代码演示
+// 展示洋葱模型的执行顺序
+
+async function agentLoop(state: AgentState): Promise&lt;AgentResult&gt; {
+  while (!state.done) {
+    // --- beforeModel 钩子链（按注册顺序执行）---
+    for (const mw of middlewares) {
+      await mw.beforeModel?.(state);  // 例如：日志记录请求
+    }
+
+    // 模型调用
+    const response = await model.invoke(state.messages);
+
+    // --- afterModel 钩子链（按逆序执行）---
+    for (const mw of middlewares.reverse()) {
+      await mw.afterModel?.(state, response);  // 例如：检查输出安全
+    }
+
+    // 如果模型选择了工具
+    if (response.toolCalls?.length) {
+      for (const toolCall of response.toolCalls) {
+        // --- beforeTool 钩子 ---
+        for (const mw of middlewares) {
+          await mw.beforeTool?.(state, toolCall);
+        }
+
+        // 执行工具
+        const result = await tools[toolCall.name].invoke(toolCall.args);
+
+        // --- afterTool 钩子 ---
+        for (const mw of middlewares.reverse()) {
+          await mw.afterTool?.(state, toolCall, result);
+        }
+      }
+    }
+
+    // 检查终止条件
+    state.done = !response.toolCalls?.length;
+  }
+
+  return state.result;
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- ==================== 预构建中间件 ==================== -->
+      <section id="prebuilt-middleware">
+        <h2>📦 预构建中间件</h2>
+
+        <p>LangChain 提供了多个开箱即用的预构建中间件，涵盖了最常见的使用场景。本节将重点介绍两个最实用的预构建中间件：<code>summarizationMiddleware</code> 和 <code>humanInTheLoopMiddleware</code>。</p>
+
+        <!-- summarizationMiddleware -->
+        <h3>summarizationMiddleware — 对话摘要</h3>
+
+        <p>当 Agent 进行多轮对话时，消息历史会不断增长。当消息长度接近模型的上下文窗口限制时，不仅会导致 API 调用失败，还会显著增加 Token 成本。<code>summarizationMiddleware</code> 会在对话长度超过指定阈值时，自动将早期对话压缩为摘要，从而释放上下文空间。</p>
+
+        <p>这个中间件的工作原理是：在 <code>beforeModel</code> 钩子中检查当前消息列表的总 Token 数。如果超过阈值，就将最早的一批消息发送给模型进行摘要，然后用一条摘要消息替换这些原始消息。这样既保留了关键信息，又大幅减少了 Token 占用。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { createAgent } from "langchain/agents";
+import { ChatOpenAI } from "@langchain/openai";
+import { summarizationMiddleware } from "langchain/agents/middleware";
+
+// 创建模型实例
+const model = new ChatOpenAI({
+  modelName: "gpt-4o",
+  temperature: 0,
+});
+
+// 配置对话摘要中间件
+const summaryMiddleware = summarizationMiddleware({
+  // 触发摘要的 Token 阈值（例如：当消息超过 4000 Token 时）
+  maxTokens: 4000,
+
+  // 用于生成摘要的模型（可以与主模型不同，推荐使用较小模型节省成本）
+  summarizationModel: new ChatOpenAI({
+    modelName: "gpt-4o-mini",
+    temperature: 0,
+  }),
+
+  // 摘要提示词，指导模型如何生成摘要
+  summaryPrompt: `请将以下对话历史压缩为简洁的摘要，保留所有关键信息、
+决策和待办事项。摘要应该足够详细，以便后续对话能够无缝继续。`,
+});
+
+// 创建 Agent 并挂载中间件
+const agent = createAgent({
+  model,
+  tools: [searchTool, calculatorTool],
+  middleware: [summaryMiddleware],
+});
+
+// 使用 Agent 进行长对话
+// 当消息 Token 数超过 4000 时，中间件会自动压缩历史
+const result = await agent.invoke({
+  messages: [
+    { role: "user", content: "请帮我分析这个数据集的趋势..." },
+  ],
+});</code></pre>
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-title">⚠️ 摘要会丢失细节</div>
+          <p>摘要压缩是有损的——一些具体的数字、代码片段或精确表述可能在摘要中被简化。如果你的应用场景需要精确回溯历史对话（例如法律咨询），建议结合向量存储实现"摘要 + 原文检索"的混合方案。</p>
+        </div>
+
+        <!-- humanInTheLoopMiddleware -->
+        <h3>humanInTheLoopMiddleware — 人机交互</h3>
+
+        <p>在很多实际应用场景中，Agent 不应该完全自主地执行所有操作。例如，发送邮件、删除数据库记录、执行金融交易等高风险操作，都需要人工确认后才能执行。<code>humanInTheLoopMiddleware</code> 就是为此而设计的——它会在 Agent 准备调用指定工具时暂停执行，等待人工审批。</p>
+
+        <p>这个中间件的工作流程如下：Agent 正常运行，直到它选择调用需要人工确认的工具。此时中间件会中断执行循环，将工具调用信息（工具名称、参数等）呈现给用户。用户可以选择批准、拒绝或修改参数。批准后 Agent 继续执行，拒绝则返回错误信息。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { createAgent } from "langchain/agents";
+import { ChatOpenAI } from "@langchain/openai";
+import { humanInTheLoopMiddleware } from "langchain/agents/middleware";
+
+const model = new ChatOpenAI({ modelName: "gpt-4o" });
+
+// 配置人机交互中间件
+const hitlMiddleware = humanInTheLoopMiddleware({
+  // 指定需要人工确认的工具列表
+  tools: ["send_email", "delete_record", "execute_transaction"],
+
+  // 自定义审批界面的回调函数
+  onInterrupt: async (toolCall) => {
+    console.log("\n=== ⚠️ 需要人工确认 ===");
+    console.log(`工具: ${toolCall.name}`);
+    console.log(`参数: ${JSON.stringify(toolCall.args, null, 2)}`);
+
+    // 在实际应用中，这里通常会弹出 UI 界面或发送审批通知
+    // 此处简化为自动批准（实际应由用户输入决定）
+    const approved = await promptUser(`是否批准调用 ${toolCall.name}？(y/n)`);
+
+    return {
+      approved: approved === "y",
+      // 可选：修改工具参数
+      modifiedArgs: approved === "y" ? toolCall.args : undefined,
+    };
+  },
+});
+
+// 创建带有防护的 Agent
+const agent = createAgent({
+  model,
+  tools: [sendEmailTool, deleteRecordTool, searchTool],
+  middleware: [hitlMiddleware],
+});
+
+// 当 Agent 尝试调用 send_email 时，会暂停等待人工确认
+const result = await agent.invoke({
+  messages: [
+    { role: "user", content: "请发送一封邮件给张三，主题是会议通知" },
+  ],
+});
+// 控制台输出：
+// === ⚠️ 需要人工确认 ===
+// 工具: send_email
+// 参数: { "to": "zhangsan@example.com", "subject": "会议通知", ... }
+// 是否批准调用 send_email？(y/n)</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 生产环境建议</div>
+          <p>在生产环境中，<code>onInterrupt</code> 回调通常会连接到一个审批系统——例如发送 Slack 通知、创建 Jira 工单或推送到审批 Web UI。LangChain 的中间件接口是通用的，你可以自由对接任何审批流程。</p>
+        </div>
+      </section>
+
+      <!-- ==================== 自定义中间件 ==================== -->
+      <section id="custom-middleware">
+        <h2>🛠️ 自定义中间件</h2>
+
+        <p>预构建中间件虽然方便，但无法覆盖所有业务场景。LangChain 提供了灵活的自定义中间件接口，让你能够根据具体需求编写专属的中间件逻辑。一个中间件本质上就是一个实现了特定钩子方法的对象。</p>
+
+        <h3>中间件接口定义</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">// LangChain 中间件的接口定义
+// 中间件只需实现你需要的钩子方法，不需要全部实现
+
+interface AgentMiddleware {
+  // Agent 开始执行前调用
+  beforeAgent?(state: AgentState): Promise&lt;void&gt;;
+
+  // Agent 执行结束后调用
+  afterAgent?(state: AgentState, result: AgentResult): Promise&lt;void&gt;;
+
+  // 模型调用前调用
+  beforeModel?(state: AgentState): Promise&lt;void&gt;;
+
+  // 模型返回响应后调用
+  afterModel?(state: AgentState, response: AIMessage): Promise&lt;void&gt;;
+
+  // 工具执行前调用
+  beforeTool?(state: AgentState, toolCall: ToolCall): Promise&lt;void&gt;;
+
+  // 工具执行完成后调用
+  afterTool?(
+    state: AgentState,
+    toolCall: ToolCall,
+    result: string
+  ): Promise&lt;void&gt;;
+}</code></pre>
+        </div>
+
+        <!-- 日志中间件 -->
+        <h3>自定义日志中间件</h3>
+
+        <p>日志中间件是最常见的自定义中间件之一。它记录 Agent 执行过程中的每一个关键事件，包括模型调用的输入输出、工具执行的参数和结果，以及每次操作的耗时。这些日志对于调试、性能优化和合规审计都非常有价值。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import type { AgentMiddleware } from "langchain/agents/middleware";
+
+/**
+ * 日志中间件 —— 记录 Agent 执行过程中的所有关键事件
+ * 包括模型调用、工具执行及其耗时
+ */
+function createLoggingMiddleware(): AgentMiddleware {
+  // 用于记录每个步骤开始时间的 Map
+  const timers = new Map&lt;string, number&gt;();
+
+  return {
+    // Agent 启动时记录日志
+    async beforeAgent(state) {
+      console.log(`\n${"=".repeat(60)}`);
+      console.log(`[Agent] 🚀 开始执行 | 输入消息数: ${state.messages.length}`);
+      console.log(`${"=".repeat(60)}`);
+      timers.set("agent", Date.now());
+    },
+
+    // 模型调用前记录
+    async beforeModel(state) {
+      const stepId = `model-${Date.now()}`;
+      timers.set("model", Date.now());
+
+      // 获取最后一条用户消息用于日志
+      const lastUserMsg = [...state.messages]
+        .reverse()
+        .find((m) => m.role === "user");
+
+      console.log(`\n[Model] 📤 发送请求...`);
+      console.log(`  最新用户消息: ${lastUserMsg?.content?.toString().slice(0, 100)}...`);
+      console.log(`  消息历史长度: ${state.messages.length} 条`);
+    },
+
+    // 模型响应后记录
+    async afterModel(state, response) {
+      const elapsed = Date.now() - (timers.get("model") || Date.now());
+      console.log(`\n[Model] 📥 收到响应 | 耗时: ${elapsed}ms`);
+      console.log(`  响应类型: ${response.tool_calls?.length ? "工具调用" : "文本回复"}`);
+
+      if (response.tool_calls?.length) {
+        response.tool_calls.forEach((tc, i) => {
+          console.log(`  工具调用 #${i + 1}: ${tc.name}(${JSON.stringify(tc.args).slice(0, 80)})`);
+        });
+      } else {
+        console.log(`  回复内容: ${response.content?.toString().slice(0, 100)}...`);
+      }
+    },
+
+    // 工具执行前记录
+    async beforeTool(state, toolCall) {
+      timers.set(`tool-${toolCall.id}`, Date.now());
+      console.log(`\n[Tool] 🔧 执行工具: ${toolCall.name}`);
+      console.log(`  参数: ${JSON.stringify(toolCall.args, null, 2)}`);
+    },
+
+    // 工具执行后记录
+    async afterTool(state, toolCall, result) {
+      const elapsed = Date.now() - (timers.get(`tool-${toolCall.id}`) || Date.now());
+      console.log(`\n[Tool] ✅ 工具完成: ${toolCall.name} | 耗时: ${elapsed}ms`);
+      console.log(`  结果: ${result.slice(0, 100)}${result.length > 100 ? "..." : ""}`);
+    },
+
+    // Agent 结束时记录汇总
+    async afterAgent(state, result) {
+      const totalElapsed = Date.now() - (timers.get("agent") || Date.now());
+      console.log(`\n${"=".repeat(60)}`);
+      console.log(`[Agent] 🏁 执行完成 | 总耗时: ${totalElapsed}ms`);
+      console.log(`  最终回复: ${result.output?.toString().slice(0, 150)}...`);
+      console.log(`${"=".repeat(60)}\n`);
+    },
+  };
+}
+
+// 使用日志中间件
+const loggingMiddleware = createLoggingMiddleware();
+
+const agent = createAgent({
+  model,
+  tools: [searchTool, calculatorTool],
+  middleware: [loggingMiddleware],
+});</code></pre>
+        </div>
+
+        <!-- 频率限制中间件 -->
+        <h3>自定义频率限制中间件</h3>
+
+        <p>在生产环境中，控制 API 调用频率至关重要。过高的调用频率不仅会导致 API 提供商返回 429 错误（Too Many Requests），还会快速消耗 Token 预算。频率限制中间件可以有效控制 Agent 的调用节奏，避免超出预算和触发限流。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import type { AgentMiddleware } from "langchain/agents/middleware";
+
+/**
+ * 频率限制中间件 —— 控制模型调用频率，防止超出 API 限额
+ * 采用令牌桶（Token Bucket）算法实现平滑限流
+ */
+function createRateLimitMiddleware(options: {
+  maxCallsPerMinute: number;    // 每分钟最大调用次数
+  cooldownMs?: number;          // 触发限流时的等待时间
+}): AgentMiddleware {
+  const { maxCallsPerMinute, cooldownMs = 1000 } = options;
+  const callTimestamps: number[] = [];
+
+  return {
+    async beforeModel(state) {
+      const now = Date.now();
+
+      // 清理一分钟前的记录
+      while (callTimestamps.length > 0 && callTimestamps[0] < now - 60_000) {
+        callTimestamps.shift();
+      }
+
+      // 检查是否超出频率限制
+      if (callTimestamps.length >= maxCallsPerMinute) {
+        const oldestCall = callTimestamps[0];
+        const waitTime = 60_000 - (now - oldestCall);
+
+        console.warn(
+          `[RateLimit] ⏳ 已达到每分钟 ${maxCallsPerMinute} 次调用限制，` +
+          `等待 ${waitTime}ms 后重试...`
+        );
+
+        // 等待直到可以继续调用
+        await new Promise((resolve) => setTimeout(resolve, waitTime + cooldownMs));
+      }
+
+      // 记录本次调用时间
+      callTimestamps.push(Date.now());
+      console.log(
+        `[RateLimit] 📊 本分钟已调用: ${callTimestamps.length}/${maxCallsPerMinute}`
+      );
+    },
+  };
+}
+
+// 使用频率限制中间件：限制每分钟最多 10 次模型调用
+const rateLimitMiddleware = createRateLimitMiddleware({
+  maxCallsPerMinute: 10,
+  cooldownMs: 500,
+});
+
+const agent = createAgent({
+  model,
+  tools: [searchTool],
+  middleware: [rateLimitMiddleware],
+});</code></pre>
+        </div>
+
+        <!-- PII 检测中间件 -->
+        <h3>自定义 PII 检测中间件</h3>
+
+        <p>PII（Personally Identifiable Information，个人可识别信息）检测是数据安全中的重要环节。在 AI 应用中，用户可能会无意间在消息中包含身份证号、手机号、银行卡号等敏感信息。PII 检测中间件可以在消息发送给模型之前自动识别并遮蔽这些敏感数据，保护用户隐私。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import type { AgentMiddleware } from "langchain/agents/middleware";
+
+/**
+ * PII 检测中间件 —— 自动识别并遮蔽个人信息
+ * 支持检测手机号、身份证号、银行卡号、邮箱地址等常见 PII 类型
+ */
+function createPIIDetectionMiddleware(): AgentMiddleware {
+  // 定义 PII 检测正则模式
+  const piiPatterns: Array&lt;{ name: string; pattern: RegExp; mask: string }&gt; = [
+    {
+      name: "手机号",
+      pattern: /(?<!\d)1[3-9]\d{9}(?!\d)/g,
+      mask: "[手机号已遮蔽]",
+    },
+    {
+      name: "身份证号",
+      pattern: /(?<!\d)\d{17}[\dXx](?!\d)/g,
+      mask: "[身份证号已遮蔽]",
+    },
+    {
+      name: "银行卡号",
+      pattern: /(?<!\d)\d{16,19}(?!\d)/g,
+      mask: "[银行卡号已遮蔽]",
+    },
+    {
+      name: "邮箱地址",
+      pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+      mask: "[邮箱已遮蔽]",
+    },
+  ];
+
+  /**
+   * 对文本进行 PII 检测和遮蔽
+   * 返回处理后的文本和检测到的 PII 信息
+   */
+  function maskPII(text: string): { masked: string; detections: string[] } {
+    let masked = text;
+    const detections: string[] = [];
+
+    for (const { name, pattern, mask } of piiPatterns) {
+      // 重置正则状态
+      pattern.lastIndex = 0;
+      const matches = text.match(pattern);
+      if (matches) {
+        matches.forEach((match) => {
+          detections.push(`${name}: ${match.slice(0, 3)}***${match.slice(-3)}`);
+          masked = masked.replace(match, mask);
+        });
+      }
+    }
+
+    return { masked, detections };
+  }
+
+  return {
+    async beforeModel(state) {
+      // 检查最新一条用户消息中的 PII
+      const lastMessage = state.messages[state.messages.length - 1];
+
+      if (lastMessage?.role === "user" && typeof lastMessage.content === "string") {
+        const { masked, detections } = maskPII(lastMessage.content);
+
+        if (detections.length > 0) {
+          console.warn(`[PII] 🔒 检测到 ${detections.length} 处个人信息：`);
+          detections.forEach((d) => console.warn(`  - ${d}`));
+
+          // 用遮蔽后的内容替换原始消息
+          lastMessage.content = masked;
+          console.log(`[PII] ✅ 已自动遮蔽个人信息`);
+        }
+      }
+    },
+  };
+}
+
+// 使用 PII 检测中间件
+const piiMiddleware = createPIIDetectionMiddleware();
+
+const agent = createAgent({
+  model,
+  tools: [searchTool],
+  middleware: [piiMiddleware],
+});
+
+// 当用户输入包含 "我的手机号是 13812345678" 时
+// 中间件会自动将其替换为 "我的手机号是 [手机号已遮蔽]"
+// 再发送给模型处理</code></pre>
+        </div>
+      </section>
+
+      <!-- ==================== 实战：日志中间件 ==================== -->
+      <section id="practice-logging">
+        <h2>📝 实战：构建日志中间件</h2>
+
+        <p>让我们通过一个完整的实战项目来巩固中间件的知识。我们将构建一个生产级别的日志中间件，它不仅能在控制台输出日志，还能将日志持久化到文件，并支持不同的日志级别。</p>
+
+        <h3>完整实现</h3>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import type { AgentMiddleware } from "langchain/agents/middleware";
+import { appendFile } from "fs/promises";
+
+// 日志级别枚举
+enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
+}
+
+// 日志条目结构
+interface LogEntry {
+  timestamp: string;        // ISO 格式时间戳
+  level: string;            // 日志级别名称
+  category: string;         // 分类：agent / model / tool
+  event: string;            // 事件名称
+  data: Record&lt;string, unknown&gt;; // 附加数据
+  durationMs?: number;      // 操作耗时（毫秒）
+}
+
+/**
+ * 生产级日志中间件
+ * 支持控制台输出 + 文件持久化 + 可配置日志级别
+ */
+function createProductionLogger(options: {
+  level?: LogLevel;         // 最低日志级别
+  logFile?: string;         // 日志文件路径（不设置则仅控制台输出）
+  includeTimestamp?: boolean;
+} = {}): AgentMiddleware {
+  const {
+    level = LogLevel.INFO,
+    logFile,
+    includeTimestamp = true,
+  } = options;
+
+  const stepTimers = new Map&lt;string, number&gt;();
+  let agentStartTime = 0;
+  let totalModelCalls = 0;
+  let totalToolCalls = 0;
+
+  // 格式化日志条目为可读字符串
+  function formatLog(entry: LogEntry): string {
+    const parts: string[] = [];
+    if (includeTimestamp) parts.push(`[${entry.timestamp}]`);
+    parts.push(`[${entry.level}]`);
+    parts.push(`[${entry.category}]`);
+    parts.push(entry.event);
+
+    if (Object.keys(entry.data).length > 0) {
+      parts.push(JSON.stringify(entry.data));
+    }
+    if (entry.durationMs !== undefined) {
+      parts.push(`(${entry.durationMs}ms)`);
+    }
+    return parts.join(" ");
+  }
+
+  // 写入日志（控制台 + 可选文件）
+  async function writeLog(entry: LogEntry): Promise&lt;void&gt; {
+    const levelValue = LogLevel[entry.level as keyof typeof LogLevel] ?? 0;
+    if (levelValue < level) return; // 低于最低级别的日志不输出
+
+    const formatted = formatLog(entry);
+    const levelColors: Record&lt;string, string&gt; = {
+      DEBUG: "\x1b[90m", // 灰色
+      INFO: "\x1b[36m",  // 青色
+      WARN: "\x1b[33m",  // 黄色
+      ERROR: "\x1b[31m", // 红色
+    };
+    const reset = "\x1b[0m";
+    const color = levelColors[entry.level] ?? "";
+
+    console.log(`${color}${formatted}${reset}`);
+
+    // 如果配置了日志文件，异步写入
+    if (logFile) {
+      try {
+        await appendFile(logFile, formatted + "\n", "utf-8");
+      } catch (err) {
+        console.error(`[Logger] 写入日志文件失败: ${err}`);
+      }
+    }
+  }
+
+  return {
+    async beforeAgent(state) {
+      agentStartTime = Date.now();
+      totalModelCalls = 0;
+      totalToolCalls = 0;
+
+      await writeLog({
+        timestamp: new Date().toISOString(),
+        level: "INFO",
+        category: "agent",
+        event: "执行开始",
+        data: { messageCount: state.messages.length },
+      });
+    },
+
+    async beforeModel(state) {
+      stepTimers.set("model", Date.now());
+      totalModelCalls++;
+
+      await writeLog({
+        timestamp: new Date().toISOString(),
+        level: "DEBUG",
+        category: "model",
+        event: "发送请求",
+        data: {
+          callNumber: totalModelCalls,
+          historyLength: state.messages.length,
+        },
+      });
+    },
+
+    async afterModel(state, response) {
+      const elapsed = Date.now() - (stepTimers.get("model") ?? Date.now());
+      const hasToolCalls = Boolean(response.tool_calls?.length);
+
+      await writeLog({
+        timestamp: new Date().toISOString(),
+        level: "INFO",
+        category: "model",
+        event: "收到响应",
+        data: {
+          responseType: hasToolCalls ? "tool_calls" : "text",
+          toolCallCount: response.tool_calls?.length ?? 0,
+        },
+        durationMs: elapsed,
+      });
+    },
+
+    async beforeTool(state, toolCall) {
+      stepTimers.set(`tool-${toolCall.id}`, Date.now());
+      totalToolCalls++;
+
+      await writeLog({
+        timestamp: new Date().toISOString(),
+        level: "INFO",
+        category: "tool",
+        event: `调用 ${toolCall.name}`,
+        data: { args: toolCall.args },
+      });
+    },
+
+    async afterTool(state, toolCall, result) {
+      const elapsed = Date.now() - (stepTimers.get(`tool-${toolCall.id}`) ?? Date.now());
+
+      await writeLog({
+        timestamp: new Date().toISOString(),
+        level: "INFO",
+        category: "tool",
+        event: `${toolCall.name} 完成`,
+        data: { resultPreview: result.slice(0, 200) },
+        durationMs: elapsed,
+      });
+    },
+
+    async afterAgent(state, result) {
+      const totalElapsed = Date.now() - agentStartTime;
+
+      await writeLog({
+        timestamp: new Date().toISOString(),
+        level: "INFO",
+        category: "agent",
+        event: "执行完成",
+        data: {
+          totalModelCalls,
+          totalToolCalls,
+          totalDurationMs: totalElapsed,
+        },
+        durationMs: totalElapsed,
+      });
+    },
+  };
+}
+
+// ===== 使用示例 =====
+const logger = createProductionLogger({
+  level: LogLevel.DEBUG,
+  logFile: "./logs/agent-execution.log",
+});
+
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o" }),
+  tools: [searchTool, calculatorTool],
+  middleware: [logger],
+});</code></pre>
+        </div>
+
+        <div class="code-output">
+<span style="color: #94a3b8;">[2026-06-09T10:30:00.000Z]</span> <span style="color: #3b82f6;">[INFO]</span> [agent] 执行开始 {"messageCount":1}
+<span style="color: #94a3b8;">[2026-06-09T10:30:00.001Z]</span> <span style="color: #94a3b8;">[DEBUG]</span> [model] 发送请求 {"callNumber":1,"historyLength":1}
+<span style="color: #94a3b8;">[2026-06-09T10:30:01.230Z]</span> <span style="color: #3b82f6;">[INFO]</span> [model] 收到响应 {"responseType":"tool_calls","toolCallCount":1} (1229ms)
+<span style="color: #94a3b8;">[2026-06-09T10:30:01.231Z]</span> <span style="color: #3b82f6;">[INFO]</span> [tool] 调用 search {"args":{"query":"最新AI新闻"}}
+<span style="color: #94a3b8;">[2026-06-09T10:30:02.450Z]</span> <span style="color: #3b82f6;">[INFO]</span> [tool] search 完成 {"resultPreview":"搜索结果：..."} (1219ms)
+<span style="color: #94a3b8;">[2026-06-09T10:30:02.451Z]</span> <span style="color: #3b82f6;">[INFO]</span> [agent] 执行完成 {"totalModelCalls":2,"totalToolCalls":1} (2451ms)
+        </div>
+      </section>
+
+      <!-- ==================== 实战：防护栏中间件 ==================== -->
+      <section id="practice-guardrail">
+        <h2>🛡️ 实战：构建防护栏中间件</h2>
+
+        <p>在面向用户的 AI 应用中，内容安全是不可忽视的一环。防护栏（Guardrail）中间件可以在两个方向上保护应用安全：一是检测用户输入中的有害请求（如越狱提示、恶意指令），二是检查模型输出是否包含不当内容。这就像在 Agent 周围安装了一圈安全围栏，确保它不会"越界"。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import type { AgentMiddleware } from "langchain/agents/middleware";
+import { ChatOpenAI } from "@langchain/openai";
+
+// 内容检查结果
+interface ContentCheckResult {
+  safe: boolean;           // 是否安全
+  reason?: string;         // 不安全的原因
+  category?: string;       // 不安全内容类别
+}
+
+/**
+ * 内容防护栏中间件
+ * 在输入和输出两端同时保护 Agent 的安全
+ */
+function createGuardrailMiddleware(options: {
+  blockedCategories?: string[];       // 需要拦截的内容类别
+  guardModel?: ChatOpenAI;            // 用于内容审查的模型（可选）
+  onBlocked?: (reason: string) => string; // 被拦截时的自定义回复
+} = {}): AgentMiddleware {
+  const {
+    blockedCategories = [
+      "暴力内容",
+      "色情内容",
+      "仇恨言论",
+      "非法活动指导",
+      "个人隐私泄露",
+    ],
+    guardModel,
+    onBlocked = (reason) =>
+      `抱歉，您的请求包含不安全内容（${reason}），我无法处理。请修改您的问题后重试。`,
+  } = options;
+
+  /**
+   * 基于规则的快速检测（无需调用模型，适用于明显的恶意内容）
+   */
+  function ruleBasedCheck(text: string): ContentCheckResult {
+    const dangerousPatterns: Array&lt;{ pattern: RegExp; category: string }&gt; = [
+      // 越狱提示检测
+      {
+        pattern: /ignore\s+(all\s+)?(previous|above)\s+(instructions?|prompts?)/i,
+        category: "越狱提示",
+      },
+      {
+        pattern: /忘记(之前|上面|以上)的(指令|提示|规则)/i,
+        category: "越狱提示",
+      },
+      {
+        pattern: /你现在(是|扮演)(?!.*助手|.*帮手).*(?:没有限制|不受约束)/i,
+        category: "越狱提示",
+      },
+      // 敏感操作检测
+      {
+        pattern: /(写|生成|帮我写)(.*)(病毒|木马|恶意软件|黑客代码)/i,
+        category: "非法活动指导",
+      },
+      {
+        pattern: /(如何|怎么)(黑入|入侵|破解)(.*)(系统|网站|账户)/i,
+        category: "非法活动指导",
+      },
+    ];
+
+    for (const { pattern, category } of dangerousPatterns) {
+      if (pattern.test(text)) {
+        return { safe: false, reason: `检测到${category}内容`, category };
+      }
+    }
+
+    return { safe: true };
+  }
+
+  /**
+   * 基于模型的深度审查（可选，适用于模糊内容）
+   */
+  async function modelBasedCheck(text: string): Promise&lt;ContentCheckResult&gt; {
+    if (!guardModel) return { safe: true };
+
+    const response = await guardModel.invoke([
+      {
+        role: "system",
+        content: `你是一个内容安全审查员。判断以下文本是否包含以下类别的不安全内容：
+${blockedCategories.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+
+只回复 JSON 格式：
+{"safe": true/false, "reason": "原因", "category": "类别"}`,
+      },
+      { role: "user", content: `请审查以下文本：\n\n${text}` },
+    ]);
+
+    try {
+      const result = JSON.parse(response.content as string) as ContentCheckResult;
+      return result;
+    } catch {
+      // 如果模型返回格式不正确，默认放行
+      console.warn("[Guardrail] 模型返回格式异常，默认放行");
+      return { safe: true };
+    }
+  }
+
+  return {
+    // 输入端防护：检查用户消息
+    async beforeModel(state) {
+      const lastMessage = state.messages[state.messages.length - 1];
+
+      if (lastMessage?.role !== "user") return;
+      if (typeof lastMessage.content !== "string") return;
+
+      const text = lastMessage.content;
+
+      // 第一层：规则快速检测
+      const ruleCheck = ruleBasedCheck(text);
+      if (!ruleCheck.safe) {
+        console.warn(`[Guardrail] 🚫 规则拦截: ${ruleCheck.reason}`);
+
+        // 用安全提示替换用户消息，中断正常处理流程
+        lastMessage.content = onBlocked(ruleCheck.reason!);
+        return;
+      }
+
+      // 第二层：模型深度审查（可选）
+      const modelCheck = await modelBasedCheck(text);
+      if (!modelCheck.safe) {
+        console.warn(`[Guardrail] 🚫 模型拦截: ${modelCheck.reason}`);
+        lastMessage.content = onBlocked(modelCheck.reason!);
+        return;
+      }
+
+      console.log("[Guardrail] ✅ 输入安全检查通过");
+    },
+
+    // 输出端防护：检查模型回复
+    async afterModel(state, response) {
+      if (typeof response.content !== "string") return;
+
+      const outputCheck = ruleBasedCheck(response.content);
+      if (!outputCheck.safe) {
+        console.warn(`[Guardrail] 🚫 输出被拦截: ${outputCheck.reason}`);
+        // 用安全的替代回复替换模型输出
+        response.content = "抱歉，我无法提供此信息。请尝试其他问题。";
+      }
+    },
+  };
+}
+
+// ===== 使用防护栏中间件 =====
+
+// 方案 1：仅使用规则检测（零成本，适合拦截明显的恶意内容）
+const basicGuardrail = createGuardrailMiddleware();
+
+// 方案 2：规则 + 模型双重检测（更安全，但会增加延迟和成本）
+const advancedGuardrail = createGuardrailMiddleware({
+  guardModel: new ChatOpenAI({
+    modelName: "gpt-4o-mini",  // 使用较小模型做审查，降低成本
+    temperature: 0,
+  }),
+  onBlocked: (reason) =>
+    `⚠️ 内容安全提示：您的请求因「${reason}」被拦截。如有疑问请联系管理员。`,
+});
+
+// 将防护栏与日志中间件组合使用
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o" }),
+  tools: [searchTool, calculatorTool],
+  middleware: [
+    logger,           // 日志中间件（先执行）
+    advancedGuardrail, // 防护栏中间件（后执行）
+  ],
+});</code></pre>
+        </div>
+
+        <div class="callout info">
+          <div class="callout-title">📌 两层防护策略说明</div>
+          <p>上述实现采用了<strong>两层防护策略</strong>：第一层是基于正则表达式的规则检测，速度快且无成本，用于拦截明显的恶意内容（如越狱提示）；第二层是基于小模型的语义理解，用于检测规则无法覆盖的变体攻击。在实际应用中，建议同时启用两层防护以获得最佳安全性。</p>
+        </div>
+      </section>
+
+      <!-- ==================== LangGraph 集成 ==================== -->
+      <section id="langgraph-integration">
+        <h2>🔗 中间件与 LangGraph 集成</h2>
+
+        <p>LangChain 的中间件并非只能在独立的 Agent 中使用。在更复杂的场景中，你可以在 LangGraph 的 <code>StateGraph</code>（状态图）中将中间件作为节点（Node）或子图（Subgraph）嵌入，实现更灵活的流程编排。</p>
+
+        <p>LangGraph 是 LangChain 生态中的流程编排框架，它使用有向图来描述 Agent 的执行流程。每个节点代表一个处理步骤，边代表状态流转。中间件可以无缝嵌入这种图结构中。</p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { StateGraph, END, START } from "@langchain/langgraph";
+import { createAgent } from "langchain/agents";
+import { ChatOpenAI } from "@langchain/openai";
+
+// 定义图的状态类型
+interface WorkflowState {
+  messages: Array&lt;{ role: string; content: string }&gt;;
+  safetyCheckPassed: boolean;
+  agentResult?: string;
+}
+
+// 创建带中间件的 Agent
+const agent = createAgent({
+  model: new ChatOpenAI({ modelName: "gpt-4o" }),
+  tools: [searchTool],
+  middleware: [logger, guardrailMiddleware],
+});
+
+// 在 LangGraph StateGraph 中使用带中间件的 Agent
+const workflow = new StateGraph&lt;WorkflowState&gt;({
+  channels: {
+    messages: { value: [] },
+    safetyCheckPassed: { value: false },
+    agentResult: { value: undefined },
+  },
+});
+
+// 定义节点
+workflow.addNode("preprocess", async (state) => {
+  // 预处理节点：数据清洗、格式标准化
+  console.log("[Graph] 预处理阶段");
+  return { messages: state.messages };
+});
+
+workflow.addNode("agent_with_middleware", async (state) => {
+  // Agent 节点：内部运行完整的中间件链
+  console.log("[Graph] Agent 执行阶段（含中间件）");
+  const result = await agent.invoke({ messages: state.messages });
+  return { agentResult: result.output };
+});
+
+workflow.addNode("postprocess", async (state) => {
+  // 后处理节点：格式化输出、添加元数据
+  console.log("[Graph] 后处理阶段");
+  return {
+    agentResult: `[处理完成] ${state.agentResult}`,
+  };
+});
+
+// 定义边（执行流程）
+workflow.addEdge(START, "preprocess");                  // 开始 → 预处理
+workflow.addEdge("preprocess", "agent_with_middleware"); // 预处理 → Agent
+workflow.addEdge("agent_with_middleware", "postprocess"); // Agent → 后处理
+workflow.addEdge("postprocess", END);                    // 后处理 → 结束
+
+// 编译并运行
+const app = workflow.compile();
+const finalResult = await app.invoke({
+  messages: [{ role: "user", content: "帮我搜索 LangChain 的最新版本" }],
+});
+
+console.log("最终结果:", finalResult.agentResult);</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 中间件 vs 节点的使用选择</div>
+          <p><strong>何时使用中间件：</strong>当你需要对 Agent 的内部行为进行拦截和增强时（如日志、防护栏、频率限制），使用中间件。它作用于 Agent 循环的每一步。</p>
+          <p><strong>何时使用节点：</strong>当你需要在更宏观的流程层面添加逻辑时（如路由决策、并行处理、条件分支），使用 LangGraph 节点。它作用于图的拓扑结构。</p>
+          <p>两者并不冲突，可以组合使用——在 StateGraph 的某个节点中运行一个带有多层中间件的 Agent。</p>
+        </div>
+
+        <p>下图展示了中间件在 LangGraph 集成中的层次关系：</p>
+
+        <div class="card">
+          <h4>架构层次示意</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>层次</th>
+                <th>组件</th>
+                <th>职责</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>最外层</td>
+                <td>LangGraph StateGraph</td>
+                <td>定义整体工作流拓扑，管理状态流转</td>
+              </tr>
+              <tr>
+                <td>中间层</td>
+                <td>Graph Node（图节点）</td>
+                <td>编排 Agent 调用、数据预处理/后处理</td>
+              </tr>
+              <tr>
+                <td>最内层</td>
+                <td>Agent + Middleware</td>
+                <td>Agent 核心循环，中间件在每一步进行拦截增强</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <section id="quiz">
+        <h2>🧠 知识检查点</h2>
+        <p>通过以下问题检验你对本章内容的理解。点击"查看答案"来核对你的解答。</p>
+
+        <div class="quiz">
+          <div class="quiz-header">📝 自测题</div>
+
+          <div class="quiz-item">
+            <div class="quiz-question">问题 1：中间件的"洋葱模型"是什么意思？当注册了多个中间件时，它们的 beforeModel 和 afterModel 分别按什么顺序执行？</div>
+            <button class="reveal-btn">💡 查看答案</button>
+            <div class="quiz-answer">
+              <p><strong>洋葱模型</strong>指的是中间件的执行像洋葱一样有层次——请求从外向内逐层穿过中间件，响应再从内向外逐层穿回。</p>
+              <p><strong>执行顺序：</strong></p>
+              <ul>
+                <li><code>beforeModel</code>：按中间件<strong>注册顺序</strong>（从前到后）依次执行</li>
+                <li><code>afterModel</code>：按<strong>逆序</strong>（从后到前）依次执行</li>
+              </ul>
+              <p>例如注册了 [A, B, C] 三个中间件，执行顺序为：A.before → B.before → C.before → 模型调用 → C.after → B.after → A.after</p>
+            </div>
+          </div>
+
+          <div class="quiz-item">
+            <div class="quiz-question">问题 2：summarizationMiddleware 的作用是什么？它在什么时候触发对话摘要？</div>
+            <button class="reveal-btn">💡 查看答案</button>
+            <div class="quiz-answer">
+              <p><strong>作用：</strong>自动压缩过长的对话历史，防止上下文窗口溢出并降低 Token 成本。</p>
+              <p><strong>触发时机：</strong>在 <code>beforeModel</code> 钩子中检查当前消息列表的总 Token 数，当超过配置的 <code>maxTokens</code> 阈值时自动触发。它会将最早的一批消息压缩为一条摘要消息，保留关键信息的同时释放上下文空间。</p>
+            </div>
+          </div>
+
+          <div class="quiz-item">
+            <div class="quiz-question">问题 3：编写自定义中间件时，为什么建议同时使用规则检测和模型检测两层防护？</div>
+            <button class="reveal-btn">💡 查看答案</button>
+            <div class="quiz-answer">
+              <p><strong>两层防护的优势：</strong></p>
+              <ul>
+                <li><strong>第一层（规则检测）：</strong>基于正则表达式，速度快、零成本，能拦截明显的恶意内容（如常见的越狱提示模板）</li>
+                <li><strong>第二层（模型检测）：</strong>基于语义理解，能检测规则无法覆盖的变体攻击（如同义词替换、隐喻表达）</li>
+              </ul>
+              <p>规则检测作为快速过滤器，大部分安全请求直接通过，减少模型调用次数；模型检测作为深度审查，处理规则无法判断的边界情况。两者互补，在安全性和性能之间取得平衡。</p>
+            </div>
+          </div>
+
+          <div class="quiz-item">
+            <div class="quiz-question">问题 4：在 LangGraph 中，中间件和图节点（Node）有什么区别？什么时候应该使用中间件，什么时候应该使用图节点？</div>
+            <button class="reveal-btn">💡 查看答案</button>
+            <div class="quiz-answer">
+              <p><strong>区别：</strong></p>
+              <ul>
+                <li><strong>中间件</strong>作用于 Agent 内部循环的每一步（模型调用前后、工具执行前后），是微观层面的拦截器</li>
+                <li><strong>图节点</strong>作用于 LangGraph 状态图的拓扑结构，是宏观层面的流程编排单元</li>
+              </ul>
+              <p><strong>使用场景：</strong></p>
+              <ul>
+                <li>需要拦截 Agent 内部行为（日志、防护栏、限流）→ 使用<strong>中间件</strong></li>
+                <li>需要编排多个处理步骤的流程（路由、并行、条件分支）→ 使用<strong>图节点</strong></li>
+                <li>两者可以组合使用：在图节点中运行一个带有多层中间件的 Agent</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <section id="common-errors">
+        <h2>🐛 常见错误</h2>
+
+        <h3>错误 1：中间件执行顺序导致逻辑错误</h3>
+        <div class="callout danger">
+          <div class="callout-title">❌ 错误现象</div>
+          <p>注册了日志中间件和防护栏中间件，但防护栏拦截的内容仍然被记录到了日志中，或者日志记录的输入内容是未被遮蔽的原始文本。</p>
+        </div>
+        <div class="callout tip">
+          <div class="callout-title">✅ 解决方案</div>
+          <p>注意中间件的注册顺序和洋葱模型。如果希望日志记录的是<strong>经过处理后</strong>的内容（如 PII 已遮蔽），应将日志中间件注册在 PII 中间件<strong>之后</strong>：</p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="lang-tag">TypeScript</span>
+              <button class="copy-btn">📋 复制</button>
+            </div>
+            <pre><code class="language-typescript">// ❌ 错误：日志先于 PII 遮蔽执行，记录的是原始文本
+middleware: [loggingMiddleware, piiMiddleware]
+
+// ✅ 正确：PII 遮蔽先执行，日志记录的是遮蔽后的文本
+middleware: [piiMiddleware, loggingMiddleware]</code></pre>
+          </div>
+        </div>
+
+        <h3>错误 2：中间件中执行异步操作未正确等待</h3>
+        <div class="callout danger">
+          <div class="callout-title">❌ 错误现象</div>
+          <p>中间件的钩子函数中发起了异步操作（如写入数据库、调用外部 API），但没有使用 <code>await</code>，导致操作在 Agent 继续执行后才完成，造成数据丢失或竞态条件。</p>
+        </div>
+        <div class="callout tip">
+          <div class="callout-title">✅ 解决方案</div>
+          <p>确保钩子函数声明为 <code>async</code> 并在所有异步操作前使用 <code>await</code>：</p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="lang-tag">TypeScript</span>
+              <button class="copy-btn">📋 复制</button>
+            </div>
+            <pre><code class="language-typescript">// ❌ 错误：忘记 await，日志可能丢失
+async beforeModel(state) {
+  saveToDatabase(logEntry);  // 没有 await！
+}
+
+// ✅ 正确：使用 await 确保写入完成
+async beforeModel(state) {
+  await saveToDatabase(logEntry);  // 等待写入完成
+}</code></pre>
+          </div>
+        </div>
+
+        <h3>错误 3：在中间件中修改状态但未正确传递</h3>
+        <div class="callout danger">
+          <div class="callout-title">❌ 错误现象</div>
+          <p>在 <code>beforeModel</code> 中修改了 <code>state</code> 对象（如过滤消息），但模型调用仍然使用了原始的未修改消息。这是因为某些状态可能被快照锁定，直接赋值不会生效。</p>
+        </div>
+        <div class="callout tip">
+          <div class="callout-title">✅ 解决方案</div>
+          <p>了解 LangChain 的状态管理机制。对于不可变状态，需要返回新的状态对象而非修改原对象。始终查阅官方文档确认状态是否可变，必要时使用展开运算符创建新对象：</p>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="lang-tag">TypeScript</span>
+              <button class="copy-btn">📋 复制</button>
+            </div>
+            <pre><code class="language-typescript">// ❌ 错误：直接修改数组可能不生效
+async beforeModel(state) {
+  state.messages = state.messages.filter(m => m.role !== "system");
+}
+
+// ✅ 正确：返回新的状态
+async beforeModel(state) {
+  const filtered = state.messages.filter(m => m.role !== "system");
+  // 根据 LangChain 版本，可能需要通过特定 API 更新状态
+  return { messages: filtered };
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <section id="summary">
+        <h2>📝 本章小结</h2>
+        <div class="chapter-summary">
+          <h2>关键知识点回顾</h2>
+          <ul>
+            <li><strong>中间件模式</strong>：借鉴 Web 开发中的拦截器模式，允许在 Agent 执行循环的关键节点插入自定义逻辑，遵循开闭原则</li>
+            <li><strong>Agent 循环与钩子</strong>：Agent 的执行循环包含模型调用、工具选择、工具执行等步骤，中间件可以在每个步骤的前后插入钩子</li>
+            <li><strong>洋葱模型</strong>：多个中间件的 before 钩子按注册顺序执行，after 钩子按逆序执行，形成洋葱状的调用栈</li>
+            <li><strong>预构建中间件</strong>：<code>summarizationMiddleware</code> 自动压缩过长的对话历史；<code>humanInTheLoopMiddleware</code> 在关键操作前暂停等待人工确认</li>
+            <li><strong>自定义中间件</strong>：通过实现 <code>AgentMiddleware</code> 接口的钩子方法，可以创建任意功能的中间件（日志、限流、PII 检测等）</li>
+            <li><strong>内容防护栏</strong>：采用"规则检测 + 模型审查"双层策略，在输入和输出两端同时保护 Agent 安全</li>
+            <li><strong>LangGraph 集成</strong>：中间件和图节点可以组合使用——图节点编排宏观流程，中间件拦截微观行为</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <section id="next-chapter">
+        <h2>➡️ 下一章预告</h2>
+        <div class="card">
+          <h3>第 9 章：记忆系统</h3>
+          <p>在下一章中，我们将探索 LangChain 的记忆系统——让 Agent 真正拥有"记忆"。你将学习：</p>
+          <ul>
+            <li>短期记忆与长期记忆的概念和区别</li>
+            <li>BufferMemory、SummaryMemory 等内置记忆组件的使用</li>
+            <li>使用向量数据库实现持久化的长期记忆</li>
+            <li>如何在 Agent 中集成记忆系统，实现跨会话的上下文保持</li>
+            <li>记忆窗口管理：在有限的上下文窗口中智能保留最重要的信息</li>
+          </ul>
+          <a href="09-memory.html" class="btn btn-primary">继续学习 →</a>
+        </div>
+      </section>
+
+      <hr>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

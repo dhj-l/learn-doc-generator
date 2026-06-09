@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LangChain.js 从入门到精通</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="index">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="index.html" class="active"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="chapters/01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="chapters/02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="chapters/03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="chapters/04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="chapters/05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="chapters/06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="chapters/07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="chapters/08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="chapters/09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="chapters/10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <h1>🦜 LangChain.js 从入门到精通</h1>
+      <p class="subtitle">基于官方最新文档 · TypeScript 实战教程 · 从零构建 AI Agent</p>
+
+      <div class="callout info">
+        <div class="callout-title">📋 信息来源说明</div>
+        本文档内容基于 <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a> 官方文档站抓取，采用 LangChain v1.x 全新 <code>createAgent</code> 架构。建议学习过程中对照官方文档确认关键 API。
+      </div>
+
+      <h2>🗺️ 学习路线图</h2>
+
+      <div class="progress-display">
+        <div class="progress-text">学习进度：0/10 章 (0%)</div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <a href="chapters/01-introduction.html" class="btn btn-primary">🚀 开始学习</a>
+        <a href="appendix/cheatsheet.html" class="btn btn-outline">📋 API 速查表</a>
+      </div>
+
+      <div class="roadmap-grid">
+        <a href="chapters/01-introduction.html" class="roadmap-card">
+          <div class="card-chapter">第 1 章</div>
+          <div class="card-title">概述与环境搭建</div>
+          <div class="card-desc">了解 LangChain 生态系统，搭建开发环境，运行第一个示例</div>
+          <div class="card-time">⏱️ 约 30 分钟</div>
+        </a>
+        <a href="chapters/02-agent-basics.html" class="roadmap-card">
+          <div class="card-chapter">第 2 章</div>
+          <div class="card-title">Agent 基础</div>
+          <div class="card-desc">理解 Agent 核心概念，用 createAgent 构建你的第一个 AI 代理</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/03-models.html" class="roadmap-card">
+          <div class="card-chapter">第 3 章</div>
+          <div class="card-title">模型 Models</div>
+          <div class="card-desc">连接各种大语言模型，掌握模型配置、调用和错误处理</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/04-messages.html" class="roadmap-card">
+          <div class="card-chapter">第 4 章</div>
+          <div class="card-title">消息 Messages</div>
+          <div class="card-desc">理解消息系统，掌握多模态输入和上下文管理</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/05-tools.html" class="roadmap-card">
+          <div class="card-chapter">第 5 章</div>
+          <div class="card-title">工具 Tools</div>
+          <div class="card-desc">为 Agent 赋予超能力：自定义工具、上下文访问和动态工具选择</div>
+          <div class="card-time">⏱️ 约 1.5 小时</div>
+        </a>
+        <a href="chapters/06-streaming.html" class="roadmap-card">
+          <div class="card-chapter">第 6 章</div>
+          <div class="card-title">流式传输 Streaming</div>
+          <div class="card-desc">实现实时响应，提升用户体验，掌握事件流式传输</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/07-structured-output.html" class="roadmap-card">
+          <div class="card-chapter">第 7 章</div>
+          <div class="card-title">结构化输出</div>
+          <div class="card-desc">精准控制模型输出格式，用 Zod 定义 schema 验证</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/08-middleware.html" class="roadmap-card">
+          <div class="card-chapter">第 8 章</div>
+          <div class="card-title">中间件 Middleware</div>
+          <div class="card-desc">拦截和增强 Agent 行为，添加日志、重试和防护栏</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/09-memory.html" class="roadmap-card">
+          <div class="card-chapter">第 9 章</div>
+          <div class="card-title">记忆系统</div>
+          <div class="card-desc">让 Agent 记住对话，实现短期和长期记忆管理</div>
+          <div class="card-time">⏱️ 约 1 小时</div>
+        </a>
+        <a href="chapters/10-capstone.html" class="roadmap-card">
+          <div class="card-chapter">第 10 章</div>
+          <div class="card-title">综合实战：智能客服助手</div>
+          <div class="card-desc">综合运用所有知识，从零构建一个完整的智能客服系统</div>
+          <div class="card-time">⏱️ 约 2 小时</div>
+        </a>
+      </div>
+
+      <h2>📌 学习建议</h2>
+
+      <div class="card">
+        <h3>🎯 高效学习三步法</h3>
+        <ol>
+          <li><strong>先读概念</strong> — 每个知识点先理解「是什么」和「为什么需要」</li>
+          <li><strong>动手敲代码</strong> — 每个代码示例都亲手敲一遍，不要复制粘贴</li>
+          <li><strong>完成练习</strong> — 每章末尾的实战练习是巩固知识的关键</li>
+        </ol>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 你将学到什么</div>
+        完成本教程后，你将能够：
+        <ul>
+          <li>使用 LangChain.js 构建功能完整的 AI Agent</li>
+          <li>连接 OpenAI、Anthropic、Google 等主流模型提供商</li>
+          <li>为 Agent 创建自定义工具，让它具备查询数据库、调用 API 等能力</li>
+          <li>实现流式响应、结构化输出等高级特性</li>
+          <li>通过中间件为 Agent 添加日志、防护栏等企业级功能</li>
+          <li>构建一个完整的智能客服助手项目</li>
+        </ul>
+      </div>
+
+      <h2>📋 前置知识</h2>
+
+      <table>
+        <thead>
+          <tr><th>技能</th><th>要求</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>TypeScript/JavaScript</td><td>⭐⭐ 基础</td><td>了解基本语法、async/await、模块导入</td></tr>
+          <tr><td>Node.js</td><td>⭐ 入门</td><td>会安装包、运行脚本即可</td></tr>
+          <tr><td>命令行</td><td>⭐ 入门</td><td>能在终端中执行基本命令</td></tr>
+          <tr><td>AI/LLM 概念</td><td>❌ 无需</td><td>教程会从零讲解</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

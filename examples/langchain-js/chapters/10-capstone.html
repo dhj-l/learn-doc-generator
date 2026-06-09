@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第10章 综合实战 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js" defer></script>
+  <script src="../script.js" defer></script>
+</head>
+<body data-page="ch10">
+
+  <!-- 阅读进度条 -->
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html" class="active"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="09-memory.html" class="prev-chapter">← 第09章 记忆系统</a>
+        <span class="chapter-indicator">第10章 / 共10章</span>
+        <a href="../appendix/cheatsheet.html" class="next-chapter">附录 速查表 →</a>
+      </div>
+
+      <h1>🎯 综合实战：构建智能客服助手</h1>
+      <p class="subtitle">将前九章所学融会贯通，从零搭建一个功能完整的 AI 智能客服系统</p>
+
+      <!-- ============================================================ -->
+      <!-- 1. 本章目标 -->
+      <!-- ============================================================ -->
+      <section id="objectives">
+        <h2>🎯 本章目标</h2>
+        <p>
+          恭喜你完成了前九章的学习！在本章中，我们将把 <strong>模型调用</strong>、<strong>消息处理</strong>、<strong>工具调用</strong>、<strong>流式传输</strong>、<strong>结构化输出</strong>、<strong>中间件</strong>、<strong>记忆系统</strong> 以及 <strong>Agent 编排</strong> 全部串联起来，构建一个真正具有实用价值的智能客服助手。这不是一个简单的 "Hello World" 示例——它涵盖了企业级客服系统所需的核心能力，包括产品查询、订单跟踪、退款处理、工单创建等完整业务流程。
+        </p>
+        <p>
+          通过本章的实战项目，你将深刻理解 LangChain.js 各组件之间如何协同工作，掌握从需求分析到代码落地的完整开发思路。这个项目可以直接作为你个人项目的基础框架，扩展后即可投入生产环境使用。
+        </p>
+
+        <div class="callout info">
+          <div class="callout-title">💡 学习建议</div>
+          <p>建议先完整阅读一遍本章内容，了解整体架构设计，然后再动手逐个步骤实现。遇到不理解的概念，可以回顾对应的前序章节。</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 2. 项目概述 -->
+      <!-- ============================================================ -->
+      <section id="overview">
+        <h2>📋 项目概述</h2>
+        <p>
+          我们要构建的是一个 <strong>智能客服助手（Smart Customer Service Assistant）</strong>，它能够像一位训练有素的人工客服一样，与用户进行自然流畅的对话，并完成多种客服场景下的任务。下面是该助手需要具备的核心能力：
+        </p>
+
+        <h3>核心功能清单</h3>
+        <ul>
+          <li><strong>产品咨询</strong> — 用户可以询问产品信息，助手会从模拟的产品数据库中检索相关数据并给出专业回答。例如："你们有哪些手机壳？"、"这款耳机支持蓝牙 5.3 吗？"</li>
+          <li><strong>订单查询</strong> — 用户提供订单号后，助手可以查询订单状态、物流信息、预计送达时间等。例如："帮我查一下订单 ORD-001 的状态。"</li>
+          <li><strong>退款处理</strong> — 用户发起退款请求时，助手会通过 <strong>人在环中（Human-in-the-Loop）</strong> 机制，在执行退款前请求人工审批，确保资金操作安全可控。</li>
+          <li><strong>记忆能力</strong> — 助手能够记住当前会话的上下文信息（短期记忆），也能在多次会话间保持客户偏好等长期记忆数据。</li>
+          <li><strong>流式响应</strong> — 对话内容以流式方式逐字推送给前端，提升用户交互体验，避免长时间等待。</li>
+          <li><strong>结构化工单</strong> — 当需要记录客户问题时，助手可以通过结构化输出自动生成标准格式的工单数据，便于后端系统对接。</li>
+        </ul>
+
+        <div class="callout tip">
+          <div class="callout-title">🔧 技术栈概览</div>
+          <p>本项目基于 <strong>LangChain.js v1.x</strong> 的 <code>createAgent</code> 架构，使用 TypeScript 编写，运行在 Node.js 环境中。所有数据均为内存模拟数据，无需外部数据库依赖，方便快速上手体验。</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 3. 需求分析 -->
+      <!-- ============================================================ -->
+      <section id="requirements">
+        <h2>📝 需求分析</h2>
+        <p>在动手写代码之前，我们先对项目进行系统化的需求分析，明确功能性需求和非功能性需求。</p>
+
+        <h3>功能性需求</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>编号</th>
+              <th>需求描述</th>
+              <th>涉及组件</th>
+              <th>优先级</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>FR-01</td>
+              <td>用户能以自然语言与客服助手对话</td>
+              <td>模型 (Models)、消息 (Messages)</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td>FR-02</td>
+              <td>助手能搜索并回答产品相关问题</td>
+              <td>工具 (Tools) — searchProducts</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td>FR-03</td>
+              <td>助手能根据订单号查询订单状态</td>
+              <td>工具 (Tools) — checkOrderStatus</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td>FR-04</td>
+              <td>助手能处理退款请求，但需要人工审批</td>
+              <td>工具 (Tools) — processRefund、人在环中</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td>FR-05</td>
+              <td>助手能自动创建标准格式的客服工单</td>
+              <td>结构化输出 (Structured Output) — createTicket</td>
+              <td>P1</td>
+            </tr>
+            <tr>
+              <td>FR-06</td>
+              <td>助手在同一会话中能记住上下文</td>
+              <td>记忆系统 (Memory) — MemorySaver</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td>FR-07</td>
+              <td>对话内容以流式方式返回</td>
+              <td>流式传输 (Streaming)</td>
+              <td>P1</td>
+            </tr>
+            <tr>
+              <td>FR-08</td>
+              <td>记录每次工具调用的日志</td>
+              <td>中间件 (Middleware) — 日志中间件</td>
+              <td>P1</td>
+            </tr>
+            <tr>
+              <td>FR-09</td>
+              <td>对敏感操作进行安全校验</td>
+              <td>中间件 (Middleware) — 护栏中间件</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td>FR-10</td>
+              <td>助手能跨会话记住客户偏好</td>
+              <td>记忆系统 (Memory) — 自定义长期记忆</td>
+              <td>P2</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>非功能性需求</h3>
+        <ul>
+          <li><strong>可扩展性</strong> — 代码结构清晰，方便后续新增工具和业务逻辑</li>
+          <li><strong>安全性</strong> — 涉及资金操作时必须经过审批，防止误操作</li>
+          <li><strong>可维护性</strong> — 关键逻辑有注释说明，易于团队协作和后期维护</li>
+          <li><strong>用户体验</strong> — 流式响应提供即时反馈，避免用户感觉系统卡顿</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 4. 技术架构 -->
+      <!-- ============================================================ -->
+      <section id="architecture">
+        <h2>🏗️ 技术架构</h2>
+        <p>
+          下面展示的是智能客服助手的整体技术架构。用户的消息经过 Agent 的统一编排，由模型决定调用哪些工具完成任务，中间通过记忆系统维护上下文，通过中间件实现日志记录和安全防护。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">系统架构图</span>
+          </div>
+          <pre><code class="language-text">
+┌─────────────────────────────────────────────────────────────────────┐
+│                        智能客服助手 系统架构                          │
+└─────────────────────────────────────────────────────────────────────┘
+
+  用户 (User)
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                    中间件层 (Middleware)                      │   │
+│  │   ┌──────────────────┐  ┌──────────────────────────────┐   │   │
+│  │   │  日志中间件        │  │  护栏中间件 (Guardrails)      │   │   │
+│  │   │  Logging          │  │  敏感操作校验 / 内容过滤       │   │   │
+│  │   └──────────────────┘  └──────────────────────────────┘   │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                │                                    │
+│                                ▼                                    │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                    Agent 编排层 (Agent)                      │   │
+│  │                                                               │   │
+│  │   ┌───────────┐    ┌───────────────┐    ┌──────────────┐    │   │
+│  │   │ 系统提示词  │───▶│  Chat Model   │───▶│  工具决策器    │    │   │
+│  │   │ System     │    │  (GPT-4o-mini)│    │  Tool Router  │    │   │
+│  │   └───────────┘    └───────────────┘    └──────┬───────┘    │   │
+│  │                                                  │            │   │
+│  └──────────────────────────────────────────────────┼────────────┘   │
+│                                                     │                │
+│         ┌───────────────────────────────────────────┼────────┐      │
+│         │              工具层 (Tools)                │        │      │
+│         │           ┌───────┴────────┐              │        │      │
+│         │           ▼                ▼              ▼        │      │
+│         │  ┌─────────────┐  ┌──────────────┐  ┌───────────┐ │      │
+│         │  │searchProducts│  │checkOrderStatus│ │processRefund││      │
+│         │  │  产品搜索     │  │  订单查询       │ │  退款处理   │ │      │
+│         │  └─────────────┘  └──────────────┘  └───────────┘ │      │
+│         │           │                │              │        │      │
+│         │           ▼                ▼              ▼        │      │
+│         │  ┌──────────────────────────────────────────────┐  │      │
+│         │  │           createTicket (结构化输出)            │  │      │
+│         │  │              工单创建 / 退款申请               │  │      │
+│         │  └──────────────────────────────────────────────┘  │      │
+│         └────────────────────────────────────────────────────┘      │
+│                                                                     │
+│         ┌────────────────────────────────────────────────────┐      │
+│         │              记忆层 (Memory)                        │      │
+│         │  ┌──────────────────┐  ┌────────────────────────┐  │      │
+│         │  │  MemorySaver     │  │  长期记忆 (Long-term)    │  │      │
+│         │  │  会话级短期记忆    │  │  客户偏好 / 历史记录     │  │      │
+│         │  └──────────────────┘  └────────────────────────┘  │      │
+│         └────────────────────────────────────────────────────┘      │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+数据流:  用户消息 ──▶ Agent (模型 + 提示词) ──▶ 选择工具 ──▶ 执行
+         ──▶ 返回结果 ──▶ 流式输出给用户
+</code></pre>
+        </div>
+
+        <p>
+          架构的核心思想是 <strong>分层解耦</strong>：数据层负责模拟数据存储，工具层封装业务逻辑，记忆层管理上下文状态，中间件层提供横切关注点（日志、安全），Agent 层统一编排所有组件。每一层都可以独立替换和扩展，体现了良好的软件工程实践。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 5. Step 1: 项目初始化 -->
+      <!-- ============================================================ -->
+      <section id="step1">
+        <h2>Step 1：项目初始化</h2>
+        <p>首先，我们创建项目目录并初始化配置。整个项目使用 TypeScript 编写，确保类型安全。</p>
+
+        <h3>目录结构</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">项目目录结构</span>
+          </div>
+          <pre><code class="language-bash">
+customer-service-assistant/
+├── src/
+│   ├── data/
+│   │   └── mock-data.ts          # 模拟数据（产品、订单）
+│   ├── tools/
+│   │   └── customer-tools.ts     # 客服工具集
+│   ├── middleware/
+│   │   └── customer-middleware.ts # 中间件（日志、护栏）
+│   ├── memory/
+│   │   └── customer-memory.ts    # 记忆配置
+│   ├── prompts/
+│   │   └── system-prompt.ts      # 系统提示词
+│   └── customer-service.ts       # 主程序入口
+├── package.json
+├── tsconfig.json
+└── .env                          # 环境变量（API Key）
+</code></pre>
+        </div>
+
+        <h3>初始化项目</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">bash — 项目初始化命令</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-bash">
+# 创建项目并进入目录
+mkdir customer-service-assistant
+cd customer-service-assistant
+
+# 初始化 npm 项目
+npm init -y
+
+# 安装核心依赖
+npm install @langchain/langgraph @langchain/core @langchain/openai
+
+# 安装开发依赖
+npm install -D typescript tsx @types/node dotenv
+
+# 初始化 TypeScript 配置
+npx tsc --init
+</code></pre>
+        </div>
+
+        <h3>package.json</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">package.json</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-json">
+{
+  "name": "customer-service-assistant",
+  "version": "1.0.0",
+  "description": "基于 LangChain.js 的智能客服助手",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/customer-service.ts",
+    "dev": "tsx watch src/customer-service.ts"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "^1.0.0",
+    "@langchain/core": "^1.0.0",
+    "@langchain/openai": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.0.0"
+  }
+}
+</code></pre>
+        </div>
+
+        <h3>tsconfig.json</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">tsconfig.json</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "strict": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+</code></pre>
+        </div>
+
+        <h3>环境变量</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">.env</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-bash">
+# OpenAI API 密钥（替换为你的真实密钥）
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# 可选：指定模型
+OPENAI_MODEL=gpt-4o-mini
+</code></pre>
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-title">⚠️ 安全提醒</div>
+          <p>请确保 <code>.env</code> 文件已添加到 <code>.gitignore</code>，避免将 API 密钥提交到版本控制系统中。</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 6. Step 2: 定义系统提示词 -->
+      <!-- ============================================================ -->
+      <section id="step2">
+        <h2>Step 2：定义系统提示词</h2>
+        <p>
+          系统提示词是智能客服助手的"灵魂"，它决定了助手的行为模式、语气风格和决策逻辑。一个好的系统提示词需要清晰地定义助手的角色、可用能力、行为规范和边界约束。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/prompts/system-prompt.ts</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 智能客服助手 — 系统提示词
+ *
+ * 定义了助手的角色定位、行为规范和能力边界。
+ * 该提示词将作为 Agent 的 system message 传递给模型。
+ */
+
+export const SYSTEM_PROMPT = `你是一位专业、友善且高效的智能客服助手，服务于 "TechShop" 电子产品商城。
+
+## 你的核心能力
+1. **产品咨询**：你可以搜索产品数据库，回答用户关于产品规格、价格、库存等方面的问题。
+2. **订单查询**：你可以根据订单号查询订单状态、物流信息和预计送达时间。
+3. **退款处理**：你可以帮助用户发起退款请求，但退款操作必须经过人工审批后才能执行。
+4. **工单创建**：当用户问题需要后续跟进时，你可以创建标准格式的客服工单。
+
+## 行为规范
+- 始终使用友好、专业的语气与用户交流。
+- 回答要简洁明了，避免冗长的解释。
+- 当用户表达不清楚时，主动追问以确认需求。
+- 涉及退款等敏感操作时，务必向用户确认退款原因和订单信息。
+- 如果用户的问题超出你的能力范围，坦诚告知并建议联系人工客服。
+- 记住用户在对话中提到的偏好信息，提供个性化的服务体验。
+
+## 重要约束
+- 退款操作必须先获得用户确认，然后等待人工审批。
+- 不要编造产品信息或订单信息，所有数据必须来自工具查询结果。
+- 单笔退款金额不能超过 5000 元，超过需转接人工客服。
+- 每个订单最多只能退款一次，请先检查是否已存在退款记录。
+
+## 对话开场白
+首次与用户对话时，使用以下开场白：
+"您好！欢迎联系 TechShop 智能客服，我是您的专属助手。请问有什么可以帮到您的？"`;
+
+/**
+ * 工具选择引导提示 — 当用户意图不明确时，辅助模型做出正确的工具选择
+ */
+export const TOOL_GUIDANCE = `
+## 工具使用指南
+- 当用户提到"产品"、"价格"、"有没有"、"推荐"等关键词时 → 使用 searchProducts
+- 当用户提到"订单"、"物流"、"发货"、"到哪了"等关键词时 → 使用 checkOrderStatus
+- 当用户提到"退款"、"退货"、"不要了"等关键词时 → 使用 processRefund
+- 当用户描述复杂问题需要记录跟进时 → 使用 createTicket
+`;
+</code></pre>
+        </div>
+
+        <p>
+          系统提示词中包含了 <strong>角色定义</strong>、<strong>能力说明</strong>、<strong>行为规范</strong> 和 <strong>安全约束</strong> 四个关键部分。这种结构化的设计确保了助手在各种场景下都能做出合理、一致的响应。同时，工具选择引导提示可以帮助模型在意图不明确时更准确地匹配到正确的工具。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 7. Step 3: 创建数据层 -->
+      <!-- ============================================================ -->
+      <section id="step3">
+        <h2>Step 3：创建数据层</h2>
+        <p>
+          为了模拟真实的业务场景，我们创建两个内存数据存储：产品数据和订单数据。在实际项目中，这些数据将来自真实的数据库或微服务 API。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/data/mock-data.ts</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 模拟数据层
+ *
+ * 提供产品和订单的模拟数据，用于客服助手的工具查询。
+ * 在生产环境中，这些数据将由数据库或外部 API 提供。
+ */
+
+// ==================== 产品数据 ====================
+
+export interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  description: string;
+  specs: Record&lt;string, string&gt;;   // 规格参数
+  colors: string[];                  // 可选颜色
+}
+
+export const products: Product[] = [
+  {
+    id: "PROD-001",
+    name: "TechShop 超薄手机壳",
+    category: "手机配件",
+    price: 49.9,
+    stock: 500,
+    description: "采用航空级 PC 材质，厚度仅 0.5mm，完美贴合手机轮廓",
+    specs: { 材质: "PC 聚碳酸酯", 厚度: "0.5mm", 重量: "12g", 适配: "iPhone 15 Pro" },
+    colors: ["透明", "午夜黑", "深海蓝", "樱花粉"],
+  },
+  {
+    id: "PROD-002",
+    name: "TechShop 无线蓝牙耳机 Pro",
+    category: "音频设备",
+    price: 299.0,
+    stock: 200,
+    description: "主动降噪，蓝牙 5.3，续航 30 小时，IPX5 防水",
+    specs: { 蓝牙版本: "5.3", 降噪: "ANC 主动降噪", 续航: "30小时", 防水等级: "IPX5" },
+    colors: ["曜石黑", "冰川白"],
+  },
+  {
+    id: "PROD-003",
+    name: "TechShop 65W 氮化镓充电器",
+    category: "充电设备",
+    price: 129.0,
+    stock: 350,
+    description: "65W 大功率，3 口输出（2C+1A），支持 PD3.0 快充协议",
+    specs: { 功率: "65W", 接口: "2×USB-C + 1×USB-A", 协议: "PD3.0/QC4.0", 重量: "98g" },
+    colors: ["白色", "黑色"],
+  },
+  {
+    id: "PROD-004",
+    name: "TechShop 机械键盘 TKL",
+    category: "电脑外设",
+    price: 399.0,
+    stock: 150,
+    description: "87 键紧凑布局，Gasket 结构，热插拔轴体，RGB 背光",
+    specs: { 布局: "87键 TKL", 轴体: "自研静音红轴", 连接: "有线/蓝牙/2.4G", 背光: "RGB" },
+    colors: ["暗夜灰", "奶白色"],
+  },
+  {
+    id: "PROD-005",
+    name: "TechShop 4K 便携显示器",
+    category: "显示设备",
+    price: 1599.0,
+    stock: 80,
+    description: "15.6 英寸 4K IPS 屏幕，100% sRGB 色域，Type-C 一线连接",
+    specs: { 分辨率: "3840×2160", 色域: "100% sRGB", 亮度: "400nit", 接口: "2×Type-C + 1×HDMI" },
+    colors: ["银色"],
+  },
+];
+
+// ==================== 订单数据 ====================
+
+export interface Order {
+  orderId: string;
+  customerId: string;
+  customerName: string;
+  items: { productId: string; productName: string; quantity: number; price: number }[];
+  totalAmount: number;
+  status: "pending" | "paid" | "shipped" | "delivered" | "refunded" | "cancelled";
+  createdAt: string;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+  refundId?: string;
+}
+
+export const orders: Order[] = [
+  {
+    orderId: "ORD-001",
+    customerId: "CUST-1001",
+    customerName: "张小明",
+    items: [
+      { productId: "PROD-001", productName: "TechShop 超薄手机壳", quantity: 2, price: 49.9 },
+      { productId: "PROD-003", productName: "TechShop 65W 氮化镓充电器", quantity: 1, price: 129.0 },
+    ],
+    totalAmount: 228.8,
+    status: "shipped",
+    createdAt: "2026-06-01T10:30:00Z",
+    trackingNumber: "SF1234567890",
+    estimatedDelivery: "2026-06-10",
+  },
+  {
+    orderId: "ORD-002",
+    customerId: "CUST-1002",
+    customerName: "李美丽",
+    items: [
+      { productId: "PROD-002", productName: "TechShop 无线蓝牙耳机 Pro", quantity: 1, price: 299.0 },
+    ],
+    totalAmount: 299.0,
+    status: "delivered",
+    createdAt: "2026-05-20T14:00:00Z",
+    trackingNumber: "JD9876543210",
+    estimatedDelivery: "2026-05-25",
+  },
+  {
+    orderId: "ORD-003",
+    customerId: "CUST-1001",
+    customerName: "张小明",
+    items: [
+      { productId: "PROD-004", productName: "TechShop 机械键盘 TKL", quantity: 1, price: 399.0 },
+    ],
+    totalAmount: 399.0,
+    status: "paid",
+    createdAt: "2026-06-08T09:15:00Z",
+    estimatedDelivery: "2026-06-15",
+  },
+];
+
+// ==================== 退款记录 ====================
+
+export interface RefundRecord {
+  refundId: string;
+  orderId: string;
+  amount: number;
+  reason: string;
+  status: "pending_approval" | "approved" | "rejected" | "completed";
+  createdAt: string;
+  approvedBy?: string;
+}
+
+export const refundRecords: RefundRecord[] = [];
+
+// ==================== 工单记录 ====================
+
+export interface Ticket {
+  ticketId: string;
+  customerId: string;
+  category: "product_inquiry" | "order_issue" | "refund_request" | "complaint" | "other";
+  priority: "low" | "medium" | "high" | "urgent";
+  subject: string;
+  description: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  createdAt: string;
+}
+
+export const tickets: Ticket[] = [];
+
+/**
+ * 生成唯一 ID 的辅助函数
+ */
+export function generateId(prefix: string): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `${prefix}-${timestamp}-${random}`.toUpperCase();
+}
+</code></pre>
+        </div>
+
+        <p>
+          数据层的设计采用了 TypeScript 接口定义数据结构，确保了类型安全。每个数据实体都有完整的字段定义，模拟了真实业务场景中需要处理的数据复杂度。特别注意订单数据中包含了不同的状态枚举，覆盖了从下单到退款的完整生命周期。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 8. Step 4: 构建工具集 -->
+      <!-- ============================================================ -->
+      <section id="step4">
+        <h2>Step 4：构建工具集</h2>
+        <p>
+          工具集是客服助手与外部世界交互的桥梁。我们使用 <code>tool()</code> 函数定义四个工具，每个工具都有明确的参数 schema 和执行逻辑。这些工具将涵盖产品搜索、订单查询、退款处理和工单创建四大业务场景。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/tools/customer-tools.ts</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 客服工具集
+ *
+ * 定义了智能客服助手使用的四个核心工具：
+ * - searchProducts: 搜索产品信息
+ * - checkOrderStatus: 查询订单状态
+ * - processRefund: 处理退款申请（需要人工审批）
+ * - createTicket: 创建客服工单（结构化输出）
+ */
+
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+import {
+  products,
+  orders,
+  refundRecords,
+  tickets,
+  generateId,
+  type RefundRecord,
+  type Ticket,
+} from "../data/mock-data.js";
+
+// ==================== 工具 1: 产品搜索 ====================
+
+export const searchProducts = tool(
+  async ({ keyword, category }) => {
+    console.log(`  🔍 [产品搜索] 关键词: "${keyword}", 分类: "${category || '不限'}"`);
+
+    let results = [...products];
+
+    // 按关键词过滤（匹配产品名称和描述）
+    if (keyword) {
+      const kw = keyword.toLowerCase();
+      results = results.filter(
+        (p) =>
+          p.name.toLowerCase().includes(kw) ||
+          p.description.toLowerCase().includes(kw)
+      );
+    }
+
+    // 按分类过滤
+    if (category) {
+      results = results.filter((p) => p.category === category);
+    }
+
+    if (results.length === 0) {
+      return "未找到符合条件的产品，请尝试其他关键词。";
+    }
+
+    // 格式化返回结果
+    const summary = results
+      .map(
+        (p) =>
+          `📦 ${p.name}\n` +
+          `   价格: ¥${p.price.toFixed(2)} | 库存: ${p.stock}件\n` +
+          `   描述: ${p.description}\n` +
+          `   颜色: ${p.colors.join(", ")}\n` +
+          `   规格: ${Object.entries(p.specs).map(([k, v]) => `${k}: ${v}`).join(" | ")}`
+      )
+      .join("\n\n");
+
+    return `找到 ${results.length} 件相关产品：\n\n${summary}`;
+  },
+  {
+    name: "searchProducts",
+    description: "搜索产品数据库。可以按关键词（如产品名称、特性）或产品分类进行搜索。",
+    schema: z.object({
+      keyword: z.string().optional().describe("搜索关键词，可匹配产品名称或描述"),
+      category: z.string().optional().describe("产品分类，如：手机配件、音频设备、充电设备、电脑外设、显示设备"),
+    }),
+  }
+);
+
+// ==================== 工具 2: 订单状态查询 ====================
+
+export const checkOrderStatus = tool(
+  async ({ orderId }) => {
+    console.log(`  📦 [订单查询] 订单号: ${orderId}`);
+
+    const order = orders.find((o) => o.orderId === orderId);
+
+    if (!order) {
+      return `未找到订单号为 ${orderId} 的订单，请确认订单号是否正确。`;
+    }
+
+    const statusMap: Record&lt;string, string&gt; = {
+      pending: "待付款",
+      paid: "已付款",
+      shipped: "已发货",
+      delivered: "已送达",
+      refunded: "已退款",
+      cancelled: "已取消",
+    };
+
+    const items = order.items
+      .map((item) => `  - ${item.productName} × ${item.quantity} (¥${item.price.toFixed(2)})`)
+      .join("\n");
+
+    return [
+      `📋 订单信息：`,
+      `订单号: ${order.orderId}`,
+      `客户: ${order.customerName}`,
+      `商品:\n${items}`,
+      `总金额: ¥${order.totalAmount.toFixed(2)}`,
+      `状态: ${statusMap[order.status] || order.status}`,
+      `下单时间: ${order.createdAt}`,
+      order.trackingNumber ? `物流单号: ${order.trackingNumber}` : null,
+      order.estimatedDelivery ? `预计送达: ${order.estimatedDelivery}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  },
+  {
+    name: "checkOrderStatus",
+    description: "根据订单号查询订单的详细状态、商品信息和物流信息。",
+    schema: z.object({
+      orderId: z.string().describe("订单号，例如 ORD-001"),
+    }),
+  }
+);
+
+// ==================== 工具 3: 退款处理 ====================
+
+export const processRefund = tool(
+  async ({ orderId, reason, amount }) => {
+    console.log(`  💰 [退款申请] 订单: ${orderId}, 原因: ${reason}, 金额: ¥${amount}`);
+
+    // 查找订单
+    const order = orders.find((o) => o.orderId === orderId);
+    if (!order) {
+      return `错误: 未找到订单 ${orderId}，无法处理退款。`;
+    }
+
+    // 检查是否已有退款记录
+    const existingRefund = refundRecords.find((r) => r.orderId === orderId && r.status !== "rejected");
+    if (existingRefund) {
+      return `订单 ${orderId} 已存在退款申请（${existingRefund.refundId}），状态为 ${existingRefund.status}，不能重复申请。`;
+    }
+
+    // 检查退款金额是否超过限制
+    if (amount > 5000) {
+      return `退款金额 ¥${amount} 超过单笔上限 5000 元，请联系人工客服处理。`;
+    }
+
+    // 检查退款金额是否超过订单总额
+    if (amount > order.totalAmount) {
+      return `退款金额 ¥${amount} 超过订单总额 ¥${order.totalAmount.toFixed(2)}，请核实。`;
+    }
+
+    // 创建退款申请（状态为待审批）
+    const refundId = generateId("REF");
+    const refundRecord: RefundRecord = {
+      refundId,
+      orderId,
+      amount,
+      reason,
+      status: "pending_approval",
+      createdAt: new Date().toISOString(),
+    };
+    refundRecords.push(refundRecord);
+
+    return [
+      `✅ 退款申请已提交，等待人工审批。`,
+      `退款单号: ${refundId}`,
+      `订单号: ${orderId}`,
+      `退款金额: ¥${amount.toFixed(2)}`,
+      `退款原因: ${reason}`,
+      `状态: 待审批（pending_approval）`,
+      `注意: 退款将在人工审批通过后执行，预计 1-3 个工作日内到账。`,
+    ].join("\n");
+  },
+  {
+    name: "processRefund",
+    description:
+      "为用户提交退款申请。注意：退款不会立即执行，需要等待人工审批。请先确认用户确实需要退款，并获取退款原因。",
+    schema: z.object({
+      orderId: z.string().describe("要退款的订单号"),
+      reason: z.string().describe("退款原因，例如：商品质量问题、不想要了、收到货不满意等"),
+      amount: z.number().describe("退款金额（不能超过订单总额，且不能超过 5000 元）"),
+    }),
+  }
+);
+
+// ==================== 工具 4: 工单创建 ====================
+
+export const createTicket = tool(
+  async ({ customerId, category, priority, subject, description }) => {
+    console.log(`  🎫 [创建工单] 主题: ${subject}, 优先级: ${priority}`);
+
+    const ticketId = generateId("TKT");
+    const ticket: Ticket = {
+      ticketId,
+      customerId,
+      category,
+      priority,
+      subject,
+      description,
+      status: "open",
+      createdAt: new Date().toISOString(),
+    };
+    tickets.push(ticket);
+
+    const priorityMap: Record&lt;string, string&gt; = {
+      low: "低",
+      medium: "中",
+      high: "高",
+      urgent: "紧急",
+    };
+
+    const categoryMap: Record&lt;string, string&gt; = {
+      product_inquiry: "产品咨询",
+      order_issue: "订单问题",
+      refund_request: "退款请求",
+      complaint: "投诉",
+      other: "其他",
+    };
+
+    return [
+      `🎫 工单已创建：`,
+      `工单号: ${ticketId}`,
+      `分类: ${categoryMap[category] || category}`,
+      `优先级: ${priorityMap[priority] || priority}`,
+      `主题: ${subject}`,
+      `描述: ${description}`,
+      `状态: 待处理（open）`,
+      `创建时间: ${ticket.createdAt}`,
+    ].join("\n");
+  },
+  {
+    name: "createTicket",
+    description: "创建客服工单，用于记录需要后续跟进的客户问题。",
+    schema: z.object({
+      customerId: z.string().describe("客户 ID"),
+      category: z
+        .enum(["product_inquiry", "order_issue", "refund_request", "complaint", "other"])
+        .describe("工单分类"),
+      priority: z.enum(["low", "medium", "high", "urgent"]).describe("优先级"),
+      subject: z.string().describe("工单主题，简明扼要"),
+      description: z.string().describe("工单详细描述"),
+    }),
+  }
+);
+
+/**
+ * 导出所有工具的数组，方便 Agent 注册使用
+ */
+export const customerServiceTools = [
+  searchProducts,
+  checkOrderStatus,
+  processRefund,
+  createTicket,
+];
+</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 设计要点</div>
+          <p>
+            注意 <code>processRefund</code> 工具的设计：它不会直接执行退款，而是创建一个"待审批"状态的退款记录。这就是 <strong>人在环中（Human-in-the-Loop）</strong> 模式的体现——涉及资金操作的关键步骤需要人工介入确认。在实际生产系统中，这里通常会触发审批工作流，通知管理员进行审核。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 9. Step 5: 配置模型 -->
+      <!-- ============================================================ -->
+      <section id="step5">
+        <h2>Step 5：配置模型</h2>
+        <p>
+          模型是 Agent 的"大脑"，负责理解用户意图、决定调用哪些工具、组织回复内容。我们使用 <code>initChatModel</code> 来初始化聊天模型，并配置合适的参数。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/customer-service.ts（模型配置部分）</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 模型配置
+ *
+ * 使用 initChatModel 初始化 OpenAI 聊天模型。
+ * 配置要点：
+ * - temperature: 0.3 — 客服场景需要稳定、一致的回复，不宜太随机
+ * - maxTokens: 2048 — 限制回复长度，避免过长的输出
+ */
+
+import "dotenv/config";
+import { initChatModel } from "@langchain/langgraph";
+
+// 初始化聊天模型
+const model = await initChatModel("openai:gpt-4o-mini", {
+  temperature: 0.3,
+  maxTokens: 2048,
+  // API Key 会自动从环境变量 OPENAI_API_KEY 读取
+});
+
+console.log("✅ 模型初始化完成");
+</code></pre>
+        </div>
+
+        <p>
+          <code>temperature</code> 设置为 0.3 是经过权衡的选择：足够低以保证回复的准确性和一致性，但又保留了一定的灵活性以适应不同的对话语境。在客服场景中，回复的可靠性远比创造性更重要。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 10. Step 6: 添加记忆 -->
+      <!-- ============================================================ -->
+      <section id="step6">
+        <h2>Step 6：添加记忆</h2>
+        <p>
+          记忆系统让客服助手能够"记住"对话上下文和客户偏好。我们使用两层记忆架构：LangGraph 内置的 <code>MemorySaver</code> 用于会话级短期记忆，自定义的上下文对象用于跨会话的长期记忆。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/memory/customer-memory.ts</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 记忆配置
+ *
+ * 两层记忆架构：
+ * 1. 短期记忆 (MemorySaver) — 维护单次会话的对话历史
+ * 2. 长期记忆 (Custom Store) — 保存客户偏好和历史数据
+ */
+
+import { MemorySaver } from "@langchain/langgraph";
+
+// ==================== 短期记忆 ====================
+// MemorySaver 会在内存中保存完整的对话历史
+// 每次会话使用唯一的 thread_id 来隔离不同对话
+
+export const sessionMemory = new MemorySaver();
+
+// ==================== 长期记忆（模拟） ====================
+// 在生产环境中，这些数据通常存储在 Redis 或数据库中
+
+interface CustomerProfile {
+  customerId: string;
+  name: string;
+  preferences: Record&lt;string, string&gt;;
+  conversationCount: number;
+  lastContactDate: string;
+  notes: string[];
+}
+
+// 模拟的客户资料数据库
+const customerProfiles: Map&lt;string, CustomerProfile&gt; = new Map([
+  [
+    "CUST-1001",
+    {
+      customerId: "CUST-1001",
+      name: "张小明",
+      preferences: {
+        语言: "中文",
+        联系方式: "在线客服",
+        常购分类: "手机配件",
+      },
+      conversationCount: 3,
+      lastContactDate: "2026-06-05",
+      notes: ["曾购买过 iPhone 15 配件", "偏好透明色手机壳"],
+    },
+  ],
+  [
+    "CUST-1002",
+    {
+      customerId: "CUST-1002",
+      name: "李美丽",
+      preferences: {
+        语言: "中文",
+        联系方式: "电话",
+        常购分类: "音频设备",
+      },
+      conversationCount: 1,
+      lastContactDate: "2026-05-20",
+      notes: ["对降噪功能有较高要求"],
+    },
+  ],
+]);
+
+/**
+ * 获取客户资料（长期记忆）
+ */
+export function getCustomerProfile(customerId: string): string {
+  const profile = customerProfiles.get(customerId);
+  if (!profile) {
+    return `客户 ${customerId} 暂无历史记录。`;
+  }
+
+  return [
+    `📋 客户资料:`,
+    `姓名: ${profile.name}`,
+    `历史会话次数: ${profile.conversationCount}`,
+    `上次联系: ${profile.lastContactDate}`,
+    `偏好: ${Object.entries(profile.preferences).map(([k, v]) => `${k}: ${v}`).join(", ")}`,
+    `备注: ${profile.notes.join("; ")}`,
+  ].join("\n");
+}
+
+/**
+ * 更新客户备注（长期记忆写入）
+ */
+export function addCustomerNote(customerId: string, note: string): void {
+  const profile = customerProfiles.get(customerId);
+  if (profile) {
+    profile.notes.push(note);
+    profile.lastContactDate = new Date().toISOString().split("T")[0];
+    profile.conversationCount += 1;
+  }
+}
+</code></pre>
+        </div>
+
+        <div class="callout info">
+          <div class="callout-title">💡 记忆架构说明</div>
+          <p>
+            <strong>短期记忆</strong>（MemorySaver）由 LangGraph 自动管理，通过 <code>thread_id</code> 隔离不同会话的对话历史。当用户开始新会话时，助手仍然能通过 <strong>长期记忆</strong>（customerProfiles）获取客户的历史偏好和联系记录，实现跨会话的个性化服务。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 11. Step 7: 添加中间件 -->
+      <!-- ============================================================ -->
+      <section id="step7">
+        <h2>Step 7：添加中间件</h2>
+        <p>
+          中间件为 Agent 提供了横切关注点的处理能力。我们实现两个中间件：<strong>日志中间件</strong> 记录所有工具调用的详细信息，<strong>护栏中间件</strong> 对敏感操作进行安全校验。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/middleware/customer-middleware.ts</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 客服中间件
+ *
+ * 提供日志记录和安全护栏两个中间件函数。
+ * 这些中间件在 Agent 的工具调用前后执行，实现非业务逻辑的横切关注点。
+ */
+
+import type { AIMessage } from "@langchain/core/messages";
+
+// ==================== 日志中间件 ====================
+
+interface ToolCallLog {
+  timestamp: string;
+  toolName: string;
+  args: Record&lt;string, unknown&gt;;
+  result?: string;
+  duration?: number;
+}
+
+const callLogs: ToolCallLog[] = [];
+
+/**
+ * 日志中间件 — 记录每次工具调用的详细信息
+ *
+ * 在工具调用前记录开始时间和参数，
+ * 在工具调用后记录结果和耗时。
+ */
+export function loggingMiddleware(toolName: string, args: Record&lt;string, unknown&gt;): {
+  onStart: () => ToolCallLog;
+  onEnd: (result: string) => void;
+} {
+  return {
+    onStart: () => {
+      const log: ToolCallLog = {
+        timestamp: new Date().toISOString(),
+        toolName,
+        args,
+      };
+      console.log(`\n📝 [日志] 工具调用开始:`);
+      console.log(`   时间: ${log.timestamp}`);
+      console.log(`   工具: ${toolName}`);
+      console.log(`   参数: ${JSON.stringify(args, null, 2)}`);
+      return log;
+    },
+    onEnd: (result: string) => {
+      const lastLog = callLogs[callLogs.length - 1];
+      if (lastLog) {
+        lastLog.result = result.substring(0, 200) + (result.length > 200 ? "..." : "");
+        lastLog.duration = Date.now() - new Date(lastLog.timestamp).getTime();
+      }
+      console.log(`   结果: ${result.substring(0, 100)}...`);
+      console.log(`📝 [日志] 工具调用结束\n`);
+    },
+  };
+}
+
+/**
+ * 获取所有调用日志（用于调试和审计）
+ */
+export function getCallLogs(): ToolCallLog[] {
+  return [...callLogs];
+}
+
+// ==================== 护栏中间件 ====================
+
+/**
+ * 护栏中间件 — 对敏感操作进行安全校验
+ *
+ * 在执行退款等敏感操作前，检查参数的合法性和安全性。
+ * 返回 { allowed, reason } 来决定是否允许执行。
+ */
+export function guardrailsMiddleware(
+  toolName: string,
+  args: Record&lt;string, unknown&gt;
+): { allowed: boolean; reason?: string } {
+  console.log(`🛡️ [护栏] 安全检查: ${toolName}`);
+
+  // 退款操作的安全检查
+  if (toolName === "processRefund") {
+    const amount = args.amount as number;
+    const orderId = args.orderId as string;
+    const reason = args.reason as string;
+
+    // 检查金额
+    if (!amount || amount &lt;= 0) {
+      return { allowed: false, reason: "退款金额必须大于 0" };
+    }
+
+    // 检查金额上限
+    if (amount > 5000) {
+      return {
+        allowed: false,
+        reason: `退款金额 ¥${amount} 超过单笔上限 ¥5000，请联系人工客服`,
+      };
+    }
+
+    // 检查退款原因
+    if (!reason || reason.trim().length &lt; 2) {
+      return { allowed: false, reason: "退款原因不能为空或过短" };
+    }
+
+    // 检查订单号格式
+    if (!orderId || !orderId.startsWith("ORD-")) {
+      return { allowed: false, reason: "订单号格式不正确" };
+    }
+
+    console.log(`   ✅ 退款安全检查通过: 订单=${orderId}, 金额=¥${amount}`);
+    return { allowed: true };
+  }
+
+  // 工单创建的安全检查
+  if (toolName === "createTicket") {
+    const subject = args.subject as string;
+
+    if (!subject || subject.length &lt; 2) {
+      return { allowed: false, reason: "工单主题不能为空" };
+    }
+
+    if (subject.length > 200) {
+      return { allowed: false, reason: "工单主题过长，不能超过 200 字符" };
+    }
+
+    console.log(`   ✅ 工单安全检查通过`);
+    return { allowed: true };
+  }
+
+  // 其他操作默认放行
+  console.log(`   ✅ 检查通过（非敏感操作）`);
+  return { allowed: true };
+}
+</code></pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 12. Step 8: 组装 Agent -->
+      <!-- ============================================================ -->
+      <section id="step8">
+        <h2>Step 8：组装 Agent</h2>
+        <p>
+          现在，我们将前面创建的所有组件——模型、工具、记忆、系统提示词——组装成一个完整的 Agent。这是整个项目的核心步骤，体现了 LangChain.js <code>createAgent</code> 架构的编排能力。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/customer-service.ts（Agent 组装部分）</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * Agent 组装
+ *
+ * 将模型、工具、记忆、系统提示词组装成完整的客服 Agent。
+ */
+
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { SYSTEM_PROMPT } from "./prompts/system-prompt.js";
+import { customerServiceTools } from "./tools/customer-tools.js";
+import { sessionMemory } from "./memory/customer-memory.js";
+
+// 创建 ReAct Agent
+const agent = createReactAgent({
+  // 配置模型
+  llm: model,
+
+  // 注册工具
+  tools: customerServiceTools,
+
+  // 配置记忆（checkpointSaver 用于会话状态持久化）
+  checkpointSaver: sessionMemory,
+
+  // 系统提示词
+  prompt: SYSTEM_PROMPT,
+});
+
+console.log("✅ Agent 组装完成");
+console.log(`   工具数量: ${customerServiceTools.length}`);
+console.log(`   工具列表: ${customerServiceTools.map((t) => t.name).join(", ")}`);
+</code></pre>
+        </div>
+
+        <p>
+          <code>createReactAgent</code> 内部实现了 ReAct（Reasoning + Acting）推理模式：模型先思考（Reasoning）应该采取什么行动，然后执行（Acting）相应的工具调用，观察结果后继续推理，直到得出最终答案。这种模式特别适合需要多步推理和工具协调的客服场景。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 13. Step 9: 实现流式响应 -->
+      <!-- ============================================================ -->
+      <section id="step9">
+        <h2>Step 9：实现流式响应</h2>
+        <p>
+          流式响应是提升用户体验的关键特性。当 Agent 在处理复杂任务时（例如搜索产品后组织回答），流式传输可以让用户在第一时间看到部分内容，而不是等待所有处理完成后才显示结果。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/customer-service.ts（流式响应部分）</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * 流式对话处理
+ *
+ * 使用 streamMode: "messages" 实现逐字流式输出，
+ * 使用 streamMode: "updates" 跟踪工具调用等中间状态。
+ */
+
+import { HumanMessage } from "@langchain/core/messages";
+
+// 会话配置（每个用户使用唯一的 thread_id）
+const threadConfig = { configurable: { thread_id: "customer-session-001" } };
+
+/**
+ * 发送用户消息并以流式方式接收响应
+ *
+ * @param userMessage - 用户输入的消息
+ */
+async function chat(userMessage: string): Promise&lt;void&gt; {
+  console.log(`\n${"=".repeat(60)}`);
+  console.log(`👤 用户: ${userMessage}`);
+  console.log(`${"=".repeat(60)}`);
+
+  try {
+    // 使用 stream 方法进行流式输出
+    const stream = await agent.stream(
+      { messages: [new HumanMessage(userMessage)] },
+      {
+        ...threadConfig,
+        streamMode: "messages",  // 同时输出 token 级别的消息流
+      }
+    );
+
+    // 收集最终的完整回复
+    let fullResponse = "";
+
+    for await (const chunk of stream) {
+      // chunk 是一个数组，包含当前批次的事件
+      if (Array.isArray(chunk)) {
+        for (const event of chunk) {
+          // 如果是 AI 消息的 token，实时打印
+          if (event && typeof event === "object" && "content" in event) {
+            const content = (event as any).content;
+            if (typeof content === "string" && content) {
+              process.stdout.write(content);
+              fullResponse += content;
+            }
+          }
+        }
+      }
+    }
+
+    console.log("\n"); // 换行
+    console.log(`📎 [调试] 完整回复长度: ${fullResponse.length} 字符`);
+  } catch (error) {
+    console.error("❌ 发生错误:", error);
+  }
+}
+
+/**
+ * 带状态更新的流式处理（跟踪工具调用）
+ */
+async function chatWithUpdates(userMessage: string): Promise&lt;void&gt; {
+  console.log(`\n${"=".repeat(60)}`);
+  console.log(`👤 用户: ${userMessage}`);
+  console.log(`${"=".repeat(60)}`);
+
+  const stream = await agent.stream(
+    { messages: [new HumanMessage(userMessage)] },
+    {
+      ...threadConfig,
+      streamMode: "updates",  // 输出 Agent 状态更新
+    }
+  );
+
+  for await (const update of stream) {
+    // 每次更新包含 Agent 的一个步骤
+    for (const [nodeName, nodeOutput] of Object.entries(update)) {
+      if (nodeName === "agent") {
+        // Agent 节点的输出（模型推理结果）
+        const messages = nodeOutput.messages;
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg?.content) {
+          console.log(`🤖 [Agent] ${lastMsg.content}`);
+        }
+        if (lastMsg?.tool_calls?.length) {
+          for (const tc of lastMsg.tool_calls) {
+            console.log(`🔧 [工具调用] ${tc.name}(${JSON.stringify(tc.args)})`);
+          }
+        }
+      } else if (nodeName === "tools") {
+        // 工具节点的输出（工具执行结果）
+        const messages = nodeOutput.messages;
+        for (const msg of messages) {
+          const preview = typeof msg.content === "string"
+            ? msg.content.substring(0, 150)
+            : JSON.stringify(msg.content).substring(0, 150);
+          console.log(`  ⬅️ [工具结果] ${preview}...`);
+        }
+      }
+    }
+  }
+}
+</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="callout-title">💡 streamMode 详解</div>
+          <p>
+            <code>streamMode: "messages"</code> 提供 token 级别的流式输出，适合前端逐字显示；<code>streamMode: "updates"</code> 提供 Agent 步骤级别的状态更新，适合监控和调试。你也可以组合使用：<code>streamMode: ["messages", "updates"]</code> 同时获取两种流。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 14. Step 10: 完整代码 -->
+      <!-- ============================================================ -->
+      <section id="step10">
+        <h2>Step 10：完整代码</h2>
+        <p>
+          下面是将所有步骤整合在一起的完整主程序文件。<code>customer-service.ts</code> 是整个项目的入口点，它按顺序导入各模块、组装 Agent、运行测试对话。
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">src/customer-service.ts — 完整代码</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">
+/**
+ * ============================================================
+ *  智能客服助手 — 主程序入口
+ * ============================================================
+ *
+ * 本文件整合了所有组件，创建并运行智能客服 Agent。
+ *
+ * 技术栈：LangChain.js v1.x + createReactAgent
+ * 涵盖知识点：模型、消息、工具、流式输出、结构化输出、中间件、记忆
+ *
+ * 运行方式：npx tsx src/customer-service.ts
+ * ============================================================
+ */
+
+import "dotenv/config";
+import { initChatAgent } from "@langchain/langgraph/prebuilt";
+import { HumanMessage } from "@langchain/core/messages";
+import { SYSTEM_PROMPT } from "./prompts/system-prompt.js";
+import { customerServiceTools } from "./tools/customer-tools.js";
+import { sessionMemory, getCustomerProfile } from "./memory/customer-memory.js";
+import { guardrailsMiddleware, loggingMiddleware } from "./middleware/customer-middleware.js";
+
+// ==================== 1. 初始化模型 ====================
+console.log("🚀 正在初始化智能客服助手...\n");
+
+const model = await initChatAgent("openai:gpt-4o-mini", {
+  temperature: 0.3,
+  maxTokens: 2048,
+});
+console.log("✅ [1/4] 模型初始化完成");
+
+// ==================== 2. 配置记忆 ====================
+const threadId = `session-${Date.now()}`;
+const threadConfig = { configurable: { thread_id: threadId } };
+console.log(`✅ [2/4] 记忆配置完成 (thread_id: ${threadId})`);
+
+// ==================== 3. 加载客户资料 ====================
+const customerId = "CUST-1001";
+const customerProfile = getCustomerProfile(customerId);
+console.log(`✅ [3/4] 客户资料已加载`);
+console.log(customerProfile);
+console.log();
+
+// ==================== 4. 组装 Agent ====================
+const agent = createReactAgent({
+  llm: model,
+  tools: customerServiceTools,
+  checkpointSaver: sessionMemory,
+  prompt: `${SYSTEM_PROMPT}\n\n当前客户资料:\n${customerProfile}`,
+});
+console.log(`✅ [4/4] Agent 组装完成`);
+console.log(`   工具: ${customerServiceTools.map((t) => t.name).join(", ")}\n`);
+
+// ==================== 5. 对话函数 ====================
+
+/**
+ * 发送消息并以流式方式接收 Agent 的回复
+ *
+ * @param userMessage 用户输入的消息文本
+ * @param useUpdates 是否使用 updates 模式（默认使用 messages 模式）
+ */
+async function chat(userMessage: string, useUpdates = false): Promise&lt;void&gt; {
+  const separator = "─".repeat(60);
+  console.log(`\n${separator}`);
+  console.log(`👤 用户: ${userMessage}`);
+  console.log(separator);
+
+  const streamMode = useUpdates ? "updates" : "messages";
+
+  try {
+    const stream = await agent.stream(
+      { messages: [new HumanMessage(userMessage)] },
+      { ...threadConfig, streamMode }
+    );
+
+    if (useUpdates) {
+      // Updates 模式：显示 Agent 的推理和工具调用过程
+      for await (const update of stream) {
+        for (const [nodeName, nodeOutput] of Object.entries(update)) {
+          if (nodeName === "agent") {
+            const msgs = nodeOutput.messages;
+            const lastMsg = msgs[msgs.length - 1];
+            if (lastMsg?.tool_calls?.length) {
+              for (const tc of lastMsg.tool_calls) {
+                // 护栏检查
+                const check = guardrailsMiddleware(tc.name, tc.args);
+                if (!check.allowed) {
+                  console.log(`🛡️ [护栏拦截] ${check.reason}`);
+                  continue;
+                }
+                // 日志记录
+                loggingMiddleware(tc.name, tc.args);
+                console.log(`🔧 [调用工具] ${tc.name}`);
+              }
+            }
+            if (lastMsg?.content) {
+              console.log(`🤖 [Agent] ${lastMsg.content}`);
+            }
+          } else if (nodeName === "tools") {
+            const msgs = nodeOutput.messages;
+            for (const msg of msgs) {
+              const preview = String(msg.content).substring(0, 200);
+              console.log(`  ➡️ [工具结果] ${preview}...`);
+            }
+          }
+        }
+      }
+    } else {
+      // Messages 模式：逐字流式输出最终回复
+      let fullResponse = "";
+      for await (const chunk of stream) {
+        if (Array.isArray(chunk)) {
+          for (const event of chunk) {
+            if (event?.content && typeof event.content === "string") {
+              process.stdout.write(event.content);
+              fullResponse += event.content;
+            }
+          }
+        }
+      }
+      console.log();
+    }
+  } catch (error) {
+    console.error("❌ 对话出错:", error);
+  }
+}
+
+// ==================== 6. 运行测试对话 ====================
+
+console.log("\n" + "=".repeat(60));
+console.log("🎯 开始测试对话");
+console.log("=".repeat(60));
+
+// 测试 1: 查询订单状态
+await chat("你好，我想查一下订单 ORD-001 的状态");
+
+// 测试 2: 产品咨询
+await chat("你们的手机壳有其他颜色吗？")
+
+// 测试 3: 退款请求
+await chat("我想给订单 ORD-003 退款，键盘手感不太好");
+
+// 测试 4: 查看上下文记忆
+await chat("我刚才查的是哪个订单？");
+
+console.log("\n" + "=".repeat(60));
+console.log("✅ 所有测试对话完成");
+console.log("=".repeat(60));
+</code></pre>
+        </div>
+
+        <div class="callout warning">
+          <div class="callout-title">⚠️ 运行前请确保</div>
+          <ul>
+            <li>已在 <code>.env</code> 文件中设置正确的 <code>OPENAI_API_KEY</code></li>
+            <li>已安装所有依赖：<code>npm install</code></li>
+            <li>使用 Node.js 18+ 版本（需要原生 <code>fetch</code> 支持）</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 15. 运行与测试 -->
+      <!-- ============================================================ -->
+      <section id="testing">
+        <h2>🧪 运行与测试</h2>
+        <p>
+          现在，让我们运行项目并看看智能客服助手的实际表现。
+        </p>
+
+        <h3>启动项目</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">bash — 运行项目</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+          </div>
+          <pre><code class="language-bash">
+# 启动智能客服助手
+npx tsx src/customer-service.ts
+</code></pre>
+        </div>
+
+        <h3>示例对话 1：订单查询</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">对话输出示例 — 订单查询</span>
+          </div>
+          <pre><code class="language-text">
+────────────────────────────────────────────────────────
+👤 用户: 你好，我想查一下订单 ORD-001 的状态
+────────────────────────────────────────────────────────
+
+🤖 [Agent] 我来帮您查询订单 ORD-001 的状态，请稍等。
+🔧 [调用工具] checkOrderStatus({ orderId: "ORD-001" })
+  ➡️ [工具结果] 📋 订单信息：
+      订单号: ORD-001
+      客户: 张小明
+      商品:
+        - TechShop 超薄手机壳 × 2 (¥49.90)
+        - TechShop 65W 氮化镓充电器 × 1 (¥129.00)
+      总金额: ¥228.80
+      状态: 已发货
+      物流单号: SF1234567890
+      预计送达: 2026-06-10
+
+🤖 [Agent] 您好！您的订单 ORD-001 已经发货了，以下是详细信息：
+
+📦 订单包含：
+- TechShop 超薄手机壳 × 2（¥99.80）
+- TechShop 65W 氮化镓充电器 × 1（¥129.00）
+
+🚚 物流信息：
+- 快递单号：SF1234567890
+- 预计送达：2026年6月10日
+
+包裹正在路上，请耐心等待。如果还有其他问题，随时告诉我！
+</code></pre>
+        </div>
+
+        <h3>示例对话 2：产品咨询</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">对话输出示例 — 产品咨询</span>
+          </div>
+          <pre><code class="language-text">
+────────────────────────────────────────────────────────
+👤 用户: 这个手机壳有其他颜色吗？
+────────────────────────────────────────────────────────
+
+🤖 [Agent] 根据我们的产品信息，TechShop 超薄手机壳有以下颜色可选：
+
+🎨 可选颜色：
+1. 透明 — 最经典的选择，展现手机原色
+2. 午夜黑 — 低调沉稳，商务首选
+3. 深海蓝 — 清新自然，适合夏天
+4. 樱花粉 — 温柔可爱，深受女性用户喜爱
+
+💡 这款手机壳采用航空级 PC 材质，厚度仅 0.5mm，非常轻薄。目前库存充足（500件），售价 ¥49.90。
+
+您对哪个颜色感兴趣呢？
+</code></pre>
+        </div>
+
+        <h3>示例对话 3：退款请求</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">对话输出示例 — 退款处理</span>
+          </div>
+          <pre><code class="language-text">
+────────────────────────────────────────────────────────
+👤 用户: 我想给订单 ORD-003 退款，键盘手感不太好
+────────────────────────────────────────────────────────
+
+🛡️ [护栏] 安全检查: processRefund
+   ✅ 退款安全检查通过: 订单=ORD-003, 金额=¥399.00
+📝 [日志] 工具调用开始:
+   工具: processRefund
+   参数: { "orderId": "ORD-003", "reason": "键盘手感不太好", "amount": 399 }
+
+🤖 [Agent] 我理解您对键盘手感不满意。已为您提交退款申请：
+
+📋 退款申请详情：
+- 退款单号: REF-M2X5K8-A3B7C2
+- 订单号: ORD-003
+- 退款金额: ¥399.00
+- 退款原因: 键盘手感不太好
+- 当前状态: 待审批
+
+⚠️ 请注意：
+退款申请已提交，但需要人工审批后才会正式处理。预计 1-3 个工作日内到账。
+
+如果您在等待期间有其他问题，随时可以问我！
+</code></pre>
+        </div>
+
+        <h3>验证记忆功能</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">对话输出示例 — 记忆测试</span>
+          </div>
+          <pre><code class="language-text">
+────────────────────────────────────────────────────────
+👤 用户: 我刚才查的是哪个订单？
+────────────────────────────────────────────────────────
+
+🤖 [Agent] 您刚才查询的是订单 ORD-001，具体信息如下：
+
+📦 订单内容：
+- TechShop 超薄手机壳 × 2
+- TechShop 65W 氮化镓充电器 × 1
+
+该订单目前状态为"已发货"，快递单号 SF1234567890，
+预计 2026年6月10日 送达。
+
+此外，您刚才还为订单 ORD-003 提交了退款申请（机械键盘 TKL），
+目前该退款正在等待审批中。
+
+请问还有什么可以帮到您的？
+</code></pre>
+        </div>
+
+        <p>
+          从以上对话中，我们可以清楚地看到智能客服助手的多项能力：它能够调用工具查询真实数据、理解上下文关系（"这个手机壳"指代之前提到的产品）、处理退款时遵守安全规范（提交申请而非直接退款），并且能够在后续对话中回忆起之前的交互内容。
+        </p>
+
+        <h3>完整对话流程图</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="filename">交互流程</span>
+          </div>
+          <pre><code class="language-text">
+用户输入 "查一下订单 ORD-001 的状态"
+  │
+  ▼
+Agent 推理: 用户要查订单 → 需要调用 checkOrderStatus
+  │
+  ▼
+护栏中间件: checkOrderStatus 非敏感操作 → 放行
+  │
+  ▼
+日志中间件: 记录工具调用（名称、参数、时间戳）
+  │
+  ▼
+工具执行: checkOrderStatus({ orderId: "ORD-001" })
+  │
+  ▼
+返回订单数据给 Agent
+  │
+  ▼
+Agent 推理: 获得订单信息 → 组织友好回复
+  │
+  ▼
+流式输出: 逐字推送给用户
+</code></pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 16. 学习总结 -->
+      <!-- ============================================================ -->
+      <section id="summary">
+        <h2>🎓 学习总结</h2>
+
+        <div class="callout success">
+          <div class="callout-title">🎉 恭喜你完成了全部学习！</div>
+          <p>你已经从零开始，使用 LangChain.js 构建了一个功能完整的智能客服助手。这是一个真正的实战项目，涵盖了企业级 AI 应用开发的核心技术栈。</p>
+        </div>
+
+        <h3>回顾：你学到了什么</h3>
+        <p>让我们回顾一下这个项目中用到的所有 LangChain.js 核心概念：</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>章节</th>
+              <th>知识点</th>
+              <th>在本项目中的应用</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ch01</td>
+              <td>环境搭建</td>
+              <td>项目初始化、依赖安装、TypeScript 配置</td>
+            </tr>
+            <tr>
+              <td>Ch02</td>
+              <td>Agent 基础</td>
+              <td>使用 createReactAgent 编排 Agent</td>
+            </tr>
+            <tr>
+              <td>Ch03</td>
+              <td>模型 Models</td>
+              <td>initChatModel 配置 GPT-4o-mini</td>
+            </tr>
+            <tr>
+              <td>Ch04</td>
+              <td>消息 Messages</td>
+              <td>HumanMessage、SystemMessage 的使用</td>
+            </tr>
+            <tr>
+              <td>Ch05</td>
+              <td>工具 Tools</td>
+              <td>searchProducts、checkOrderStatus、processRefund、createTicket</td>
+            </tr>
+            <tr>
+              <td>Ch06</td>
+              <td>流式传输</td>
+              <td>agent.stream() 实现实时响应</td>
+            </tr>
+            <tr>
+              <td>Ch07</td>
+              <td>结构化输出</td>
+              <td>createTicket 的 Zod schema 定义</td>
+            </tr>
+            <tr>
+              <td>Ch08</td>
+              <td>中间件</td>
+              <td>日志记录中间件 + 安全护栏中间件</td>
+            </tr>
+            <tr>
+              <td>Ch09</td>
+              <td>记忆系统</td>
+              <td>MemorySaver 短期记忆 + 客户资料长期记忆</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>下一步学习路径</h3>
+        <p>
+          完成了本教程的基础学习后，你可以根据自己的兴趣和项目需求，继续深入探索以下方向：
+        </p>
+
+        <h4>1. Deep Agents — 更强大的智能体</h4>
+        <p>
+          <code>@langchain/langgraph</code> 提供了更高级的 Agent 架构，包括支持多 Agent 协作的 <strong>Supervisor</strong> 模式、可以规划并执行复杂任务的 <strong>Plan-and-Execute</strong> 模式，以及支持 Agent 之间相互委派任务的 <strong>Handoff</strong> 机制。这些高级模式适合构建更复杂的业务系统。
+        </p>
+
+        <h4>2. LangGraph — 复杂工作流编排</h4>
+        <p>
+          当业务逻辑不再是简单的"推理-行动"循环时，你需要 LangGraph 的图编排能力。它允许你定义有状态的工作流，支持条件分支、并行执行、循环控制等复杂模式。例如，一个完整的客服系统可能需要"分类-路由-处理-审核-回复"的多步工作流。
+        </p>
+
+        <h4>3. LangSmith — 生产环境监控</h4>
+        <p>
+          将应用部署到生产环境后，你需要 LangSmith 来监控 Agent 的运行状态。LangSmith 提供了请求追踪（Trace）、性能监控、质量评估、调试回放等功能，帮助你持续优化 Agent 的表现。设置非常简单，只需在环境变量中配置 <code>LANGSMITH_API_KEY</code> 即可自动上报。
+        </p>
+
+        <h4>4. RAG — 基于知识库的应用</h4>
+        <p>
+          <strong>检索增强生成（Retrieval-Augmented Generation）</strong> 是让 AI 助手拥有"专业知识"的关键技术。通过将企业文档、产品手册、FAQ 等知识库内容向量化存储，Agent 可以在回答用户问题前先检索相关资料，从而给出更准确、更有依据的回答。在客服场景中，RAG 可以显著提升回答的专业度和可靠性。
+        </p>
+
+        <div class="callout info">
+          <div class="callout-title">📚 推荐学习资源</div>
+          <ul>
+            <li><a href="https://docs.langchain.com" target="_blank">LangChain 官方文档</a> — 最权威的 API 参考</li>
+            <li><a href="https://langchain-ai.github.io/langgraphjs/" target="_blank">LangGraph.js 文档</a> — 工作流编排详解</li>
+            <li><a href="https://docs.smith.langchain.com" target="_blank">LangSmith 文档</a> — 生产监控平台</li>
+            <li><a href="https://github.com/langchain-ai/langchainjs" target="_blank">GitHub 仓库</a> — 源码与示例</li>
+          </ul>
+        </div>
+
+        <div class="callout success" style="margin-top: 2rem;">
+          <div class="callout-title">🚀 祝你开发愉快！</div>
+          <p>
+            AI 应用开发是一个快速发展的领域，新的工具和最佳实践层出不穷。希望本教程为你打下了坚实的基础，让你能够自信地使用 LangChain.js 构建自己的 AI 应用。记住，最好的学习方式是动手实践——选择一个你感兴趣的场景，开始构建你自己的 Agent 吧！
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 章节底部导航 -->
+      <!-- ============================================================ -->
+      <div class="chapter-nav" style="margin-top: 3rem;">
+        <a href="09-memory.html" class="prev-chapter">← 第09章 记忆系统</a>
+        <span class="chapter-indicator">第10章 / 共10章</span>
+        <a href="../appendix/cheatsheet.html" class="next-chapter">附录 速查表 →</a>
+      </div>
+
+    </div><!-- .content-wrapper -->
+  </main>
+
+</body>
+</html>

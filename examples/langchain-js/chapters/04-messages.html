@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第4章 消息 Messages - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    .message-diagram {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .message-diagram .msg-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .message-diagram .msg-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+      width: 40px;
+      text-align: center;
+    }
+    .message-diagram .msg-body h4 {
+      margin: 0 0 4px;
+      font-size: 0.95rem;
+    }
+    .message-diagram .msg-body p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+    }
+    .msg-system   { border-left: 4px solid #8b5cf6 !important; }
+    .msg-human    { border-left: 4px solid #3b82f6 !important; }
+    .msg-ai       { border-left: 4px solid #10b981 !important; }
+    .msg-tool     { border-left: 4px solid #f59e0b !important; }
+
+    .type-table { margin: 20px 0; }
+    .type-table td:first-child { font-weight: 600; white-space: nowrap; }
+
+    .analogy-box {
+      background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(59,130,246,0.08));
+      border: 1px solid var(--border);
+      border-left: 4px solid #8b5cf6;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 24px 0;
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+    .analogy-box strong { color: #8b5cf6; }
+  </style>
+</head>
+<body data-page="ch04">
+
+  <!-- 阅读进度条 -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 教程</a>
+    <div class="actions">
+      <button class="btn-icon" id="themeToggle" title="切换主题">🌙</button>
+      <a href="https://js.langchain.com/docs/" target="_blank" class="btn-icon" title="官方文档">📖</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏导航 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html" class="active"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容区 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="03-models.html" class="nav-link">← 上一章：模型 Models</a>
+        <span class="chapter-progress">第 4 章 / 共 10 章</span>
+        <a href="05-tools.html" class="nav-link">下一章：工具 Tools →</a>
+      </div>
+
+      <!-- 标题 -->
+      <h1>消息（Messages）— 理解上下文通信</h1>
+      <p class="subtitle">掌握 LangChain.js 中消息系统的设计哲学与实际应用</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+      <div class="objectives">
+        <div class="objectives-title">学完本章后，你将能够：</div>
+        <ul>
+          <li>深入理解 LangChain.js 消息系统的设计理念及其在 AI 应用中的核心地位</li>
+          <li>熟练区分并使用四种核心消息类型：<code>SystemMessage</code>、<code>HumanMessage</code>、<code>AIMessage</code>、<code>ToolMessage</code></li>
+          <li>掌握消息对象的创建、组合与传递方式，构建符合业务需求的对话上下文</li>
+          <li>理解多模态消息的处理方法，包括图片和文档的嵌入方式</li>
+          <li>学会通过 <code>usage_metadata</code> 字段追踪模型调用的 Token 消耗</li>
+          <li>动手实现一个带有完整对话历史管理能力的聊天机器人原型</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📚 前置知识</h2>
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>在阅读本章之前，请确保你已经：
+        <ul>
+          <li>完成第 1 章的环境搭建，能够运行 TypeScript 代码</li>
+          <li>阅读第 2 章，了解 Agent 的基本概念</li>
+          <li>阅读第 3 章，掌握模型（Models）的基本用法以及如何通过 <code>invoke()</code> 方法调用模型</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 消息的本质 ==================== -->
+      <h2 id="essence" class="anchor-heading">💬 消息的本质</h2>
+
+      <p>在与大语言模型（LLM）交互时，所有通信都是通过"消息"来完成的。理解消息的概念，是构建任何 AI 应用的基础。如果你已经使用过 ChatGPT 或其他对话式 AI，你其实已经在不知不觉中使用消息了——你发送的每一条输入就是一条消息，模型返回的每一段回复也是一条消息。</p>
+
+      <div class="analogy-box">
+        <strong>通俗类比：</strong>消息就像两个人之间的对话记录，每条消息都标明了是谁说的（角色）、说了什么（内容）、以及一些附加信息（元数据）。想象一个客服系统，客户提问、系统自动回复、客服人员介入回答，每一次发言都被完整地记录下来，形成一条完整的消息链。LangChain.js 的消息系统正是模拟了这种自然的对话结构。
+      </div>
+
+      <p>在 LangChain.js 中，消息不仅仅是一段纯文本字符串。每条消息都是一个结构化的对象，至少包含以下三个核心属性：</p>
+
+      <ul>
+        <li><strong>角色（role）</strong>——表明这条消息来自谁。是系统设定？用户输入？AI 回复？还是工具返回的结果？</li>
+        <li><strong>内容（content）</strong>——消息的正文，即对话的实际文字内容。在多模态场景下，内容可以包含图片、文件等富媒体信息。</li>
+        <li><strong>附加元数据</strong>——例如消息 ID、时间戳、Token 使用量、工具调用信息等。这些数据虽不直接参与对话，但对调试、监控和业务逻辑至关重要。</li>
+      </ul>
+
+      <p>为什么要用结构化的消息对象，而不是简单的字符串数组呢？原因在于，不同角色的消息在模型处理时有完全不同的语义。模型需要知道哪些是系统指令、哪些是用户的真实输入、哪些是它自己之前的回复——只有这样，模型才能正确理解上下文并给出有意义的回答。使用强类型的消息对象，也能让 TypeScript 编译器在编译期捕获错误，提升代码的可靠性。</p>
+
+      <!-- ==================== 四种核心消息类型 ==================== -->
+      <h2 id="four-types" class="anchor-heading">📦 四种核心消息类型</h2>
+
+      <p>LangChain.js 定义了四种核心消息类型，每一种都有明确的职责和使用场景。下面我们逐一详细讲解。</p>
+
+      <div class="message-diagram">
+        <div class="msg-item msg-system">
+          <div class="msg-icon">🔧</div>
+          <div class="msg-body">
+            <h4>SystemMessage — 系统消息</h4>
+            <p>设置模型行为的指令。就像给新入职的员工发放一本工作手册，告诉它"你是谁"、"你应该怎么做"、"你有哪些限制"。系统消息通常在对话开始时设置一次，用来定义 AI 的人格、回答风格、安全边界等。例如："你是一个专业的法律顾问，请用严谨的语言回答问题"。</p>
+          </div>
+        </div>
+        <div class="msg-item msg-human">
+          <div class="msg-icon">👤</div>
+          <div class="msg-body">
+            <h4>HumanMessage — 用户消息</h4>
+            <p>代表用户的输入。就像客户在客服窗口中提出的问题或请求。这是对话的驱动力——没有用户消息，AI 就没有需要回答的内容。HumanMessage 是整个对话中最频繁出现的消息类型，每次用户发送一条消息，就对应创建一个 HumanMessage 对象。</p>
+          </div>
+        </div>
+        <div class="msg-item msg-ai">
+          <div class="msg-icon">🤖</div>
+          <div class="msg-body">
+            <h4>AIMessage — AI 消息</h4>
+            <p>模型生成的回复。就像客服人员对客户问题的回答。AIMessage 不仅包含回复文本，还可能包含 <code>tool_calls</code>（工具调用请求）——当 AI 认为需要调用外部工具来获取信息时，它不会直接给出回答，而是先在 AIMessage 中声明"我需要调用某个工具"。这种机制是 Agent 系统的核心驱动力。</p>
+          </div>
+        </div>
+        <div class="msg-item msg-tool">
+          <div class="msg-icon">⚡</div>
+          <div class="msg-body">
+            <h4>ToolMessage — 工具消息</h4>
+            <p>工具执行后返回的结果。就像内部系统对客服查询请求返回的数据库查询数据。当 AI 发出工具调用请求后，应用程序执行对应工具，并将执行结果封装成 ToolMessage 放回对话历史中，供 AI 在下一轮推理时使用。</p>
+          </div>
+        </div>
+      </div>
+
+      <p>除了这四种核心类型外，LangChain.js 还支持一些特殊消息类型，例如 <code>RemoveMessage</code>（用于从对话历史中移除特定消息）和 <code>FunctionMessage</code>（旧版 Function Calling API 使用的消息格式，现已逐步被 ToolMessage 替代）。在日常开发中，你 90% 以上的时间都在与这四种核心类型打交道。</p>
+
+      <!-- ==================== 创建和使用消息 ==================== -->
+      <h2 id="create-messages" class="anchor-heading">🔨 创建和使用消息</h2>
+
+      <p>所有消息类型都从 <code>@langchain/core/messages</code> 模块导入。下面的代码展示了如何创建每种消息类型，以及消息对象上可以访问哪些属性。</p>
+
+      <h3>创建 SystemMessage</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import {
+  SystemMessage,
+  HumanMessage,
+  AIMessage,
+  ToolMessage,
+} from "@langchain/core/messages";
+
+// 创建系统消息：定义 AI 的角色和行为规范
+const systemMsg = new SystemMessage(
+  "你是一位经验丰富的 TypeScript 开发导师，擅长用通俗易懂的方式讲解复杂概念。" +
+  "回答时请先给出简要解释，再附上代码示例。"
+);
+
+// 查看消息属性
+console.log(systemMsg.getType());  // 消息类型标识
+console.log(systemMsg.content);    // 消息内容</code></pre>
+      </div>
+      <div class="code-output">"system"
+"你是一位经验丰富的 TypeScript 开发导师，擅长用通俗易懂的方式讲解复杂概念。回答时请先给出简要解释，再附上代码示例。"</div>
+
+      <h3>创建 HumanMessage</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 创建用户消息：模拟用户提问
+const humanMsg = new HumanMessage(
+  "请解释一下 TypeScript 中泛型的概念，并给出一个实际应用的例子。"
+);
+
+console.log(humanMsg.getType());  // "human"
+console.log(humanMsg.content);     // 用户输入的文本内容</code></pre>
+      </div>
+      <div class="code-output">"human"
+"请解释一下 TypeScript 中泛型的概念，并给出一个实际应用的例子。"</div>
+
+      <h3>创建 AIMessage</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 创建 AI 回复消息
+const aiMsg = new AIMessage(
+  "泛型（Generics）允许你在定义函数、接口或类时不预先指定具体类型，" +
+  "而是在使用时再确定。例如：\n\n" +
+  "```typescript\n" +
+  "function identity&lt;T&gt;(arg: T): T {\n" +
+  "  return arg;\n" +
+  "}\n" +
+  "```"
+);
+
+// AIMessage 还可以包含工具调用信息
+const aiMsgWithToolCall = new AIMessage({
+  content: "",    // 当需要调用工具时，内容可以为空字符串
+  tool_calls: [
+    {
+      id: "call_abc123",          // 工具调用的唯一标识
+      name: "search_docs",         // 要调用的工具名称
+      args: { query: "TypeScript 泛型" }, // 传递给工具的参数
+    },
+  ],
+});
+
+console.log(aiMsgWithToolCall.tool_calls);
+// 查看 AI 请求调用的工具列表</code></pre>
+      </div>
+      <div class="code-output">[
+  {
+    id: "call_abc123",
+    name: "search_docs",
+    args: { query: "TypeScript 泛型" }
+  }
+]</div>
+
+      <h3>创建 ToolMessage</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 创建工具消息：将工具执行结果返回给模型
+// tool_call_id 必须与 AIMessage 中的 tool_calls[].id 对应
+const toolMsg = new ToolMessage({
+  content: "TypeScript 泛型文档摘要：泛型允许创建可复用的组件...",
+  tool_call_id: "call_abc123",   // 关联到对应的工具调用请求
+  name: "search_docs",           // 工具名称（可选但推荐）
+});
+
+console.log(toolMsg.getType());     // "tool"
+console.log(toolMsg.tool_call_id);  // "call_abc123"</code></pre>
+      </div>
+      <div class="code-output">"tool"
+"call_abc123"</div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 从字符串快捷创建</div>
+        <p>除了使用构造函数，你还可以使用 <code>HumanMessage</code> 的 <code>.fromText()</code> 静态方法（如果可用），或者直接传字符串给构造函数。对于简单的文本消息，构造函数传字符串是最简洁的方式。如果你需要在消息中附加额外的元数据（如自定义 name 字段），可以传入一个配置对象。</p>
+      </div>
+
+      <!-- ==================== 消息与模型交互 ==================== -->
+      <h2 id="model-interaction" class="anchor-heading">🔗 消息与模型交互</h2>
+
+      <p>创建消息的目的是将它们传递给模型进行处理。在 LangChain.js 中，调用模型的 <code>invoke()</code> 方法时，输入参数可以是三种格式之一。理解这三种格式有助于你灵活地组织对话上下文。</p>
+
+      <h3>格式一：纯字符串</h3>
+      <p>最简单的方式——直接传入一个字符串。LangChain 会自动将其包装为 <code>HumanMessage</code>。适合快速测试或简单场景。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+
+const model = new ChatOpenAI({ modelName: "gpt-4o-mini" });
+
+// 方式一：直接传字符串（自动转为 HumanMessage）
+const response1 = await model.invoke("你好，请自我介绍一下。");
+console.log(response1.content);</code></pre>
+      </div>
+
+      <h3>格式二：消息对象数组（推荐）</h3>
+      <p>传入一个消息对象数组，这是最常用也是最灵活的方式。你可以在数组中包含多种类型的消息，构建完整的对话上下文。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 方式二：传入消息对象数组（推荐方式）
+const response2 = await model.invoke([
+  new SystemMessage("你是一位友好的编程助手，只用中文回答。"),
+  new HumanMessage("什么是闭包？"),
+]);
+
+console.log(response2.content);
+// AI 会以"编程助手"的身份用中文解释闭包概念</code></pre>
+      </div>
+
+      <h3>格式三：OpenAI 字典格式</h3>
+      <p>如果你习惯 OpenAI 原生 API 的格式，也可以直接传入带有 <code>role</code> 和 <code>content</code> 字段的对象数组。LangChain 会自动将其转换为内部消息对象。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 方式三：OpenAI 字典格式（兼容原生 API 风格）
+const response3 = await model.invoke([
+  { role: "system", content: "你是一位友好的编程助手。" },
+  { role: "user", content: "请用一句话解释 REST API。" },
+]);
+
+console.log(response3.content);</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">ℹ️ 选择哪种格式？</div>
+        <p>在实际项目中，<strong>推荐使用格式二（消息对象数组）</strong>。它提供了完整的类型检查和代码提示，让 TypeScript 编译器帮你发现潜在错误。格式三适用于从其他系统迁移代码或需要与 OpenAI 原生 API 格式保持兼容的场景。格式一只适合快速原型验证。</p>
+      </div>
+
+      <!-- ==================== 多模态消息 ==================== -->
+      <h2 id="multimodal" class="anchor-heading">🖼️ 多模态消息</h2>
+
+      <p>现代大语言模型不仅能够处理文本，还能够理解图片、PDF 文档等多种媒体类型。这就是所谓的"多模态"能力。在 LangChain.js 中，你可以通过在消息的 <code>content</code> 属性中传递一个包含多种类型内容块的数组来实现多模态输入。</p>
+
+      <h3>发送图片消息</h3>
+      <p>你可以通过 URL 或 Base64 编码两种方式向模型发送图片。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { HumanMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
+
+const visionModel = new ChatOpenAI({
+  modelName: "gpt-4o",         // 需要使用支持视觉的模型
+  maxTokens: 1024,
+});
+
+// 方式一：通过 URL 传递图片
+const imageUrlMsg = new HumanMessage({
+  content: [
+    {
+      type: "text",
+      text: "请描述这张图片中的内容，并分析其中的设计风格。",
+    },
+    {
+      type: "image_url",
+      image_url: {
+        url: "https://example.com/design-screenshot.png",
+        detail: "high",   // 图片解析精度：low / high / auto
+      },
+    },
+  ],
+});
+
+const responseUrl = await visionModel.invoke([imageUrlMsg]);
+console.log(responseUrl.content);</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import * as fs from "fs";
+
+// 方式二：通过 Base64 编码传递本地图片
+const imageBuffer = fs.readFileSync("./local-image.png");
+const base64Image = imageBuffer.toString("base64");
+
+const base64Msg = new HumanMessage({
+  content: [
+    { type: "text", text: "这张图片里有什么？" },
+    {
+      type: "image_url",
+      image_url: {
+        url: `data:image/png;base64,${base64Image}`,
+      },
+    },
+  ],
+});
+
+const responseBase64 = await visionModel.invoke([base64Msg]);
+console.log(responseBase64.content);</code></pre>
+      </div>
+
+      <h3>发送 PDF 文档</h3>
+      <p>部分模型和平台支持直接处理 PDF 文档。你可以将 PDF 文件编码后作为消息内容的一部分发送。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 通过 Base64 编码发送 PDF 文档
+const pdfBuffer = fs.readFileSync("./contract.pdf");
+const base64Pdf = pdfBuffer.toString("base64");
+
+const pdfMsg = new HumanMessage({
+  content: [
+    { type: "text", text: "请总结这份合同的核心条款。" },
+    {
+      type: "file",
+      source_type: "base64",
+      mime_type: "application/pdf",
+      data: base64Pdf,
+    },
+  ],
+});
+
+const pdfResponse = await visionModel.invoke([pdfMsg]);
+console.log(pdfResponse.content);</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 多模态消息的注意事项</div>
+        <p>并非所有模型都支持多模态输入。在使用前，请确认你选择的模型（如 GPT-4o、Claude 3.5 Sonnet 等）支持相应的媒体类型。此外，发送大型图片或 PDF 会消耗更多的 Token，注意控制文件大小以避免超出模型的上下文窗口限制。建议在生产环境中对图片进行压缩处理。</p>
+      </div>
+
+      <!-- ==================== 消息内容块 ==================== -->
+      <h2 id="content-blocks" class="anchor-heading">🧩 消息内容块（Content Blocks）</h2>
+
+      <p>从 LangChain Core 的较新版本开始，消息的 <code>content</code> 属性可以是纯字符串，也可以是一个"内容块"数组（content blocks）。每个内容块是一个带有 <code>type</code> 字段的对象，用来区分不同类型的内容。这种设计让消息能够承载更加丰富的信息。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { HumanMessage, AIMessage } from "@langchain/core/messages";
+
+// 多模态消息的 content 是一个内容块数组
+const multiModalMsg = new HumanMessage({
+  content: [
+    { type: "text", text: "分析这张图片的配色方案。" },
+    { type: "image_url", image_url: { url: "https://example.com/img.png" } },
+  ],
+});
+
+// AI 回复中可能包含文本和工具调用
+const aiResponse = new AIMessage({
+  content: [
+    { type: "text", text: "正在查询相关信息..." },
+  ],
+  tool_calls: [
+    { id: "call_1", name: "get_weather", args: { city: "北京" } },
+  ],
+});
+
+// 通过 contentBlocks 属性（如果有）进行类型安全的内容访问
+if (typeof multiModalMsg.content !== "string") {
+  // content 是数组时，逐块处理
+  for (const block of multiModalMsg.content) {
+    if (block.type === "text") {
+      console.log("文本内容:", block.text);
+    } else if (block.type === "image_url") {
+      console.log("图片 URL:", block.image_url.url);
+    }
+  }
+}</code></pre>
+      </div>
+      <div class="code-output">文本内容: 分析这张图片的配色方案。
+图片 URL: https://example.com/img.png</div>
+
+      <p>内容块的设计使得 LangChain 能够在不丢失语义的情况下，统一处理来自不同来源和格式的消息。无论消息来自 OpenAI、Anthropic 还是 Google 的模型，LangChain 都能将它们转换为统一的内容块格式，方便你在应用层进行处理。</p>
+
+      <!-- ==================== Token 使用量追踪 ==================== -->
+      <h2 id="token-usage" class="anchor-heading">📊 Token 使用量追踪</h2>
+
+      <p>在生产环境中，了解每次模型调用消耗了多少 Token 至关重要——它直接影响 API 费用和性能。LangChain.js 在 <code>AIMessage</code> 的 <code>usage_metadata</code> 字段中提供了详细的 Token 使用量信息。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+
+const model = new ChatOpenAI({
+  modelName: "gpt-4o-mini",
+  temperature: 0.7,
+});
+
+const response = await model.invoke([
+  new SystemMessage("用一句话回答。"),
+  new HumanMessage("太阳系有几颗行星？"),
+]);
+
+// 访问 usage_metadata 获取 Token 使用量
+const usage = response.usage_metadata;
+console.log("输入 Token 数:", usage?.input_tokens);
+console.log("输出 Token 数:", usage?.output_tokens);
+console.log("总 Token 数:", usage?.total_tokens);
+
+// 响应元数据中还包含更多细节（如延迟、模型名称等）
+console.log("响应元数据:", response.response_metadata);</code></pre>
+      </div>
+      <div class="code-output">输入 Token 数: 25
+输出 Token 数: 12
+总 Token 数: 37
+响应元数据: {
+  tokenUsage: { promptTokens: 25, completionTokens: 12, totalTokens: 37 },
+  model_name: "gpt-4o-mini",
+  ...
+}</div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 成本监控最佳实践</div>
+        <p>在生产应用中，建议将每次调用的 Token 使用量记录到日志或监控系统中。你可以通过 LangChain 的回调机制（Callbacks）自动捕获每次调用的 Token 消耗，而不需要手动访问每个响应的 <code>usage_metadata</code>。这在批量处理大量请求时尤为方便。我们将在后续章节中详细讲解回调机制。</p>
+      </div>
+
+      <!-- ==================== 实战项目 ==================== -->
+      <h2 id="practice" class="anchor-heading">🛠️ 实战：构建对话式聊天机器人</h2>
+
+      <p>现在让我们把本章学到的知识综合运用，构建一个具有完整对话历史管理能力的聊天机器人。这个机器人能够记住之前的对话内容，支持多轮交互，并且会自动裁剪过长的对话历史以避免超出 Token 限制。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import {
+  SystemMessage,
+  HumanMessage,
+  AIMessage,
+  type BaseMessage,
+} from "@langchain/core/messages";
+
+/**
+ * 对话式聊天机器人类
+ * 功能：管理对话历史、自动裁剪、Token 追踪
+ */
+class ChatBot {
+  private model: ChatOpenAI;
+  private chatHistory: BaseMessage[] = [];
+  private systemPrompt: SystemMessage;
+  private maxHistoryLength: number;
+
+  constructor(options: {
+    modelName?: string;
+    systemPrompt?: string;
+    maxHistoryLength?: number;
+  } = {}) {
+    // 初始化模型
+    this.model = new ChatOpenAI({
+      modelName: options.modelName ?? "gpt-4o-mini",
+      temperature: 0.7,
+    });
+
+    // 设置系统提示词
+    this.systemPrompt = new SystemMessage(
+      options.systemPrompt ??
+      "你是一个友好的 AI 助手。请用简洁清晰的中文回答用户的问题。"
+    );
+
+    // 设置最大历史记录长度（消息条数）
+    this.maxHistoryLength = options.maxHistoryLength ?? 20;
+  }
+
+  /**
+   * 发送消息并获取回复
+   */
+  async chat(userInput: string): Promise&lt;string&gt; {
+    // 将用户输入添加到对话历史
+    this.chatHistory.push(new HumanMessage(userInput));
+
+    // 裁剪过长的历史记录，保留系统消息和最近的对话
+    this.trimHistory();
+
+    // 构建完整的消息列表：系统提示 + 对话历史
+    const messages: BaseMessage[] = [
+      this.systemPrompt,
+      ...this.chatHistory,
+    ];
+
+    // 调用模型
+    const response = await this.model.invoke(messages);
+
+    // 将 AI 回复添加到对话历史
+    this.chatHistory.push(new AIMessage(response.content as string));
+
+    // 输出 Token 使用量
+    const usage = response.usage_metadata;
+    if (usage) {
+      console.log(
+        `[Token 消耗] 输入: ${usage.input_tokens}, ` +
+        `输出: ${usage.output_tokens}, ` +
+        `合计: ${usage.total_tokens}`
+      );
+    }
+
+    return response.content as string;
+  }
+
+  /**
+   * 裁剪对话历史，防止超出上下文窗口
+   * 保留最近的 N 条消息
+   */
+  private trimHistory(): void {
+    if (this.chatHistory.length > this.maxHistoryLength) {
+      // 保留最近的消息，丢弃最早的消息
+      this.chatHistory = this.chatHistory.slice(-this.maxHistoryLength);
+      console.log(`[历史裁剪] 已将对话历史裁剪至最近 ${this.maxHistoryLength} 条消息`);
+    }
+  }
+
+  /**
+   * 获取当前对话历史
+   */
+  getHistory(): BaseMessage[] {
+    return [...this.chatHistory];
+  }
+
+  /**
+   * 清空对话历史
+   */
+  clearHistory(): void {
+    this.chatHistory = [];
+    console.log("[历史清空] 对话历史已重置");
+  }
+
+  /**
+   * 导出对话历史为可读格式
+   */
+  exportHistory(): string {
+    return this.chatHistory
+      .map((msg) => {
+        const role =
+          msg.getType() === "human" ? "👤 用户" :
+          msg.getType() === "ai"    ? "🤖 AI  " :
+          msg.getType();
+        return `${role}: ${msg.content}`;
+      })
+      .join("\n---\n");
+  }
+}
+
+// ====== 使用示例 ======
+async function main() {
+  const bot = new ChatBot({
+    systemPrompt: "你是一位耐心的编程导师，善于用生活中的例子来解释技术概念。",
+    maxHistoryLength: 10,
+  });
+
+  // 第一轮对话
+  const reply1 = await bot.chat("你好，我想学习 TypeScript。");
+  console.log("AI:", reply1);
+
+  // 第二轮对话（机器人能记住上文）
+  const reply2 = await bot.chat("TypeScript 和 JavaScript 有什么区别？");
+  console.log("AI:", reply2);
+
+  // 第三轮对话（追问）
+  const reply3 = await bot.chat("那我应该从哪里开始学起？");
+  console.log("AI:", reply3);
+
+  // 查看完整对话历史
+  console.log("\n===== 对话历史 =====");
+  console.log(bot.exportHistory());
+}
+
+main().catch(console.error);</code></pre>
+      </div>
+      <div class="code-output">[Token 消耗] 输入: 48, 输出: 85, 合计: 133
+AI: 你好！欢迎学习 TypeScript！TypeScript 是 JavaScript 的超集，就像给一辆自行车加上了变速器和导航仪——它让你在同样的路上骑得更稳、更远。有任何问题随时问我！
+[Token 消耗] 输入: 152, 输出: 120, 合计: 272
+AI: 简单来说，TypeScript 就是 "带类型的 JavaScript"。想象一下：JavaScript 像是自由散漫的画家，而 TypeScript 更像是有规划的建筑师——它要求你提前想好每个变量是什么类型...
+[Token 消耗] 输入: 295, 输出: 160, 合计: 455
+AI: 建议你按这个顺序学习：1. 先确保 JavaScript 基础扎实 2. 学习基本类型注解 3. 理解接口和类型别名 4. 掌握泛型...
+
+===== 对话历史 =====
+👤 用户: 你好，我想学习 TypeScript。
+---
+🤖 AI  : 你好！欢迎学习 TypeScript！...
+---
+👤 用户: TypeScript 和 JavaScript 有什么区别？
+---
+🤖 AI  : 简单来说，TypeScript 就是 "带类型的 JavaScript"...
+---
+👤 用户: 那我应该从哪里开始学起？
+---
+🤖 AI  : 建议你按这个顺序学习...</div>
+
+      <div class="callout info">
+        <div class="callout-title">ℹ️ 关于对话历史管理</div>
+        <p>在上面的示例中，我们手动管理对话历史。在实际的生产应用中，你可能需要将对话历史持久化到数据库中，并且需要更智能的裁剪策略（例如保留系统消息和最近几轮对话，而不是简单地截断）。LangChain 的记忆系统（Memory）和 LangGraph 提供了更高级的历史管理方案，我们将在第 9 章中深入探讨。</p>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">自测题 — 点击"显示答案"查看解析</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. 四种核心消息类型分别是什么？它们各自的职责是什么？</div>
+          <button class="reveal-btn" onclick="revealAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p><strong>SystemMessage</strong>：系统消息，用于定义 AI 的角色、行为规范和约束条件，类似工作手册。</p>
+            <p><strong>HumanMessage</strong>：用户消息，代表用户的输入，是对话的驱动力。</p>
+            <p><strong>AIMessage</strong>：AI 消息，模型生成的回复，可能包含 <code>tool_calls</code>（工具调用请求）。</p>
+            <p><strong>ToolMessage</strong>：工具消息，封装工具执行后的结果，通过 <code>tool_call_id</code> 与 AIMessage 中的工具调用关联。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. 向模型的 invoke() 方法传递消息有哪三种格式？推荐使用哪种？</div>
+          <button class="reveal-btn" onclick="revealAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p>三种格式分别是：<strong>纯字符串</strong>（自动包装为 HumanMessage）、<strong>消息对象数组</strong>（使用 SystemMessage/HumanMessage 等实例）、<strong>OpenAI 字典格式</strong>（使用 {role, content} 对象）。</p>
+            <p><strong>推荐使用消息对象数组</strong>，因为它提供了完整的 TypeScript 类型检查和 IDE 代码提示支持。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. AIMessage 中的 tool_calls 属性有什么作用？ToolMessage 的 tool_call_id 如何与之关联？</div>
+          <button class="reveal-btn" onclick="revealAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p><code>tool_calls</code> 是 AIMessage 上的一个数组属性，当模型判断需要调用外部工具时，它会在回复中声明需要调用哪些工具、传什么参数。每个工具调用都有一个唯一的 <code>id</code>。</p>
+            <p>当应用程序执行完工具后，需要创建一个 ToolMessage，将其 <code>tool_call_id</code> 设置为对应的工具调用 ID，这样模型就能将工具结果与原始请求正确关联起来。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. 如何在 LangChain.js 中追踪每次模型调用的 Token 使用量？</div>
+          <button class="reveal-btn" onclick="revealAnswer(this)">显示答案</button>
+          <div class="quiz-answer">
+            <p>调用模型的 <code>invoke()</code> 方法后，返回的 AIMessage 对象上有一个 <code>usage_metadata</code> 属性，其中包含：</p>
+            <ul>
+              <li><code>input_tokens</code>：输入 Token 数（包括系统提示、对话历史和当前用户输入）</li>
+              <li><code>output_tokens</code>：输出 Token 数（模型生成的回复长度）</li>
+              <li><code>total_tokens</code>：总 Token 数</li>
+            </ul>
+            <p>此外，<code>response_metadata</code> 中也可能包含更详细的分项信息。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <h3>错误 1：ToolMessage 缺少 tool_call_id</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：忘记设置 tool_call_id
+const badToolMsg = new ToolMessage({
+  content: "查询结果: 北京, 晴, 25°C",
+  // 缺少 tool_call_id！模型无法将结果关联到调用请求
+});
+
+// ✅ 正确：必须提供 tool_call_id
+const goodToolMsg = new ToolMessage({
+  content: "查询结果: 北京, 晴, 25°C",
+  tool_call_id: "call_weather_001", // 与 AIMessage 中的 id 一致
+});</code></pre>
+      </div>
+
+      <h3>错误 2：对话历史顺序混乱</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：消息顺序不对，把 AI 回复放在了用户消息前面
+const wrongOrder = [
+  new SystemMessage("你是助手"),
+  new AIMessage("你好！"),          // AI 回复出现在用户提问之前？
+  new HumanMessage("你好"),         // 这不合逻辑
+];
+
+// ✅ 正确：严格遵循 System → Human → AI → Human → AI 的交替顺序
+const correctOrder = [
+  new SystemMessage("你是助手"),
+  new HumanMessage("你好"),         // 用户先提问
+  new AIMessage("你好！"),          // AI 再回答
+  new HumanMessage("今天天气如何？"), // 用户继续提问
+];</code></pre>
+      </div>
+
+      <h3>错误 3：混淆消息 content 的类型</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：以为 content 总是字符串
+const msg = new HumanMessage({
+  content: [
+    { type: "text", text: "描述这张图" },
+    { type: "image_url", image_url: { url: "https://..." } },
+  ],
+});
+// msg.content 现在是数组，不是字符串！
+console.log(msg.content.length);  // 如果当字符串处理会出错
+
+// ✅ 正确：使用前检查 content 的类型
+if (typeof msg.content === "string") {
+  console.log("纯文本:", msg.content);
+} else {
+  // content 是 ContentBlock 数组
+  for (const block of msg.content) {
+    if ("text" in block) {
+      console.log("文本块:", block.text);
+    }
+  }
+}</code></pre>
+      </div>
+
+      <h3>错误 4：SystemMessage 位置不正确</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ❌ 错误：SystemMessage 放在消息列表末尾
+const wrongPlacement = [
+  new HumanMessage("你好"),
+  new AIMessage("你好！"),
+  new SystemMessage("你是一个专业顾问"), // 系统消息不应放在末尾
+];
+
+// ✅ 正确：SystemMessage 应始终放在消息列表的最前面
+const correctPlacement = [
+  new SystemMessage("你是一个专业顾问"), // 系统消息在最前面
+  new HumanMessage("你好"),
+  new AIMessage("你好！"),
+];</code></pre>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>第 4 章要点回顾</h2>
+        <ul>
+          <li><strong>消息是 LLM 交互的基础</strong>——每条消息都是包含角色、内容和元数据的结构化对象，而不是简单的文本字符串。</li>
+          <li><strong>四种核心消息类型</strong>各有分工：SystemMessage 设置行为规则，HumanMessage 承载用户输入，AIMessage 包含模型回复和工具调用请求，ToolMessage 封装工具执行结果。</li>
+          <li><strong>invoke() 方法支持三种输入格式</strong>：纯字符串、消息对象数组（推荐）和 OpenAI 字典格式。消息对象数组提供最佳的类型安全性和代码可读性。</li>
+          <li><strong>多模态消息</strong>通过内容块数组实现，支持图片（URL 或 Base64）和文档等富媒体输入，但需确认模型是否支持。</li>
+          <li><strong>Token 使用量追踪</strong>通过 AIMessage 的 <code>usage_metadata</code> 字段实现，包含输入、输出和总 Token 数。</li>
+          <li><strong>对话历史管理</strong>是构建聊天机器人的核心挑战之一——需要维护消息顺序、控制历史长度，并考虑持久化存储。</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>第 5 章：工具（Tools）— 赋予 AI 超能力</h3>
+        <p>在本章中我们看到，AIMessage 可以包含 <code>tool_calls</code> 来请求调用外部工具。那么问题来了：这些"工具"是如何定义的？模型是如何知道有哪些工具可用的？工具执行的结果又是如何反馈给模型的？</p>
+        <p>在下一章中，我们将深入学习 LangChain.js 的工具系统，包括：</p>
+        <ul>
+          <li>使用 <code>@tool</code> 装饰器和 <code>DynamicTool</code> 创建自定义工具</li>
+          <li>Zod Schema 定义工具参数的类型验证</li>
+          <li>将工具绑定到模型，让 AI 能够自主决定何时调用工具</li>
+          <li>构建一个完整的"搜索 + 计算"多工具 Agent</li>
+        </ul>
+        <a href="05-tools.html" class="btn btn-primary">继续学习第 5 章 →</a>
+      </div>
+
+      <!-- 章节导航（底部） -->
+      <div class="chapter-nav" style="margin-top: 48px;">
+        <a href="03-models.html" class="nav-link">← 上一章：模型 Models</a>
+        <a href="#" class="nav-link" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;">回到顶部 ↑</a>
+        <a href="05-tools.html" class="nav-link">下一章：工具 Tools →</a>
+      </div>
+
+    </div><!-- /.content-wrapper -->
+  </main>
+
+  <!-- Prism.js 代码高亮 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+
+  <script>
+    // ====== 阅读进度条 ======
+    window.addEventListener("scroll", () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      document.getElementById("progressBar").style.width = progress + "%";
+    });
+
+    // ====== 主题切换 ======
+    const themeToggle = document.getElementById("themeToggle");
+    const savedTheme = localStorage.getItem("theme") || "light";
+    if (savedTheme === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+      themeToggle.textContent = "☀️";
+    }
+
+    themeToggle.addEventListener("click", () => {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (isDark) {
+        document.documentElement.removeAttribute("data-theme");
+        themeToggle.textContent = "🌙";
+        localStorage.setItem("theme", "light");
+      } else {
+        document.documentElement.setAttribute("data-theme", "dark");
+        themeToggle.textContent = "☀️";
+        localStorage.setItem("theme", "dark");
+      }
+    });
+
+    // ====== 代码复制功能 ======
+    function copyCode(btn) {
+      const codeBlock = btn.closest(".code-block");
+      const code = codeBlock.querySelector("code").textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const original = btn.textContent;
+        btn.textContent = "✅ 已复制";
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      }).catch(() => {
+        btn.textContent = "❌ 失败";
+        setTimeout(() => { btn.textContent = "📋 复制"; }, 2000);
+      });
+    }
+
+    // ====== 显示自测题答案 ======
+    function revealAnswer(btn) {
+      const answer = btn.nextElementSibling;
+      answer.classList.toggle("visible");
+      btn.textContent = answer.classList.contains("visible") ? "隐藏答案" : "显示答案";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第7章 结构化输出 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch07">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html" class="active"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="06-streaming.html" class="nav-link">← 第6章 流式传输</a>
+        <span class="chapter-progress">第 7 章 / 共 10 章</span>
+        <a href="08-middleware.html" class="nav-link">第8章 中间件 →</a>
+      </div>
+
+      <!-- 标题 -->
+      <h1>结构化输出 — 精准控制返回格式</h1>
+      <p class="subtitle">让 AI 模型返回严格符合你定义的数据结构，告别手动解析文本的痛苦</p>
+
+      <!-- ===================== 1. 本章目标 ===================== -->
+      <div class="objectives">
+        <div class="objectives-title">🎯 本章目标</div>
+        <ul>
+          <li>理解结构化输出的核心概念，以及它相比自由文本输出的优势所在</li>
+          <li>掌握 LangChain.js 中支持的三种 Schema 定义方式：Zod Schema、Standard Schema 和 JSON Schema</li>
+          <li>深入理解两种输出策略 —— Provider Strategy 与 Tool Calling Strategy 的工作原理和适用场景</li>
+          <li>能够使用 Zod 定义复杂的结构化输出 schema，并通过 <code>createAgent</code> 的 <code>responseFormat</code> 参数应用到 Agent 中</li>
+          <li>掌握结构化输出中的错误处理机制，包括 schema 验证失败和多输出错误的处理方式</li>
+          <li>能够实战完成情感分析、实体提取等常见结构化输出应用场景</li>
+        </ul>
+      </div>
+
+      <!-- ===================== 2. 前置知识 ===================== -->
+      <h2 id="prerequisites">📚 前置知识</h2>
+      <div class="prerequisites">
+        <strong>⚠️ 建议先学习以下章节：</strong>
+        <ul>
+          <li><a href="03-models.html">第3章 模型 Models</a> — 了解如何配置和调用大语言模型</li>
+          <li><a href="04-messages.html">第4章 消息 Messages</a> — 理解消息系统的基本概念</li>
+          <li><a href="05-tools.html">第5章 工具 Tools</a> — 了解工具调用机制（Tool Calling Strategy 的基础）</li>
+        </ul>
+      </div>
+
+      <!-- ===================== 3. 为什么需要结构化输出 ===================== -->
+      <h2 id="why-structured-output">🤔 为什么需要结构化输出</h2>
+
+      <p>在前面的章节中，我们已经学会了如何与大语言模型交互。但你一定遇到过这样的困扰：当你让模型返回数据时，它给你的是一段自由格式的散文，而你需要的是一个规整的 JSON 对象。你不得不写一大堆正则表达式或文本解析代码，从"大约在2024年成立，地址似乎在北京朝阳区"这样的描述中提取结构化数据 —— 这简直是一场噩梦。</p>
+
+      <p>打一个比方：<strong>让 AI 返回 JSON 而不是散文，就像让餐厅给你一份正式菜单，而不是让服务员口头描述今天有什么菜</strong>。菜单有明确的菜名、价格、分类，你可以直接点单；而口头描述呢？你得费力去理解、记忆、整理，最后还可能遗漏信息。</p>
+
+      <p>在实际的生产应用中，结构化输出的重要性更加突出：</p>
+
+      <ul>
+        <li><strong>API 集成</strong> —— 当 Agent 需要调用外部 API 时，请求参数必须严格符合 API 的 schema 格式，任何偏差都会导致调用失败</li>
+        <li><strong>数据入库</strong> —— 将 AI 提取的信息存入数据库时，字段类型和约束必须匹配，否则会引发数据完整性问题</li>
+        <li><strong>前端渲染</strong> —— 前端组件需要确切的数据类型来正确渲染 UI，一个字段的缺失或类型错误就可能导致界面崩溃</li>
+        <li><strong>流程编排</strong> —— 在多步骤的 Agent 工作流中，上一步的输出就是下一步的输入，格式不一致会导致整个链条断裂</li>
+        <li><strong>质量保证</strong> —— 结构化输出可以在返回给用户之前进行 schema 验证，确保数据的完整性和正确性</li>
+      </ul>
+
+      <div class="callout info">
+        <div class="callout-title">📋 核心思想</div>
+        结构化输出的本质是<strong>约束解码</strong>：我们通过定义 schema 来约束模型的输出空间，使其只能生成符合我们定义格式的数据。这并不是"让 AI 猜你想要什么格式"，而是"强制 AI 按照你的格式来回答"。
+      </div>
+
+      <!-- ===================== 4. 支持的 Schema 类型 ===================== -->
+      <h2 id="schema-types">📐 支持的 Schema 类型</h2>
+
+      <p>LangChain.js 支持三种 schema 定义方式，每种都有其适用场景。你可以根据项目的具体需求和技术栈来选择最合适的方式。</p>
+
+      <h3 id="zod-schema">Zod Schema</h3>
+      <p>Zod 是 TypeScript 生态中最流行的 schema 验证库，它提供了强大的类型推断能力。使用 Zod 定义 schema 时，TypeScript 编译器能自动推断出对应的类型，让你在开发时获得完整的类型提示和代码补全。这是 LangChain.js 中最推荐的方式。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+
+// 定义一个用户信息的 schema
+const UserSchema = z.object({
+  // 用户姓名：必填的字符串
+  name: z.string().describe("用户的全名"),
+
+  // 年龄：必填的数字，且必须为正整数
+  age: z.number().int().positive().describe("用户的年龄"),
+
+  // 邮箱：可选的字符串，带格式验证
+  email: z.string().email().optional().describe("用户的邮箱地址"),
+
+  // 兴趣标签：字符串数组
+  interests: z.array(z.string()).describe("用户的兴趣标签列表"),
+
+  // 会员等级：枚举类型，只能是这三个值之一
+  membership: z.enum(["free", "basic", "premium"]).describe("会员等级"),
+});
+
+// TypeScript 会自动推断出完整的类型：
+// type User = {
+//   name: string;
+//   age: number;
+//   email?: string;
+//   interests: string[];
+//   membership: "free" | "basic" | "premium";
+// }
+type User = z.infer&lt;typeof UserSchema&gt;;</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 小技巧</div>
+        使用 Zod 的 <code>.describe()</code> 方法为每个字段添加描述非常重要。这些描述会作为提示信息传递给模型，帮助它更好地理解你期望的数据格式和内容。描述越清晰，模型的输出质量越高。
+      </div>
+
+      <h3 id="standard-schema">Standard Schema</h3>
+      <p>Standard Schema 是一个 schema 验证库的通用标准接口，旨在实现不同验证库之间的互操作性。如果你的项目已经在使用支持 Standard Schema 接口的库（如 Valibot、ArkType 等），那么你可以直接使用它们来定义 LangChain.js 的结构化输出 schema，而无需额外引入 Zod。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import * as v from "valibot";
+
+// 使用 Valibot 定义 schema（Valibot 支持 Standard Schema 接口）
+const ProductSchema = v.object({
+  title: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+  price: v.pipe(v.number(), v.minValue(0)),
+  category: v.picklist(["electronics", "clothing", "food", "other"]),
+  inStock: v.boolean(),
+  tags: v.array(v.string()),
+});
+
+// 该 schema 可以直接传递给 LangChain.js 的 responseFormat 参数
+// 因为 Valibot 实现了 Standard Schema 接口</code></pre>
+      </div>
+
+      <h3 id="json-schema">JSON Schema</h3>
+      <p>JSON Schema 是最通用的 schema 定义方式，它不依赖于任何特定的编程语言或库。如果你需要从 API 动态获取 schema 定义，或者你的项目没有使用 TypeScript，那么 JSON Schema 是一个很好的选择。不过它的语法相对冗长，且没有类型推断能力。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 使用原生 JSON Schema 定义相同的结构
+const productJsonSchema = {
+  type: "object",
+  properties: {
+    title: {
+      type: "string",
+      description: "商品名称",
+      minLength: 1,
+      maxLength: 200,
+    },
+    price: {
+      type: "number",
+      description: "商品价格",
+      minimum: 0,
+    },
+    category: {
+      type: "string",
+      description: "商品类别",
+      enum: ["electronics", "clothing", "food", "other"],
+    },
+    inStock: {
+      type: "boolean",
+      description: "是否有库存",
+    },
+    tags: {
+      type: "array",
+      items: { type: "string" },
+      description: "商品标签",
+    },
+  },
+  required: ["title", "price", "category", "inStock", "tags"],
+};</code></pre>
+      </div>
+
+      <h3 id="schema-comparison">三种 Schema 类型对比</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>特性</th>
+            <th>Zod Schema</th>
+            <th>Standard Schema</th>
+            <th>JSON Schema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>类型推断</td>
+            <td>完整支持</td>
+            <td>取决于实现库</td>
+            <td>不支持</td>
+          </tr>
+          <tr>
+            <td>运行时验证</td>
+            <td>内置</td>
+            <td>内置</td>
+            <td>需要额外库</td>
+          </tr>
+          <tr>
+            <td>语法简洁度</td>
+            <td>非常简洁</td>
+            <td>取决于实现库</td>
+            <td>较冗长</td>
+          </tr>
+          <tr>
+            <td>依赖</td>
+            <td>需要安装 zod</td>
+            <td>取决于实现库</td>
+            <td>无依赖</td>
+          </tr>
+          <tr>
+            <td>适用场景</td>
+            <td>TypeScript 项目首选</td>
+            <td>已有验证库的项目</td>
+            <td>动态 schema / 非 TS 项目</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ===================== 5. 两种输出策略 ===================== -->
+      <h2 id="output-strategies">⚙️ 两种输出策略</h2>
+
+      <p>LangChain.js 在底层使用两种不同的策略来实现结构化输出。理解这两种策略的区别，有助于你在不同场景下做出正确的选择。</p>
+
+      <h3 id="provider-strategy">Provider Strategy：原生支持</h3>
+      <p>一些模型提供商（如 OpenAI、Anthropic、Google Gemini）已经在其 API 中原生支持了结构化输出功能。Provider Strategy 直接利用这些提供商的原生能力来约束模型的输出格式，性能最优、可靠性最高。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+// 定义输出 schema
+const SentimentSchema = z.object({
+  sentiment: z.enum(["positive", "negative", "neutral"])
+    .describe("文本的情感倾向"),
+  confidence: z.number().min(0).max(1)
+    .describe("置信度，0 到 1 之间的浮点数"),
+});
+
+// 创建模型并使用 withStructuredOutput 方法
+const model = new ChatOpenAI({
+  model: "gpt-4o",
+  temperature: 0, // 结构化输出时建议使用低温度
+});
+
+// 使用 Provider Strategy —— 利用 OpenAI 原生的 structured output 能力
+const structuredModel = model.withStructuredOutput(SentimentSchema, {
+  name: "sentiment_analysis", // 可选：指定工具名称
+});
+
+// 调用模型，直接获得类型安全的结果
+const result = await structuredModel.invoke(
+  "这款手机的拍照效果非常出色，但电池续航让人失望"
+);
+console.log(result);
+// {
+//   sentiment: "neutral",
+//   confidence: 0.85
+// }</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">📋 支持 Provider Strategy 的模型提供商</div>
+        <ul>
+          <li><strong>OpenAI</strong>（gpt-4o、gpt-4o-mini 等）—— 使用 response_format: { type: "json_schema" } 原生支持</li>
+          <li><strong>Anthropic</strong>（Claude 系列）—— 通过工具调用实现结构化输出</li>
+          <li><strong>Google Gemini</strong> —— 使用 responseMimeType 和 responseSchema 参数</li>
+        </ul>
+      </div>
+
+      <h3 id="tool-strategy">Tool Calling Strategy：通用方案</h3>
+      <p>对于不原生支持结构化输出的模型，LangChain.js 提供了 Tool Calling Strategy 作为通用解决方案。它的原理是将 schema 包装成一个工具定义，然后通过工具调用机制来获取结构化数据。这个策略适用于所有支持工具调用（Function Calling）的模型。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatAnthropic } from "@langchain/anthropic";
+import { z } from "zod";
+
+// 定义输出 schema
+const ExtractedInfoSchema = z.object({
+  name: z.string().describe("提取出的姓名"),
+  email: z.string().describe("提取出的邮箱地址"),
+  phone: z.string().optional().describe("提取出的电话号码"),
+});
+
+const model = new ChatAnthropic({
+  model: "claude-sonnet-4-20250514",
+  temperature: 0,
+});
+
+// 使用 Tool Calling Strategy（显式指定）
+const structuredModel = model.withStructuredOutput(ExtractedInfoSchema, {
+  // method: "toolCalling" 是默认值，可以省略
+  // 当模型不支持原生结构化输出时，LangChain 会自动回退到此策略
+});
+
+const result = await structuredModel.invoke(
+  "我叫张三，邮箱是 zhangsan@example.com，手机号 13800138000"
+);
+console.log(result);
+// {
+//   name: "张三",
+//   email: "zhangsan@example.com",
+//   phone: "13800138000"
+// }</code></pre>
+      </div>
+
+      <h3 id="auto-strategy">自动选择策略</h3>
+      <p>在大多数情况下，你不需要手动指定使用哪种策略。LangChain.js 会根据你使用的模型自动选择最合适的策略。如果模型支持原生结构化输出，就使用 Provider Strategy；否则就回退到 Tool Calling Strategy。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// LangChain.js 会自动选择最佳策略，你只需要指定 schema
+const model = new ChatOpenAI({ model: "gpt-4o" });
+
+// 不指定 method 参数，LangChain 自动选择
+// 对于 OpenAI 模型，会选择 Provider Strategy
+const structuredModel = model.withStructuredOutput(MySchema);
+
+// 你也可以显式指定策略
+const providerVersion = model.withStructuredOutput(MySchema, {
+  // 强制使用 Provider Strategy（如果模型不支持则报错）
+});
+const toolVersion = model.withStructuredOutput(MySchema, {
+  method: "toolCalling", // 强制使用 Tool Calling Strategy
+});</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 策略选择注意事项</div>
+        <p>虽然自动选择在大多数情况下表现良好，但在以下场景中你可能需要显式指定策略：</p>
+        <ul>
+          <li>需要确保使用 Provider Strategy 获得最佳性能和可靠性时</li>
+          <li>模型同时支持两种策略但你想要使用特定策略时</li>
+          <li>调试时需要切换策略来排查问题时</li>
+        </ul>
+      </div>
+
+      <!-- ===================== 6. 实战：情感分析 ===================== -->
+      <h2 id="practice-sentiment">🛠️ 实战：用 Zod 定义结构化输出</h2>
+
+      <p>让我们通过一个完整的实战案例来掌握结构化输出的使用方法。我们将构建一个<strong>情感分析系统</strong>，让模型分析一段文本的情感倾向，并返回包含情感分类、置信度和详细推理过程的结构化结果。</p>
+
+      <h3>第一步：定义 Schema</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+
+// 定义情感分析的输出 schema
+const SentimentAnalysisSchema = z.object({
+  // 情感分类：只能是三种之一
+  sentiment: z.enum(["positive", "negative", "neutral"])
+    .describe("文本的整体情感倾向：positive（积极）、negative（消极）或 neutral（中性）"),
+
+  // 置信度：0 到 1 之间的浮点数
+  confidence: z.number()
+    .min(0, "置信度不能低于 0")
+    .max(1, "置信度不能超过 1")
+    .describe("分析结果的置信度，范围 0-1，越高表示越确信"),
+
+  // 推理过程：模型给出分析理由
+  reasoning: z.string()
+    .min(10, "推理说明不能少于 10 个字符")
+    .describe("详细说明为什么判定为该情感，引用原文中的关键表达"),
+
+  // 关键词列表：提取情感相关的关键词
+  keywords: z.array(z.string())
+    .min(1, "至少提取一个关键词")
+    .describe("从文本中提取的情感相关关键词"),
+
+  // 情感强度：使用 1-5 的评分
+  intensity: z.number()
+    .int()
+    .min(1)
+    .max(5)
+    .describe("情感强度评分，1 表示非常微弱，5 表示非常强烈"),
+});
+
+// 从 schema 推断 TypeScript 类型
+type SentimentResult = z.infer&lt;typeof SentimentAnalysisSchema&gt;;</code></pre>
+      </div>
+
+      <h3>第二步：创建带结构化输出的 Agent</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createAgent } from "langchain/agents";
+import { ChatOpenAI } from "@langchain/openai";
+
+// 创建模型实例
+const model = new ChatOpenAI({
+  model: "gpt-4o-mini",
+  temperature: 0, // 结构化输出建议使用低温度，确保结果稳定
+});
+
+// 使用 createAgent 并传入 responseFormat 来启用结构化输出
+const agent = createAgent({
+  llm: model,
+  tools: [], // 此场景不需要工具
+  responseFormat: SentimentAnalysisSchema, // 直接传入 Zod schema
+  prompt: `你是一位专业的文本情感分析专家。请对用户提供的文本进行深入分析，
+返回结构化的情感分析结果。分析时注意：
+1. 综合考虑文本的语义、语气和上下文
+2. 提供准确的置信度评估
+3. 列出关键的情感表达词语
+4. 给出合理的推理过程`,
+});
+
+// 调用 Agent 进行情感分析
+const result = await agent.invoke({
+  messages: [
+    {
+      role: "user",
+      content: "今天面试表现还不错，面试官对我做的项目很感兴趣，问了很多深入的问题。不过等结果的过程真的很焦虑，不知道能不能拿到 offer。",
+    },
+  ],
+});
+
+// result 是一个结构化的对象，类型完全匹配 SentimentResult
+console.log("情感分析结果：");
+console.log(JSON.stringify(result, null, 2));
+
+// 输出示例：
+// {
+//   "sentiment": "neutral",
+//   "confidence": 0.75,
+//   "reasoning": "文本包含积极和消极两种情感。积极方面：'表现还不错'、'很感兴趣'；
+//                 消极方面：'真的很焦虑'、'不知道能不能拿到'。整体呈现出喜忧参半的状态。",
+//   "keywords": ["还不错", "很感兴趣", "焦虑", "不知道"],
+//   "intensity": 3
+// }</code></pre>
+      </div>
+
+      <h3>第三步：批量处理与结果使用</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 批量分析多条文本
+const texts = [
+  "这个产品太棒了！完全超出了我的预期，强烈推荐！",
+  "服务态度很差，等了一个小时才上菜，而且菜品味道一般。",
+  "今天的天气预报显示明天多云转晴，气温 18-25 度。",
+];
+
+// 使用 Promise.all 并行处理多个请求
+const results = await Promise.all(
+  texts.map((text) =>
+    agent.invoke({
+      messages: [{ role: "user", content: text }],
+    })
+  )
+);
+
+// 汇总分析结果
+const summary = results.map((r, i) => ({
+  text: texts[i].slice(0, 30) + "...",
+  sentiment: r.sentiment,
+  confidence: r.confidence,
+  intensity: r.intensity,
+}));
+
+console.table(summary);
+// ┌────┬───────────────────────────────┬───────────┬────────────┬───────────┐
+// │    │ text                          │ sentiment │ confidence │ intensity │
+// ├────┼───────────────────────────────┼───────────┼────────────┼───────────┤
+// │ 0  │ "这个产品太棒了！完全超出..."  │ positive  │ 0.95       │ 5         │
+// │ 1  │ "服务态度很差，等了一个..."    │ negative  │ 0.92       │ 4         │
+// │ 2  │ "今天的天气预报显示明天..."    │ neutral   │ 0.98       │ 1         │
+// └────┴───────────────────────────────┴───────────┴────────────┴───────────┘</code></pre>
+      </div>
+
+      <!-- ===================== 7. 实战：实体提取 ===================== -->
+      <h2 id="practice-extraction">🔍 实战：实体提取</h2>
+
+      <p>实体提取（Named Entity Recognition）是结构化输出最经典的应用场景之一。想象一下，你收到一封邮件或一段文本，里面包含了联系人信息、地址、日期等关键数据 —— 你需要将这些非结构化信息提取为结构化的数据库记录。下面让我们来构建一个完整的实体提取系统。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+import { createAgent } from "langchain/agents";
+import { ChatOpenAI } from "@langchain/openai";
+
+// 定义实体提取的 schema
+const ContactSchema = z.object({
+  // 姓名
+  name: z.object({
+    full: z.string().describe("全名"),
+    surname: z.string().optional().describe("姓氏"),
+    given: z.string().optional().describe("名字"),
+  }).describe("提取出的姓名信息"),
+
+  // 邮箱列表：一条文本中可能包含多个邮箱
+  emails: z.array(
+    z.object({
+      address: z.string().describe("邮箱地址"),
+      type: z.enum(["work", "personal", "other"]).describe("邮箱类型"),
+    })
+  ).describe("提取出的邮箱地址列表"),
+
+  // 电话号码列表
+  phones: z.array(
+    z.object({
+      number: z.string().describe("电话号码"),
+      type: z.enum(["mobile", "office", "home", "fax", "other"]).describe("电话类型"),
+    })
+  ).describe("提取出的电话号码列表"),
+
+  // 地址信息
+  address: z.object({
+    province: z.string().optional().describe("省份"),
+    city: z.string().optional().describe("城市"),
+    district: z.string().optional().describe("区/县"),
+    street: z.string().optional().describe("街道地址"),
+    full: z.string().describe("完整地址字符串"),
+  }).optional().describe("提取出的地址信息"),
+
+  // 公司信息
+  company: z.object({
+    name: z.string().describe("公司名称"),
+    department: z.string().optional().describe("部门"),
+    title: z.string().optional().describe("职位"),
+  }).optional().describe("工作单位信息"),
+
+  // 提取置信度
+  confidence: z.number().min(0).max(1).describe("整体提取的置信度"),
+});
+
+// 创建实体提取 Agent
+const extractionAgent = createAgent({
+  llm: new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 }),
+  tools: [],
+  responseFormat: ContactSchema,
+  prompt: `你是一位专业的信息提取专家。请从用户提供的文本中提取联系人相关信息。
+提取规则：
+1. 只提取文本中明确提到的信息，不要推测
+2. 如果某个字段信息不存在，返回 null 或空数组
+3. 正确识别邮箱类型（工作/个人）和电话类型（手机/座机等）
+4. 尽可能完整地提取地址的各个组成部分
+5. 对于中文姓名，正确区分姓和名`,
+});
+
+// 从非结构化文本中提取实体
+const rawText = `你好，我是华为技术有限公司研发部的李明辉。
+你可以通过以下方式联系我：
+工作邮箱：li.minghua@huawei.com
+私人邮箱：lmh_personal@163.com
+手机：139-1234-5678
+办公电话：0755-28780808
+公司地址：广东省深圳市龙岗区坂田街道华为基地`;
+
+const contact = await extractionAgent.invoke({
+  messages: [{ role: "user", content: rawText }],
+});
+
+console.log("提取结果：");
+console.log(JSON.stringify(contact, null, 2));
+
+// 输出示例：
+// {
+//   "name": {
+//     "full": "李明辉",
+//     "surname": "李",
+//     "given": "明辉"
+//   },
+//   "emails": [
+//     { "address": "li.minghua@huawei.com", "type": "work" },
+//     { "address": "lmh_personal@163.com", "type": "personal" }
+//   ],
+//   "phones": [
+//     { "number": "13912345678", "type": "mobile" },
+//     { "number": "0755-28780808", "type": "office" }
+//   ],
+//   "address": {
+//     "province": "广东省",
+//     "city": "深圳市",
+//     "district": "龙岗区",
+//     "street": "坂田街道华为基地",
+//     "full": "广东省深圳市龙岗区坂田街道华为基地"
+//   },
+//   "company": {
+//     "name": "华为技术有限公司",
+//     "department": "研发部",
+//     "title": null
+//   },
+//   "confidence": 0.95
+// }</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 生产环境建议</div>
+        在生产环境中使用实体提取时，建议对提取结果进行二次验证：检查必填字段是否为空、邮箱格式是否合法、电话号码是否符合预期的号码段等。虽然 Zod schema 已经提供了一定的验证能力，但业务层面的校验仍然需要额外处理。
+      </div>
+
+      <!-- ===================== 8. 错误处理 ===================== -->
+      <h2 id="error-handling">⚠️ 错误处理</h2>
+
+      <p>在使用结构化输出时，错误处理是不可忽视的重要环节。虽然结构化输出大大降低了出错概率，但仍可能出现各种异常情况。了解常见的错误类型及其处理方式，能帮助你构建更加健壮的应用。</p>
+
+      <h3 id="multi-output-error">多输出错误（Multiple Tool Calls Error）</h3>
+      <p>当使用 Tool Calling Strategy 时，模型可能在一次响应中发出多个工具调用。由于结构化输出期望的是单一结果，这种情况会引发 <code>MultipleToolCallsError</code>。这是因为模型可能误解了指令，试图同时调用多个工具。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+import { MultipleToolCallsError } from "langchain/agents";
+
+const schema = z.object({
+  answer: z.string(),
+  source: z.string(),
+});
+
+const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+const structured = model.withStructuredOutput(schema, {
+  method: "toolCalling", // 显式使用 Tool Calling Strategy
+});
+
+try {
+  const result = await structured.invoke("你好");
+} catch (error) {
+  if (error instanceof MultipleToolCallsError) {
+    // 模型发出了多个工具调用，需要处理
+    console.error("模型返回了多个工具调用，需要调整提示词或 schema");
+    console.error("错误详情：", error.message);
+
+    // 可选：获取未解析的工具调用结果进行手动处理
+    const toolCalls = error.toolCalls;
+    console.log("原始工具调用：", toolCalls);
+  } else {
+    throw error; // 其他错误继续抛出
+  }
+}</code></pre>
+      </div>
+
+      <h3 id="schema-validation-error">Schema 验证错误</h3>
+      <p>当模型返回的数据不符合 schema 定义时（比如应该返回数字却返回了字符串），LangChain.js 会在验证阶段抛出错误。这类错误通常可以通过降低 temperature 或优化提示词来缓解。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { z } from "zod";
+
+const StrictSchema = z.object({
+  // 定义严格的验证规则
+  score: z.number()
+    .int("分数必须是整数")
+    .min(0, "分数不能为负数")
+    .max(100, "分数不能超过 100"),
+  grade: z.enum(["A", "B", "C", "D", "F"]),
+  passed: z.boolean(),
+});
+
+const model = new ChatOpenAI({
+  model: "gpt-4o-mini",
+  temperature: 0, // 低温度减少随机性，提高 schema 合规率
+});
+const structured = model.withStructuredOutput(StrictSchema);
+
+try {
+  const result = await structured.invoke(
+    "小明在期末考试中得了 92 分，请评估他的等级"
+  );
+  console.log("评分结果：", result);
+  // { score: 92, grade: "A", passed: true }
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    // Zod 验证失败
+    console.error("数据验证失败：");
+    error.errors.forEach((err) => {
+      console.error(`  字段 ${err.path.join(".")}: ${err.message}`);
+    });
+  } else {
+    // 模型调用失败或其他错误
+    console.error("调用失败：", error);
+  }
+}</code></pre>
+      </div>
+
+      <h3 id="custom-error-handling">自定义错误处理与重试</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+/**
+ * 带重试机制的结构化输出调用
+ * @param model - 模型实例
+ * @param schema - Zod schema 定义
+ * @param input - 输入文本
+ * @param maxRetries - 最大重试次数
+ */
+async function callWithRetry&lt;T extends z.ZodType&gt;(
+  model: ChatOpenAI,
+  schema: T,
+  input: string,
+  maxRetries: number = 3
+): Promise&lt;z.infer&lt;T&gt;&gt; {
+  const structured = model.withStructuredOutput(schema);
+
+  for (let attempt = 1; attempt &lt;= maxRetries; attempt++) {
+    try {
+      const result = await structured.invoke(input);
+      return result;
+    } catch (error) {
+      console.warn(`第 ${attempt} 次调用失败: ${error}`);
+
+      if (attempt === maxRetries) {
+        // 最后一次重试也失败了，抛出错误
+        throw new Error(
+          `结构化输出在 ${maxRetries} 次重试后仍然失败: ${error}`
+        );
+      }
+
+      // 等待一段时间后重试（指数退避策略）
+      const delay = Math.pow(2, attempt) * 1000;
+      console.log(`等待 ${delay}ms 后重试...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  // TypeScript 类型守卫，实际上不会执行到这里
+  throw new Error("意外的执行路径");
+}
+
+// 使用示例
+const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+const schema = z.object({
+  summary: z.string(),
+  keyPoints: z.array(z.string()),
+});
+
+try {
+  const result = await callWithRetry(model, schema, "请分析这段长文本...");
+  console.log("分析结果：", result);
+} catch (error) {
+  console.error("所有重试均失败：", error);
+}</code></pre>
+      </div>
+
+      <!-- ===================== 9. 自定义工具消息内容 ===================== -->
+      <h2 id="tool-message-content">📝 自定义工具消息内容</h2>
+
+      <p>当使用 Tool Calling Strategy 时，LangChain.js 会在内部将 schema 包装为一个工具。默认情况下，工具调用的结果消息内容是模型返回的 JSON 字符串。但在某些场景下，你可能需要自定义这个消息内容 —— 比如添加额外的上下文信息、格式化输出以便调试，或者将结果转换为其他格式。</p>
+
+      <p><code>toolMessageContent</code> 参数允许你控制工具返回消息的内容。你可以传入一个字符串、一个函数来动态生成内容，或者一个包含多个内容块的数组。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+const AnalysisSchema = z.object({
+  topic: z.string().describe("主题"),
+  summary: z.string().describe("摘要"),
+  tags: z.array(z.string()).describe("标签"),
+});
+
+const model = new ChatOpenAI({
+  model: "gpt-4o-mini",
+  temperature: 0,
+});
+
+// 方式一：静态字符串内容
+const staticVersion = model.withStructuredOutput(AnalysisSchema, {
+  method: "toolCalling",
+  toolMessageContent: "结构化数据已成功提取。", // 所有成功结果都返回这个文本
+});
+
+// 方式二：使用函数动态生成内容（根据解析结果定制消息）
+const dynamicVersion = model.withStructuredOutput(AnalysisSchema, {
+  method: "toolCalling",
+  toolMessageContent: (result) => {
+    // result 是解析后的结构化对象
+    return `成功提取分析结果：
+- 主题：${result.topic}
+- 摘要长度：${result.summary.length} 字符
+- 标签数量：${result.tags.length} 个
+数据验证通过，可以继续处理。`;
+  },
+});
+
+// 方式三：使用内容块数组（包含多种类型的内容）
+const richVersion = model.withStructuredOutput(AnalysisSchema, {
+  method: "toolCalling",
+  toolMessageContent: (result) => [
+    {
+      type: "text" as const,
+      text: `提取完成，主题为「${result.topic}」`,
+    },
+  ],
+});
+
+// 使用动态版本示例
+const analysisResult = await dynamicVersion.invoke(
+  "2024年人工智能行业报告指出，大语言模型在各行业的应用持续深入..."
+);
+console.log(analysisResult);</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">📋 什么时候需要自定义 toolMessageContent？</div>
+        <ul>
+          <li><strong>调试场景</strong>：在工具消息中添加详细的解析日志，方便排查问题</li>
+          <li><strong>多轮对话</strong>：当结构化输出的结果需要在后续对话中作为上下文引用时，格式化消息内容可以提高后续轮次的理解质量</li>
+          <li><strong>链式处理</strong>：在将结果传递给下一个 Agent 或工具之前，添加前置校验信息</li>
+        </ul>
+      </div>
+
+      <!-- ===================== 10. 知识检查点 ===================== -->
+      <h2 id="quiz">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题 — 检验你的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q1: LangChain.js 支持哪两种结构化输出策略？它们的主要区别是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><strong>Provider Strategy</strong>（提供商策略）：利用 OpenAI、Anthropic、Google Gemini 等模型提供商的原生结构化输出 API，性能最好，可靠性最高。</p>
+            <p><strong>Tool Calling Strategy</strong>（工具调用策略）：将 schema 包装为工具定义，通过 Function Calling 机制获取结构化数据，适用于所有支持工具调用的模型。</p>
+            <p>主要区别在于：Provider Strategy 是直接约束模型解码过程，而 Tool Calling Strategy 是间接通过工具调用机制来获取结构化数据。LangChain.js 会自动为你的模型选择最合适的策略。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q2: 为什么在使用结构化输出时建议将 temperature 设置为 0？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>Temperature 控制模型输出的随机性。temperature 越高，输出越随机和多样；越低则越确定和一致。在结构化输出场景中，我们期望每次调用都能得到格式一致、可预测的结果。将 temperature 设为 0 可以最大程度减少随机性，降低模型返回不符合 schema 的数据的概率，提高结构化输出的稳定性和可靠性。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q3: Zod schema 中的 <code>.describe()</code> 方法有什么作用？为什么推荐使用它？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>.describe()</code> 方法为 schema 的每个字段添加人类可读的描述文本。这些描述有两个重要作用：</p>
+            <ol>
+              <li><strong>对模型的指导</strong>：描述文本会作为提示信息传递给模型，帮助它理解你对每个字段的期望内容、格式和约束。描述越清晰，模型的输出质量越高。</li>
+              <li><strong>文档化</strong>：描述文本也可以作为 API 文档的一部分，帮助其他开发者理解 schema 的设计意图。</li>
+            </ol>
+            <p>推荐为所有字段都添加 <code>.describe()</code>，特别是当字段名称不够直观或字段有特殊约束时。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q4: 当遇到 MultipleToolCallsError 时，应该如何处理？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>MultipleToolCallsError 表示模型在一次响应中返回了多个工具调用，而结构化输出期望的是单一结果。处理方式包括：</p>
+            <ol>
+              <li><strong>优化提示词</strong>：在 prompt 中明确指示模型只返回一个结果，避免拆分回答</li>
+              <li><strong>简化 schema</strong>：如果 schema 过于复杂，模型可能会试图分步处理，尝试简化结构</li>
+              <li><strong>使用 try-catch 捕获</strong>：在代码中捕获该错误并实现重试逻辑，使用 <code>error.toolCalls</code> 获取原始数据</li>
+              <li><strong>切换策略</strong>：如果可能，切换到 Provider Strategy 可以避免此问题</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== 11. 常见错误 ===================== -->
+      <h2 id="common-errors">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：忘记安装 Zod</div>
+        <p><strong>症状</strong>：<code>Error: Cannot find module 'zod'</code></p>
+        <p><strong>原因</strong>：使用 Zod Schema 定义结构化输出时，需要先安装 zod 包。</p>
+        <p><strong>解决</strong>：运行 <code>npm install zod</code> 安装依赖。注意 LangChain.js 不会自动安装 zod，你需要手动添加到项目依赖中。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：模型不支持结构化输出</div>
+        <p><strong>症状</strong>：<code>Model does not support structured output via the provider strategy</code></p>
+        <p><strong>原因</strong>：使用了不支持原生结构化输出的模型，且未指定 <code>method: "toolCalling"</code>。</p>
+        <p><strong>解决</strong>：</p>
+        <ul>
+          <li>切换到支持原生结构化输出的模型（如 gpt-4o、claude-sonnet-4-20250514 等）</li>
+          <li>或者显式指定 <code>method: "toolCalling"</code> 使用通用策略</li>
+        </ul>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：schema 字段缺少 .describe() 导致输出质量差</div>
+        <p><strong>症状</strong>：模型返回的结构化数据虽然格式正确，但字段内容不符合预期。例如 <code>name</code> 字段返回了一个完整的句子而不是名字。</p>
+        <p><strong>原因</strong>：没有使用 <code>.describe()</code> 为字段提供清晰的描述，模型无法准确理解你对每个字段的期望。</p>
+        <p><strong>解决</strong>：为每个字段添加 <code>.describe("清晰的描述文本")</code>，说明该字段应包含什么内容、有什么格式要求。描述越详细，输出越准确。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：schema 定义过于严格导致验证失败</div>
+        <p><strong>症状</strong>：<code>ZodError: Expected number, received string</code> 或类似的类型不匹配错误</p>
+        <p><strong>原因</strong>：模型返回的数据类型与 schema 定义不完全匹配。例如 schema 要求 <code>z.number()</code> 但模型返回了字符串 <code>"92"</code>。</p>
+        <p><strong>解决</strong>：</p>
+        <ul>
+          <li>在 schema 中使用 <code>.describe()</code> 明确说明字段的类型要求</li>
+          <li>适当放宽验证规则，例如使用 <code>z.coerce.number()</code> 自动转换类型</li>
+          <li>实现重试机制，在验证失败时自动重试</li>
+          <li>使用 Provider Strategy 代替 Tool Calling Strategy，原生支持的验证更严格</li>
+        </ul>
+      </div>
+
+      <!-- ===================== 12. 本章小结 ===================== -->
+      <h2 id="summary">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎉 恭喜完成第 7 章！</h2>
+        <p>在本章中，我们深入学习了 LangChain.js 的结构化输出功能。以下是关键知识点回顾：</p>
+        <ul>
+          <li><strong>结构化输出的核心价值</strong>：让 AI 模型返回符合预定义 schema 的数据，而非自由格式的文本，使 AI 输出能够直接被程序消费</li>
+          <li><strong>三种 Schema 类型</strong>：Zod Schema（推荐，提供完整类型推断）、Standard Schema（兼容多种验证库）、JSON Schema（通用但冗长）</li>
+          <li><strong>两种输出策略</strong>：Provider Strategy 利用模型提供商的原生能力，Tool Calling Strategy 通过工具调用机制实现，LangChain.js 会自动选择最优策略</li>
+          <li><strong>实战应用</strong>：通过情感分析和实体提取两个案例，掌握了从定义 schema 到创建 Agent 再到处理结果的完整流程</li>
+          <li><strong>错误处理</strong>：了解了多输出错误、schema 验证错误等常见问题及其解决方案，学会了实现带重试机制的健壮调用</li>
+          <li><strong>高级用法</strong>：通过 <code>toolMessageContent</code> 参数自定义工具消息内容，满足调试和链式处理等高级需求</li>
+        </ul>
+        <p>结构化输出是将 AI 从"玩具"变为"生产工具"的关键能力之一。掌握了它，你就能够让 AI 无缝集成到各种应用系统中，真正发挥大语言模型的实用价值。</p>
+      </div>
+
+      <!-- ===================== 13. 下一章预告 ===================== -->
+      <h2 id="next-chapter">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>第 8 章：中间件 Middleware</h3>
+        <p>在下一章中，我们将学习 LangChain.js 的中间件机制。中间件允许你在 Agent 的执行流程中插入自定义逻辑 —— 比如添加日志记录、实现请求重试、设置安全防护栏等。你可以把它想象成 Agent 的"管道工"，在请求和响应之间安装各种"阀门"和"过滤器"，让你的 Agent 更加可靠、安全和可监控。</p>
+        <p>你将学到：</p>
+        <ul>
+          <li>中间件的工作原理和执行顺序</li>
+          <li>如何编写自定义中间件</li>
+          <li>内置中间件的使用（日志、重试、防护栏等）</li>
+          <li>中间件与结构化输出的配合使用</li>
+        </ul>
+        <a href="08-middleware.html" class="btn btn-primary">开始学习第 8 章 →</a>
+      </div>
+
+      <hr>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

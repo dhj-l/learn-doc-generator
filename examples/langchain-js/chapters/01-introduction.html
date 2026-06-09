@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第1章 概述与环境搭建 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch01">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html" class="active"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="../index.html" class="nav-link">← 首页</a>
+        <span class="chapter-progress">第 1 章 / 共 10 章</span>
+        <a href="02-agent-basics.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>第 1 章 · 概述与环境搭建</h1>
+      <p class="subtitle">了解 LangChain 是什么、为什么需要它，以及如何从零搭建开发环境</p>
+
+      <div class="callout info">
+        <div class="callout-title">📋 信息来源说明</div>
+        本章内容基于 <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a> 官方文档站，采用 LangChain v1.x 全新 <code>createAgent</code> 架构。建议学习过程中对照官方文档确认关键 API。
+      </div>
+
+      <!-- ===== 🎯 本章目标 ===== -->
+      <div class="objectives">
+        <div class="objectives-title">🎯 本章目标</div>
+        <ul>
+          <li>理解 LangChain 是什么，以及它在 AI 开发中的定位</li>
+          <li>了解 LangChain 生态系统的各个组成部分及其相互关系</li>
+          <li>掌握 LangChain 的核心理念：Agent = Model + Harness</li>
+          <li>从零搭建一个 TypeScript 开发环境</li>
+          <li>成功运行你的第一个 LangChain 程序</li>
+          <li>建立良好的项目结构习惯</li>
+        </ul>
+      </div>
+
+      <!-- ===== 什么是 LangChain ===== -->
+      <h2>🦜 什么是 LangChain</h2>
+
+      <p>如果你曾经用过 ChatGPT 或者其他大语言模型（LLM），你一定体验过它们令人惊叹的对话能力。但当你想要在自己的应用中集成这些 AI 能力时，问题就来了：<strong>如何让 AI 不只是聊天，而是真正帮用户完成任务？</strong></p>
+
+      <p>这就是 LangChain 诞生的原因。</p>
+
+      <p><strong>LangChain</strong> 是一个开源框架，专门用于构建由大语言模型（LLM）驱动的应用程序。它提供了一整套工具和抽象，让你可以轻松地将 AI 模型与外部数据源、工具和工作流连接起来，从而构建出真正有用的智能应用。</p>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 一个形象的类比</div>
+        <p>想象你在搭建一个智能助手，LangChain 就像一个完整的工具箱：</p>
+        <ul>
+          <li><strong>Agent（智能体）</strong>= 大脑 —— 负责理解用户需求、制定计划、做出决策</li>
+          <li><strong>Tools（工具）</strong>= 双手 —— 负责执行具体任务，比如搜索网页、查询数据库、发送邮件</li>
+          <li><strong>Memory（记忆）</strong>= 记事本 —— 负责记住之前的对话和上下文，让 AI 不会「健忘」</li>
+          <li><strong>Model（模型）</strong>= 思考引擎 —— 底层的大语言模型，提供推理和生成能力</li>
+        </ul>
+      </div>
+
+      <h3>Agent = Model + Harness</h3>
+
+      <p>在 LangChain 的核心理念中，<strong>Agent（智能体）</strong>并不是一个神秘的概念。它本质上就是：</p>
+
+      <p><strong>Agent = Model（模型）+ Harness（控制框架）</strong></p>
+
+      <p>这里的 <strong>Model</strong> 指的是底层的大语言模型，比如 GPT-4、Claude、Gemini 等。而 <strong>Harness</strong>（控制框架）则是 LangChain 提供的「外壳」，它负责：</p>
+
+      <ul>
+        <li><strong>管理对话流程</strong> —— 决定什么时候调用模型、什么时候调用工具</li>
+        <li><strong>解析输出</strong> —— 将模型的自然语言输出转化为结构化的工具调用指令</li>
+        <li><strong>处理错误</strong> —— 当工具调用失败时进行重试或回退</li>
+        <li><strong>维护状态</strong> —— 追踪多轮对话的上下文和中间结果</li>
+      </ul>
+
+      <p>换句话说，LangChain 帮你把一个「只会说话」的语言模型，变成了一个「能做事情」的智能助手。模型负责思考和表达，LangChain 负责协调和执行。这种分离设计使得你可以轻松切换底层模型（比如从 OpenAI 换成 Anthropic），而不需要重写整个应用逻辑。</p>
+
+      <h3>LangChain v1.x 的新架构</h3>
+
+      <p>LangChain 经历了多次重大迭代。在 v1.x 版本中，引入了全新的 <code>createAgent</code> 架构，这是一个重要变化。新架构的核心特点是：</p>
+
+      <ul>
+        <li><strong>声明式创建</strong> —— 使用 <code>createAgent()</code> 函数一步创建 Agent，无需手动组装各个组件</li>
+        <li><strong>内置工具调用</strong> —— Agent 自动处理模型的工具调用请求，无需自己编写解析逻辑</li>
+        <li><strong>类型安全</strong> —— 完整的 TypeScript 类型支持，开发时就能获得自动补全和类型检查</li>
+        <li><strong>灵活的中间件机制</strong> —— 通过中间件可以拦截和增强 Agent 的行为，而不需要修改核心逻辑</li>
+      </ul>
+
+      <p>这套新架构大幅降低了入门门槛，同时也为高级用户保留了足够的灵活性。接下来让我们详细看看 LangChain 的生态系统。</p>
+
+      <!-- ===== LangChain 生态系统 ===== -->
+      <h2>🌐 LangChain 生态系统</h2>
+
+      <p>LangChain 并不是一个单独的包，而是一个由多个组件组成的生态系统。理解它们之间的关系，对于后续的学习至关重要。就像一座城市有不同功能的建筑一样，LangChain 生态也有不同分工的模块：</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>组件</th>
+            <th>包名</th>
+            <th>职责</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>LangChain Core</strong></td>
+            <td><code>@langchain/core</code></td>
+            <td>核心原语：消息、工具、输出解析器等基础抽象</td>
+          </tr>
+          <tr>
+            <td><strong>LangChain</strong></td>
+            <td><code>langchain</code></td>
+            <td>主要的运行框架（Harness），包含 Agent 创建、链（Chain）等高级功能</td>
+          </tr>
+          <tr>
+            <td><strong>模型集成</strong></td>
+            <td><code>@langchain/openai</code>、<code>@langchain/anthropic</code> 等</td>
+            <td>各大模型提供商的连接器，负责与具体的 LLM API 通信</td>
+          </tr>
+          <tr>
+            <td><strong>LangGraph</strong></td>
+            <td><code>@langchain/langgraph</code></td>
+            <td>底层编排框架，用于构建复杂的多步骤工作流和有状态的 Agent</td>
+          </tr>
+          <tr>
+            <td><strong>Deep Agents</strong></td>
+            <td><code>@langchain/deep-agents</code></td>
+            <td>开箱即用的 Agent 实现，提供「电池全包」的高级 Agent 功能</td>
+          </tr>
+          <tr>
+            <td><strong>LangSmith</strong></td>
+            <td>平台服务</td>
+            <td>可观测性平台：追踪、调试、评估你的 LLM 应用</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>包的依赖关系</h3>
+
+      <p>这些包之间的依赖关系就像俄罗斯套娃一样层层嵌套：</p>
+
+      <ul>
+        <li><code>@langchain/core</code> 是最底层的基础包，定义了所有核心接口和类型</li>
+        <li><code>langchain</code> 依赖 <code>@langchain/core</code>，在其基础上构建了 Agent、Chain 等高级抽象</li>
+        <li><code>@langchain/openai</code> 等模型集成包依赖 <code>@langchain/core</code>，实现具体的模型连接</li>
+        <li><code>@langchain/langgraph</code> 构建在 Core 之上，提供图结构的编排能力</li>
+      </ul>
+
+      <p>这种模块化设计的好处是显而易见的：你只需要安装你实际使用的部分。如果只需要调用 OpenAI 的模型做简单对话，只需要 <code>@langchain/core</code> + <code>@langchain/openai</code> 就够了。只有当你需要构建复杂的 Agent 时，才需要引入 <code>langchain</code> 或 <code>@langchain/langgraph</code>。</p>
+
+      <div class="callout info">
+        <div class="callout-title">📌 关于 LangSmith</div>
+        LangSmith 是 LangChain 团队提供的可观测性平台（SaaS 服务），类似于给你的 AI 应用装上了一个监控摄像头。它可以记录每一次模型调用的输入输出、耗时、Token 消耗等信息。在开发调试阶段非常有用。它不是必须的，但强烈推荐在正式项目中使用。本教程中会偶尔提及它的使用方式。
+      </div>
+
+      <h3>如何选择组件</h3>
+
+      <p>对于初学者来说，一个常见的困惑是：「我到底该安装哪些包？」这里给出一个简单的决策指南：</p>
+
+      <ul>
+        <li><strong>刚入门学习</strong> —— 安装 <code>langchain</code> + <code>@langchain/core</code> + 一个模型集成包（如 <code>@langchain/openai</code>），这三者足以覆盖本教程前 5 章的所有内容</li>
+        <li><strong>需要流式输出和高级编排</strong> —— 再加上 <code>@langchain/langgraph</code></li>
+        <li><strong>需要快速搭建 Agent</strong> —— 可以考虑 <code>@langchain/deep-agents</code>，它是对底层能力的高级封装</li>
+      </ul>
+
+      <p>在本教程中，我们会逐步引入各个组件，不会一开始就堆砌所有依赖。就像学做菜一样，先把基础的炒鸡蛋学会，再挑战满汉全席。</p>
+
+      <!-- ===== 环境搭建 ===== -->
+      <h2>🔧 环境搭建</h2>
+
+      <p>好了，理论知识铺垫够了，是时候动手了！接下来我们一步一步搭建开发环境。</p>
+
+      <h3>前置条件</h3>
+
+      <p>在开始之前，请确保你的电脑上已经安装了以下工具：</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>工具</th>
+            <th>版本要求</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Node.js</strong></td>
+            <td>20.0 或更高</td>
+            <td>JavaScript 运行时环境</td>
+          </tr>
+          <tr>
+            <td><strong>npm</strong></td>
+            <td>随 Node.js 自带</td>
+            <td>包管理器</td>
+          </tr>
+          <tr>
+            <td><strong>TypeScript</strong></td>
+            <td>5.0 或更高</td>
+            <td>我们将通过 npm 安装</td>
+          </tr>
+          <tr>
+            <td><strong>代码编辑器</strong></td>
+            <td>-</td>
+            <td>推荐 VS Code</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>你可以在终端中输入以下命令来检查 Node.js 版本：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 检查 Node.js 版本（需要 20.0 或更高）
+node --version
+
+# 检查 npm 版本
+npm --version</code></pre>
+      </div>
+
+      <div class="code-output">v20.11.0
+10.2.4</div>
+
+      <p>如果你还没有安装 Node.js，建议前往 <a href="https://nodejs.org" target="_blank">nodejs.org</a> 下载 LTS（长期支持）版本。安装时会自动包含 npm。</p>
+
+      <h3>第一步：创建项目</h3>
+
+      <p>打开终端，执行以下命令来创建一个新的项目目录并初始化 npm 项目：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 创建项目目录
+mkdir my-langchain-app
+
+# 进入项目目录
+cd my-langchain-app
+
+# 初始化 npm 项目（-y 表示使用默认配置）
+npm init -y</code></pre>
+      </div>
+
+      <p>执行完这些命令后，你会看到目录下生成了一个 <code>package.json</code> 文件。这就是你项目的「身份证」，记录了项目名称、版本和依赖信息。</p>
+
+      <h3>第二步：安装依赖包</h3>
+
+      <p>接下来，安装 LangChain 相关的核心包和其他必要的依赖：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 安装 LangChain 核心包 + OpenAI 集成 + Zod 类型验证 + TypeScript
+npm install langchain @langchain/core @langchain/openai zod typescript</code></pre>
+      </div>
+
+      <p>这条命令安装了五个包，每个都有明确的用途：</p>
+
+      <ul>
+        <li><code>langchain</code> —— 主框架，提供 Agent 创建等高级功能</li>
+        <li><code>@langchain/core</code> —— 核心原语，定义消息、工具等基础类型</li>
+        <li><code>@langchain/openai</code> —— OpenAI 模型连接器，支持 GPT-4 等模型</li>
+        <li><code>zod</code> —— TypeScript 优先的类型验证库，用于定义工具参数和结构化输出</li>
+        <li><code>typescript</code> —— TypeScript 编译器，让我们能用 TypeScript 写代码</li>
+      </ul>
+
+      <h3>第三步：配置 TypeScript</h3>
+
+      <p>在项目根目录下创建 <code>tsconfig.json</code> 文件，这是 TypeScript 的配置文件：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">JSON</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-json">{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}</code></pre>
+      </div>
+
+      <p>这些配置项的含义是：</p>
+
+      <ul>
+        <li><code>target: "ES2022"</code> —— 编译目标为 ES2022，支持最新的 JavaScript 特性</li>
+        <li><code>module: "NodeNext"</code> —— 使用 Node.js 原生的模块系统</li>
+        <li><code>strict: true</code> —— 启用严格的类型检查，这是好事，能帮你提前发现 bug</li>
+        <li><code>outDir: "./dist"</code> —— 编译后的 JavaScript 文件输出到 dist 目录</li>
+        <li><code>rootDir: "./src"</code> —— 源代码放在 src 目录下</li>
+      </ul>
+
+      <h3>第四步：获取 API 密钥</h3>
+
+      <p>要使用 OpenAI 的模型（如 GPT-4），你需要一个 API 密钥。获取步骤如下：</p>
+
+      <ol>
+        <li>访问 <a href="https://platform.openai.com" target="_blank">platform.openai.com</a> 并注册账号</li>
+        <li>在控制台中导航到 API Keys 页面</li>
+        <li>点击「Create new secret key」生成一个新的密钥</li>
+        <li><strong>立即复制并安全保存这个密钥</strong>，因为它只会显示一次</li>
+      </ol>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 安全提醒</div>
+        <p>API 密钥相当于你的密码，绝对不能做以下事情：</p>
+        <ul>
+          <li>不要将密钥硬编码在源代码中</li>
+          <li>不要将密钥提交到 Git 仓库</li>
+          <li>不要在公开场合分享密钥</li>
+        </ul>
+        <p>正确做法是使用环境变量来管理密钥。</p>
+      </div>
+
+      <h3>第五步：设置环境变量</h3>
+
+      <p>在项目根目录下创建一个 <code>.env</code> 文件来存储 API 密钥：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 创建 .env 文件
+echo "OPENAI_API_KEY=sk-你的密钥放这里" > .env</code></pre>
+      </div>
+
+      <p>然后安装 <code>dotenv</code> 包来加载环境变量：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 安装 dotenv 用于加载环境变量
+npm install dotenv
+
+# 同时安装 ts-node 以便直接运行 TypeScript 文件
+npm install -D ts-node @types/node</code></pre>
+      </div>
+
+      <p>别忘了在项目根目录创建 <code>.gitignore</code> 文件，将敏感文件排除在版本控制之外：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 创建 .gitignore
+echo "node_modules/" > .gitignore
+echo "dist/" >> .gitignore
+echo ".env" >> .gitignore</code></pre>
+      </div>
+
+      <p>至此，环境搭建完成！你的项目已经准备好迎接第一个 LangChain 程序了。</p>
+
+      <!-- ===== 第一个 LangChain 程序 ===== -->
+      <h2>🚀 第一个 LangChain 程序</h2>
+
+      <p>环境搭好了，让我们来写第一个程序。我们将从两个示例开始：先做一个简单的模型调用，然后构建你的第一个 Agent。</p>
+
+      <h3>示例 1：简单模型调用</h3>
+
+      <p>首先，创建 <code>src</code> 目录和我们的第一个文件：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash"># 创建源代码目录
+mkdir src</code></pre>
+      </div>
+
+      <p>然后创建 <code>src/01-simple-chat.ts</code> 文件：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// src/01-simple-chat.ts
+// 第一个 LangChain 程序：简单的模型调用
+
+// 加载环境变量（必须在其他导入之前）
+import "dotenv/config";
+
+// 从 langchain 导入 initChatModel 工厂函数
+import { initChatModel } from "langchain/chat_models/universal";
+
+async function main() {
+  // 使用 initChatModel 创建模型实例
+  // 第一个参数是模型名称，第二个参数是提供商名称
+  const model = await initChatModel("gpt-4o-mini", "openai");
+
+  // 调用模型，发送一条简单的消息
+  const response = await model.invoke("用一句话介绍 LangChain 是什么？");
+
+  // 输出模型的回复
+  console.log("模型回复：");
+  console.log(response.content);
+}
+
+// 运行主函数
+main().catch(console.error);</code></pre>
+      </div>
+
+      <p>运行这个程序：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">npx ts-node src/01-simple-chat.ts</code></pre>
+      </div>
+
+      <div class="code-output">模型回复：
+LangChain 是一个开源框架，用于构建由大语言模型驱动的应用程序，提供了将 AI 模型与外部工具和数据源集成的标准化接口。</div>
+
+      <p>恭喜！你刚刚完成了第一个 LangChain 程序。虽然这个例子很简单，但它展示了 LangChain 最基本的能力：<strong>连接大语言模型并获取回复</strong>。</p>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 关于 initChatModel</div>
+        <p><code>initChatModel</code> 是一个工厂函数，它根据你传入的模型名称和提供商，自动创建对应的模型实例。这种设计让你可以在不修改其他代码的情况下切换模型提供商。比如要把 OpenAI 换成 Anthropic，只需要改一行代码：</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 切换到 Anthropic 的 Claude 模型
+// 只需要安装 @langchain/anthropic 然后改这里即可
+const model = await initChatModel("claude-sonnet-4-20250514", "anthropic");</code></pre>
+      </div>
+
+      <h3>示例 2：你的第一个 Agent</h3>
+
+      <p>接下来，让我们构建一个真正有用的 Agent —— 一个可以查询天气的智能助手。这个例子展示了 Agent 的核心能力：<strong>根据用户的问题，自主决定是否需要调用工具来获取信息</strong>。</p>
+
+      <p>创建 <code>src/02-first-agent.ts</code> 文件：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// src/02-first-agent.ts
+// 第一个 Agent：天气查询助手
+
+import "dotenv/config";
+import { ChatOpenAI } from "@langchain/openai";
+import { createAgent } from "langchain/agents";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 定义一个天气查询工具
+// 这里使用模拟数据，实际项目中可以调用真实的天气 API
+const getWeather = tool(
+  // 工具的执行函数：接收参数，返回结果
+  async ({ city }: { city: string }) => {
+    // 模拟天气数据
+    const weatherData: Record&lt;string, string&gt; = {
+      "北京": "晴天，气温 25°C，空气质量良好",
+      "上海": "多云，气温 28°C，湿度 65%",
+      "广州": "阵雨，气温 30°C，注意带伞",
+      "深圳": "阴天，气温 29°C，微风",
+    };
+    return weatherData[city] || `抱歉，暂时没有 ${city} 的天气数据`;
+  },
+  {
+    // 工具的名称
+    name: "get_weather",
+    // 工具的描述：Agent 根据这段描述决定何时使用这个工具
+    description: "查询指定城市的当前天气情况。当你需要回答关于天气的问题时使用此工具。",
+    // 使用 Zod 定义参数的类型和验证规则
+    schema: z.object({
+      city: z.string().describe("要查询天气的城市名称"),
+    }),
+  }
+);
+
+async function main() {
+  // 创建模型实例
+  const model = new ChatOpenAI({
+    modelName: "gpt-4o-mini",
+    temperature: 0, // 使用 0 让输出更确定
+  });
+
+  // 使用 createAgent 创建 Agent
+  // Agent 会自动理解工具的描述，并在需要时调用它们
+  const agent = await createAgent({
+    llm: model,
+    tools: [getWeather],
+  });
+
+  // 向 Agent 提问
+  console.log("用户提问：北京今天天气怎么样？\n");
+
+  const result = await agent.invoke({
+    messages: [{ role: "user", content: "北京今天天气怎么样？" }],
+  });
+
+  // 输出 Agent 的最终回复
+  // result.messages 中包含完整的对话历史（包括工具调用记录）
+  const lastMessage = result.messages[result.messages.length - 1];
+  console.log("Agent 回复：");
+  console.log(lastMessage.content);
+}
+
+main().catch(console.error);</code></pre>
+      </div>
+
+      <p>运行这个 Agent：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">npx ts-node src/02-first-agent.ts</code></pre>
+      </div>
+
+      <div class="code-output">用户提问：北京今天天气怎么样？
+
+Agent 回复：
+北京今天天气很好！现在是晴天，气温 25°C，空气质量良好。是个适合外出的好天气！</div>
+
+      <p>让我们拆解一下这个程序中发生了什么：</p>
+
+      <ol>
+        <li><strong>用户提问</strong> —— 「北京今天天气怎么样？」</li>
+        <li><strong>Agent 思考</strong> —— 模型看到有一个 <code>get_weather</code> 工具，描述说「查询天气时使用」</li>
+        <li><strong>调用工具</strong> —— Agent 决定调用 <code>get_weather("北京")</code></li>
+        <li><strong>获取结果</strong> —— 工具返回「晴天，气温 25°C，空气质量良好」</li>
+        <li><strong>生成回复</strong> —— Agent 将工具返回的数据组织成自然语言回复给用户</li>
+      </ol>
+
+      <p>这就是 Agent 的魅力所在：<strong>它能自主判断什么时候需要「动手」（调用工具），什么时候直接「动嘴」（用自身知识回答）</strong>。你不需要写 if-else 来决定何时调用哪个工具，模型会根据上下文自动做出最优决策。</p>
+
+      <div class="callout info">
+        <div class="callout-title">📌 工具描述的重要性</div>
+        <p>注意 <code>getWeather</code> 工具的 <code>description</code> 字段：「查询指定城市的当前天气情况。当你需要回答关于天气的问题时使用此工具。」这段描述不是给人看的，而是<strong>给模型看的</strong>。模型根据工具的名称和描述来决定在什么场景下使用哪个工具。因此，写好工具描述是构建高质量 Agent 的关键技巧之一。我们会在第 5 章详细讨论这个话题。</p>
+      </div>
+
+      <!-- ===== 项目结构最佳实践 ===== -->
+      <h2>📁 项目结构最佳实践</h2>
+
+      <p>随着项目的增长，良好的项目结构能帮你保持代码的整洁和可维护性。以下是一个推荐的项目目录结构：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">my-langchain-app/
+├── src/
+│   ├── agents/          # Agent 定义和配置
+│   │   └── weather-agent.ts
+│   ├── tools/           # 自定义工具
+│   │   └── weather.ts
+│   ├── models/          # 模型配置和工厂
+│   │   └── index.ts
+│   ├── prompts/         # 提示词模板
+│   │   └── templates.ts
+│   ├── utils/           # 工具函数
+│   │   └── helpers.ts
+│   ├── types/           # TypeScript 类型定义
+│   │   └── index.ts
+│   └── index.ts         # 程序入口
+├── tests/               # 测试文件
+│   └── agent.test.ts
+├── .env                 # 环境变量（不提交到 Git）
+├── .gitignore           # Git 忽略规则
+├── package.json         # 项目配置
+└── tsconfig.json        # TypeScript 配置</code></pre>
+      </div>
+
+      <p>这个结构的核心思想是<strong>按职责分离</strong>：</p>
+
+      <ul>
+        <li><code>src/agents/</code> —— 存放 Agent 的定义。每个 Agent 是一个独立的模块，方便复用和测试</li>
+        <li><code>src/tools/</code> —— 存放自定义工具。将工具独立出来，方便多个 Agent 共享同一套工具</li>
+        <li><code>src/models/</code> —— 集中管理模型的创建和配置。如果将来需要切换模型提供商，只需修改这一个地方</li>
+        <li><code>src/prompts/</code> —— 存放提示词模板。好的提示词是 Agent 表现优秀的关键，值得单独管理</li>
+        <li><code>src/utils/</code> —— 通用工具函数，如日志、错误处理等</li>
+        <li><code>src/types/</code> —— 自定义的 TypeScript 类型定义</li>
+      </ul>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 小贴士：从简单开始</div>
+        <p>对于本教程的前几个章节，你不需要一开始就创建这么完整的目录结构。先从简单的单文件开始（就像前面的示例 1 和示例 2 那样），等到代码量增长到你觉得混乱时，再按照这个结构进行重构。过早优化是万恶之源。</p>
+      </div>
+
+      <p>在 <code>package.json</code> 中，你可以添加一些常用的脚本来简化开发流程：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">JSON</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-json">{
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "agent": "ts-node src/02-first-agent.ts",
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/"
+  }
+}</code></pre>
+      </div>
+
+      <p>这样你就可以用 <code>npm start</code> 来运行程序，用 <code>npm run build</code> 来编译 TypeScript，用 <code>npm test</code> 来运行测试。比起每次输入长长的 <code>npx ts-node ...</code> 命令，这样方便多了。</p>
+
+      <!-- ===== 知识检查点 ===== -->
+      <h2>🧠 知识检查点</h2>
+
+      <p>学完一章后，来检验一下你的理解程度吧！试着先回忆再看答案，效果会更好。</p>
+
+      <div class="quiz">
+        <div class="quiz-header">🧠 知识检查点</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q1: LangChain 的核心理念「Agent = Model + Harness」中，Harness 的作用是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <strong>A:</strong> Harness（控制框架）是 LangChain 提供的「外壳」，它负责管理对话流程、解析模型输出为工具调用指令、处理工具调用的错误和重试、以及维护多轮对话的状态。简而言之，Harness 把一个「只会说话」的模型变成了一个「能做事情」的 Agent。模型负责思考和表达，Harness 负责协调和执行。
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q2: 在 LangChain 生态系统中，<code>@langchain/core</code> 和 <code>langchain</code> 这两个包有什么区别？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <strong>A:</strong> <code>@langchain/core</code> 是最底层的核心包，定义了所有基础原语（如消息、工具、输出解析器等）的接口和类型。<code>langchain</code> 则是在 Core 之上的高级包，提供了 Agent 创建（<code>createAgent</code>）、链（Chain）等高级功能。可以理解为：<code>@langchain/core</code> 是地基，<code>langchain</code> 是建在地基上的房子。模型集成包（如 <code>@langchain/openai</code>）依赖 Core 而不依赖 langchain。
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q3: 为什么 API 密钥不能硬编码在源代码中？正确的做法是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <strong>A:</strong> API 密钥如果硬编码在源代码中，一旦代码被提交到 Git 仓库（尤其是公开仓库），密钥就会泄露。恶意用户可以利用你的密钥产生大量费用或滥用你的账户。正确做法是将密钥存储在 <code>.env</code> 环境变量文件中，使用 <code>dotenv</code> 包在运行时加载，并确保 <code>.env</code> 文件在 <code>.gitignore</code> 中被排除。
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">Q4: 在 Agent 的工具定义中，<code>description</code> 字段为什么如此重要？如果描述写得不好会怎样？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <strong>A:</strong> <code>description</code> 字段是 Agent 决定「何时使用哪个工具」的唯一依据。模型会根据工具的名称和描述来判断当前场景下是否需要调用该工具。如果描述写得模糊或不准确，Agent 可能会在不该调用工具时调用（浪费时间），或者在应该调用时遗漏（回答不准确）。好的描述应该清晰说明工具的功能和适用场景。
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 常见错误 ===== -->
+      <h2>🐛 常见错误</h2>
+
+      <p>在搭建环境和运行第一个程序时，新手经常会遇到一些问题。这里列出最常见的几个，帮你少走弯路：</p>
+
+      <h3>错误 1：API Key 未设置</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">Error: OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.</code></pre>
+      </div>
+
+      <p><strong>原因：</strong>没有正确设置 <code>OPENAI_API_KEY</code> 环境变量。</p>
+      <p><strong>解决方案：</strong></p>
+      <ol>
+        <li>确认项目根目录下有 <code>.env</code> 文件，并且其中包含 <code>OPENAI_API_KEY=sk-xxx</code></li>
+        <li>确认在代码最顶部（其他 import 之前）执行了 <code>import "dotenv/config"</code></li>
+        <li>确认已安装 dotenv：<code>npm install dotenv</code></li>
+        <li>确认密钥值前后没有多余的空格或引号</li>
+      </ol>
+
+      <h3>错误 2：模块找不到</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">Error: Cannot find module '@langchain/openai'
+Require stack:
+- /path/to/your/project/src/index.ts</code></pre>
+      </div>
+
+      <p><strong>原因：</strong>忘记安装必要的 npm 包，或者包名拼写错误。</p>
+      <p><strong>解决方案：</strong></p>
+      <ol>
+        <li>运行 <code>npm install langchain @langchain/core @langchain/openai</code></li>
+        <li>检查 import 语句中的包名是否拼写正确（注意 <code>@</code> 前缀和 <code>/</code> 分隔符）</li>
+        <li>确认 <code>node_modules</code> 目录存在（如果缺失，运行 <code>npm install</code>）</li>
+      </ol>
+
+      <h3>错误 3：Node.js 版本过低</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">SyntaxError: Unexpected token '{'</code></pre>
+      </div>
+
+      <p><strong>原因：</strong>Node.js 版本低于 20，不支持某些现代 JavaScript 语法。</p>
+      <p><strong>解决方案：</strong></p>
+      <ol>
+        <li>运行 <code>node --version</code> 检查当前版本</li>
+        <li>如果版本低于 20，请前往 <a href="https://nodejs.org" target="_blank">nodejs.org</a> 下载并安装最新 LTS 版本</li>
+        <li>如果你使用 nvm 管理 Node.js 版本，运行 <code>nvm install 20 && nvm use 20</code></li>
+      </ol>
+
+      <h3>错误 4：TypeScript 编译配置问题</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">Bash</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-bash">TS1479: The current file is a CommonJS module whose imports will produce a require call...
+Consider updating to the newer "module" setting.</code></pre>
+      </div>
+
+      <p><strong>原因：</strong>TypeScript 的模块系统配置与 Node.js 不匹配。</p>
+      <p><strong>解决方案：</strong>确保 <code>tsconfig.json</code> 中设置了 <code>"module": "NodeNext"</code> 和 <code>"moduleResolution": "NodeNext"</code>。如果 <code>package.json</code> 中没有 <code>"type": "module"</code>，还需要将 TypeScript 文件的扩展名设为 <code>.mts</code>，或者在 <code>package.json</code> 中添加 <code>"type": "module"</code>。</p>
+
+      <!-- ===== 本章小结 ===== -->
+      <div class="chapter-summary">
+        <h2>📝 本章小结</h2>
+        <p>恭喜你完成了第 1 章的学习！让我们回顾一下这一章的核心内容：</p>
+        <ul>
+          <li><strong>LangChain 是什么</strong> —— 一个用于构建 LLM 驱动应用的开源框架，核心理念是 Agent = Model + Harness</li>
+          <li><strong>生态系统</strong> —— 由 <code>@langchain/core</code>（基础原语）、<code>langchain</code>（主框架）、模型集成包、LangGraph（编排）、Deep Agents（开箱即用）和 LangSmith（可观测性）组成</li>
+          <li><strong>环境搭建</strong> —— Node.js 20+、TypeScript、必要的 npm 包、API 密钥和环境变量</li>
+          <li><strong>第一个程序</strong> —— 用 <code>initChatModel</code> 调用模型，以及用 <code>createAgent</code> 创建能调用工具的 Agent</li>
+          <li><strong>项目结构</strong> —— 按职责分离代码，从简单开始，逐步重构</li>
+        </ul>
+        <p>你现在已经有了一个可以运行的开发环境，并且成功跑通了第一个 LangChain 程序。这些基础将为后续的学习提供坚实支撑。</p>
+      </div>
+
+      <!-- ===== 下一章预告 ===== -->
+      <h2>➡️ 下一章预告</h2>
+
+      <p>在第 2 章「Agent 基础」中，我们将深入探索 Agent 的核心概念。你会学到：</p>
+
+      <ul>
+        <li>Agent 的内部工作原理：ReAct 推理模式是什么？</li>
+        <li><code>createAgent</code> 的详细配置选项</li>
+        <li>如何为 Agent 设计和注册多个工具</li>
+        <li>Agent 的消息格式和对话管理</li>
+        <li>处理 Agent 执行过程中的异常情况</li>
+      </ul>
+
+      <p>如果你在本章的学习中遇到了问题，欢迎回到开头重新尝试，或者查阅 <a href="../appendix/troubleshooting.html">常见错误排错</a> 页面。学习编程就像学骑自行车，摔几次就学会了。</p>
+
+      <hr>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>
