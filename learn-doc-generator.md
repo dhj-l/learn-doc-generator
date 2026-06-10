@@ -36,6 +36,7 @@
 |--------|------|----------|------|
 | ⭐⭐⭐ | `context7` MCP | 尝试调用 `mcp__context7__resolve-library-id` | 获取结构化官方文档 |
 | ⭐⭐⭐ | `WebFetch` | 尝试调用 `WebFetch` | 抓取官方网站页面内容 |
+| ⭐⭐⭐ | `kosyak-fetch` MCP | 尝试调用 `mcp__kosyak-fetch__*` 系列工具 | WebFetch 的增强替代：抓取网页内容为 Markdown，支持 PDF、SPA 渲染、YouTube 字幕等 |
 | ⭐⭐ | `WebSearch` | 尝试调用 `WebSearch` | 搜索最新版本、社区实践、踩坑经验 |
 | ⭐ | `Playwright` MCP | 检测是否存在 `mcp__playwright__*` 系列工具 | 动态渲染的文档站抓取（SPA 站点） |
 
@@ -43,25 +44,27 @@
 
 根据检测结果，按以下矩阵选择资料获取策略：
 
-**🟢 满配模式（推荐）**—— context7 + WebFetch + WebSearch 均可用
+**🟢 满配模式（推荐）**—— context7 + WebFetch/kosyak-fetch + WebSearch 均可用
 
 ```
 信息质量：★★★★★（最新官方文档 + 社区实践 + 版本确认）
 处理流程：1.2 → 1.3 → 1.4 正常执行
+说明：WebFetch 与 kosyak-fetch 互补使用；对于 SPA 站点或 PDF 等特殊格式，
+      优先使用 kosyak-fetch 获取完整内容
 ```
 
-**🟡 标准模式**—— context7 缺失，但 WebFetch + WebSearch 可用
+**🟡 标准模式**—— context7 缺失，但 WebFetch/kosyak-fetch + WebSearch 可用
 
 ```
 信息质量：★★★★☆（官网页面抓取 + 搜索引擎辅助）
 处理流程：
-  - 通过 WebFetch 直接访问官方文档站（/docs、/api、/quickstart 等路径）
+  - 通过 WebFetch 或 kosyak-fetch 直接访问官方文档站（/docs、/api、/quickstart 等路径）
   - 通过 WebSearch 补充 API 细节和版本信息
-  - 可能存在的问题：部分 SPA 文档站 WebFetch 无法获取动态内容
-  - 应对：若 WebFetch 抓取到的内容为空或仅有导航框架，提示用户是否要安装 context7
+  - 对于 SPA 文档站，优先使用 kosyak-fetch（其内置 Readability 引擎可提取动态渲染内容）
+  - 若两者均无法获取有效内容，提示用户是否要安装 context7
 ```
 
-**🟠 降级模式**—— 仅 WebSearch 可用
+**🟠 降级模式**—— 仅 WebSearch 可用（WebFetch/kosyak-fetch 均不可用，且自动安装 kosyak-fetch 失败）
 
 ```
 信息质量：★★★☆☆（搜索结果 + 博客 + Stack Overflow）
@@ -71,7 +74,7 @@
   - ⚠️ 必须向用户声明：文档中的 API 可能不是最新版本
 ```
 
-**🔴 最小模式**—— 所有外部获取工具均不可用
+**🔴 最小模式**—— 所有外部获取工具均不可用（含自动安装 kosyak-fetch 失败）
 
 ```
 信息质量：★★☆☆☆（基于模型训练数据，可能包含过时信息）
@@ -85,6 +88,49 @@
     - 提示用户粘贴官方文档的关键片段（如安装方式、核心 API 等）
 ```
 
+#### 🔧 网页抓取 MCP 自动安装
+
+在完成上述工具检测后，如果发现 **`WebFetch` 和 `kosyak-fetch` MCP 均不可用**，则自动尝试安装 `kosyak-fetch` MCP 作为网页抓取的补充工具，而不是直接降级。
+
+**自动安装流程：**
+
+1. 检查 `WebFetch` 是否可用
+2. 如果不可用，检查 `kosyak-fetch` MCP 是否可用（即是否存在 `mcp__kosyak-fetch__*` 系列工具）
+3. 如果两者均不可用，自动执行安装：
+   ```bash
+   claude mcp add -s user kosyak-fetch -- npx -y kosyak-fetch-mcp@latest
+   ```
+4. 安装完成后，重新检测 `kosyak-fetch` MCP 是否可用
+5. 如果安装成功，将其作为 `WebFetch` 的替代方案，重新评估运行模式
+6. 如果安装失败（如网络问题、权限不足等），向用户提示安装失败原因，并按原策略继续
+
+**安装结果通知：**
+
+```
+🔧 网页抓取工具补全
+
+  ❌ WebFetch        —— 不可用
+  ❌ kosyak-fetch    —— 未安装
+  → 正在自动安装 kosyak-fetch MCP ...
+  ✅ kosyak-fetch    —— 安装成功（可作为 WebFetch 替代使用）
+
+📦 模式已更新：🔴 最小模式 → 🟡 标准模式
+```
+
+或安装失败时：
+
+```
+🔧 网页抓取工具补全
+
+  ❌ WebFetch        —— 不可用
+  ❌ kosyak-fetch    —— 未安装
+  → 正在自动安装 kosyak-fetch MCP ...
+  ❌ 安装失败：[错误原因]
+
+📦 当前模式不变：🟠 降级模式
+💡 你可以手动安装：claude mcp add -s user kosyak-fetch -- npx -y kosyak-fetch-mcp@latest
+```
+
 #### 检测结果通知
 
 完成检测后，向用户输出环境报告：
@@ -94,13 +140,12 @@
 
   ✅ context7 MCP  —— 可用（结构化官方文档获取）
   ✅ WebFetch       —— 可用（网页内容抓取）
+  ✅ kosyak-fetch   —— 可用（增强网页抓取，支持 PDF/SPA/YouTube）
   ❌ WebSearch      —— 不可用
   ❌ Playwright     —— 不可用
 
-📦 当前模式：🟡 标准模式
-📝 影响：将通过 WebFetch 直接抓取官方文档站内容。
-        部分动态渲染的页面可能无法完整获取。
-        如需最佳体验，建议安装 context7 MCP。
+📦 当前模式：🟢 满配模式
+📝 影响：将通过 context7 + WebFetch/kosyak-fetch 获取最新官方文档。
 ```
 
 #### 回退时的用户交互
@@ -144,9 +189,11 @@
    - 再调用 `mcp__context7__get-library-docs` 获取各主题下的文档片段
    - 尽可能覆盖多个主题（topic 参数），如 "getting-started"、"quickstart"、"core concepts"、"api"、"tutorial"、"examples" 等
 
-2. **`WebFetch` 工具**：访问该技术的官方网站，抓取关键页面
+2. **`WebFetch` / `kosyak-fetch` MCP**：访问该技术的官方网站，抓取关键页面
    - 官网首页、快速开始、核心概念、API 参考、教程页面
    - GitHub 仓库的 README、CHANGELOG
+   - 对于 SPA 文档站或 PDF 格式的文档，优先使用 `kosyak-fetch`（支持动态渲染和 PDF 解析）
+   - 对于 YouTube 视频教程，使用 `kosyak-fetch` 获取字幕内容作为补充素材
 
 3. **`WebSearch` 工具**：搜索该技术的
    - 最新版本号和近期重大更新
@@ -155,12 +202,13 @@
 
 #### 🟡 标准模式执行流程
 
-1. **`WebFetch` 工具**：直接访问官方文档站的已知路径
+1. **`WebFetch` / `kosyak-fetch` 工具**：直接访问官方文档站的已知路径
    - `https://[官网域名]/docs` 或 `https://[官网域名]/documentation`
    - `https://[官网域名]/quickstart` 或 `https://[官网域名]/getting-started`
    - `https://[官网域名]/api-reference`
    - GitHub 仓库的 README、CHANGELOG、docs 目录
-   - 如果目标文档站是 SPA（如 VuePress、Docusaurus 等），WebFetch 可能只能获取到导航框架而非实际内容，此时需要：
+   - 如果目标文档站是 SPA（如 VuePress、Docusaurus 等），优先使用 `kosyak-fetch` 抓取（其内置 Readability 引擎可提取动态渲染内容）
+   - 若 `WebFetch` 和 `kosyak-fetch` 均无法获取有效内容：
      - 尝试 WebSearch 搜索 `site:[官网域名]` 获取具体页面链接
      - 逐个抓取关键页面
      - 若大部分页面为空，降级为 🟠 模式并向用户说明
@@ -575,7 +623,8 @@ python -m http.server 8080
 ```
 用户输入："学习 LangChain"
 
-→ Step 1: 环境检测 —— 检查 context7/WebFetch/WebSearch/Playwright 可用性
+→ Step 1: 环境检测 —— 检查 context7/WebFetch/kosyak-fetch/WebSearch/Playwright 可用性
+→ Step 1.5: 网页抓取工具补全 —— 若 WebFetch 和 kosyak-fetch 均不可用，自动安装 kosyak-fetch MCP
 → Step 2: 根据检测结果选择策略（满配/标准/降级/最小模式）
 → Step 3: 按所选策略获取 LangChain 最新文档
 → Step 4: 确定版本号，分析文档结构

@@ -6,8 +6,8 @@
 
 - 🎯 **实战驱动** —— 60% 以上内容为实战演练，每学一个知识点立刻动手练习
 - 📖 **系统完整** —— 由浅入深，每个教程 30,000+ 字起步，不是敷衍的速成笔记
-- 🔄 **自动获取最新文档** —— 通过 context7 / WebFetch / WebSearch 自动同步官方最新文档，避免过时 API
-- 🛡️ **环境自适应** —— 自动检测可用工具，四档策略矩阵（满配/标准/降级/最小），缺失工具时主动提示并回退
+- 🔄 **自动获取最新文档** —— 通过 context7 / WebFetch / kosyak-fetch / WebSearch 自动同步官方最新文档，避免过时 API
+- 🛡️ **环境自适应** —— 自动检测可用工具，四档策略矩阵（满配/标准/降级/最小），缺失网页抓取工具时自动安装 kosyak-fetch MCP
 - 📝 **Markdown 原生** —— 生成纯 Markdown 文件，VS Code / GitHub / Typora / Obsidian 均可直接阅读
 - 🌐 **可选站点预览** —— 需要时一键生成 Docsify 配置，在浏览器中浏览
 - 🧩 **章节拆分** —— 内容按章节独立文件，不堆在一个巨型文件中
@@ -46,12 +46,13 @@ cp learn-doc-generator.md .claude/commands/
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI 已安装并可正常使用
 
-**可选依赖**（缺失时 Skill 会自动降级并提示）：
+**可选依赖**（缺失时 Skill 会自动降级或自动安装）：
 
 | 工具 | 作用 | 安装方式 |
 |------|------|----------|
 | [context7](https://github.com/upstash/context7) MCP | 获取结构化官方文档 | Claude Code MCP 配置 |
 | WebFetch（内置） | 抓取网页内容 | Claude Code 内置 |
+| [kosyak-fetch](https://github.com/kosyakdev/fetch-mcp) MCP | WebFetch 增强替代，支持 PDF/SPA/YouTube | 自动安装（当 WebFetch 不可用时） |
 | WebSearch（内置） | 搜索最新信息 | Claude Code 内置 |
 
 ## 🚀 使用
@@ -88,27 +89,31 @@ cp learn-doc-generator.md .claude/commands/
        │
        ▼
 ┌──────────────────┐
-│  1. 环境检测       │  检查 context7 / WebFetch / WebSearch 可用性
+│  1. 环境检测       │  检查 context7 / WebFetch / kosyak-fetch / WebSearch 可用性
 └────────┬─────────┘
          ▼
 ┌──────────────────┐
-│  2. 选择策略       │  🟢满配 / 🟡标准 / 🟠降级 / 🔴最小
+│  2. 工具补全       │  若 WebFetch/kosyak-fetch 均不可用，自动安装 kosyak-fetch MCP
 └────────┬─────────┘
          ▼
 ┌──────────────────┐
-│  3. 获取官方文档   │  按策略自动拉取最新文档内容
+│  3. 选择策略       │  🟢满配 / 🟡标准 / 🟠降级 / 🔴最小
 └────────┬─────────┘
          ▼
 ┌──────────────────┐
-│  4. 展示路线图     │  章节规划 + 预计时长，等用户确认
+│  4. 获取官方文档   │  按策略自动拉取最新文档内容
 └────────┬─────────┘
          ▼
 ┌──────────────────┐
-│  5. 逐章生成文档   │  Markdown 格式，含代码 + 练习 + 自测
+│  5. 展示路线图     │  章节规划 + 预计时长，等用户确认
 └────────┬─────────┘
          ▼
 ┌──────────────────┐
-│  6. 可选站点预览   │  用户选择后生成 Docsify 配置并启动
+│  6. 逐章生成文档   │  Markdown 格式，含代码 + 练习 + 自测
+└────────┬─────────┘
+         ▼
+┌──────────────────┐
+│  7. 可选站点预览   │  用户选择后生成 Docsify 配置并启动
 └──────────────────┘
 ```
 
@@ -149,10 +154,12 @@ Skill 启动时会自动检测可用工具，并选择最佳策略：
 
 | 模式 | 条件 | 信息质量 | 行为 |
 |------|------|----------|------|
-| 🟢 满配 | context7 + WebFetch + WebSearch | ★★★★★ | 自动获取最新官方文档 |
-| 🟡 标准 | WebFetch + WebSearch | ★★★★☆ | 直接抓取官网页面 |
+| 🟢 满配 | context7 + WebFetch/kosyak-fetch + WebSearch | ★★★★★ | 自动获取最新官方文档 |
+| 🟡 标准 | WebFetch/kosyak-fetch + WebSearch | ★★★★☆ | 直接抓取官网页面（SPA 站点用 kosyak-fetch） |
 | 🟠 降级 | 仅 WebSearch | ★★★☆☆ | 搜索引擎辅助，声明版本风险 |
 | 🔴 最小 | 全部不可用 | ★★☆☆☆ | 请求用户提供文档链接，标注免责声明 |
+
+> **自动补全机制**：当 `WebFetch` 和 `kosyak-fetch` MCP 均不可用时，Skill 会自动安装 `kosyak-fetch-mcp`，避免不必要的降级。
 
 ## ❓ FAQ
 
