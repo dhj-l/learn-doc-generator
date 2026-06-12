@@ -1,0 +1,8 @@
+# Reasonix tooling
+.codegraph/
+.playwright-mcp/
+tmp/
+nul
+
+# Reasonix desktop config (keep skills/ though)
+.reasonix/desktop-*

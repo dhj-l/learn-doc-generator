@@ -1,0 +1,14 @@
+- [📚 首页](/)
+- **基础篇**
+  - [第0章 Python 基础速通](chapters/00-python-crash.md)
+  - [第1章 NumPy 数组操作](chapters/01-numpy.md)
+- **核心篇**
+  - [第2章 Pandas 基础与数据清洗](chapters/02-pandas-basics.md)
+  - [第3章 Pandas 分组聚合与合并](chapters/03-pandas-advanced.md)
+  - [第4章 Matplotlib 数据可视化](chapters/04-matplotlib.md)
+- **冲刺篇**
+  - [第5章 全真模拟试卷](chapters/05-practice-exam.md)
+- **附录**
+  - [API 速查表](appendix/cheatsheet.md)
+  - [常见错误排错指南](appendix/troubleshooting.md)
+  - [考前速记卡](appendix/quick-review.md)
