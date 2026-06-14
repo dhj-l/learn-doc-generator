@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第18章 Callbacks & LangSmith - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch18">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html" class="active"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="17-langgraph.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 18 章 / 共 19 章</span>
+        <a href="10-capstone.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>📊 Callbacks & LangSmith — 追踪、调试与可观测性</h1>
+      <p class="subtitle">让每一次 LLM 调用都有迹可循——从本地日志到云端全链路追踪</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 CallbackHandler 接口及其生命周期事件模型</li>
+          <li>配置 LangSmith 环境变量实现云端全链路追踪</li>
+          <li>在 LangSmith UI 中查看 Trace、Span、Token 用量等核心信息</li>
+          <li>创建 Dataset 并运行 Evaluation 评测</li>
+          <li>编写自定义 CallbackHandler 实现本地日志、指标收集等能力</li>
+          <li>对 RAG 调用链进行细粒度追踪与调试</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="02-agent-basics.html">第 2 章：Agent 基础</a> 的学习，
+        理解 Agent 的 invoke 流程和 tool 调用机制。同时建议熟悉
+        <a href="06-streaming.html">第 6 章 流式传输</a> 中 event 回调的概念。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：CallbackHandler 接口与生命周期事件</h3>
+
+      <p>
+        LangChain 中的所有可运行组件（Runnable）——包括模型、工具、Agent、链（Chain）——
+        在执行的各个阶段都会触发<strong>生命周期事件（Lifecycle Events）</strong>。
+        这些事件可以通过注册 <code>CallbackHandler</code> 来监听。
+      </p>
+
+      <p>
+        可以把 CallbackHandler 想象成<strong>监控摄像头</strong>——它不会干扰组件本身的运行，
+        但会在每个关键节点"拍下照片"供你事后审查。LangChain 内置了多个 CallbackHandler 实现，
+        其中最常用的是 LangSmith 的 <code>LangChainTracer</code>，它会自动将事件上报到 LangSmith 平台。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
+
+/**
+ * ==========================================
+ * CallbackHandler 核心生命周期方法一览
+ * ==========================================
+ *
+ * ┌─────────────────────────────────────────────────┐
+ * │  handleLLMStart     – LLM 开始调用              │
+ * │  handleLLMEnd       – LLM 调用完成（有输出）    │
+ * │  handleLLMError     – LLM 调用出错              │
+ * ├─────────────────────────────────────────────────┤
+ * │  handleChatModelStart – 聊天模型开始调用        │
+ * ├─────────────────────────────────────────────────┤
+ * │  handleChainStart   – Chain/Agent 开始执行      │
+ * │  handleChainEnd     – Chain/Agent 执行完成      │
+ * │  handleChainError   – Chain/Agent 执行出错      │
+ * ├─────────────────────────────────────────────────┤
+ * │  handleToolStart    – 工具开始执行              │
+ * │  handleToolEnd      – 工具执行完成              │
+ * │  handleToolError    – 工具执行出错              │
+ * ├─────────────────────────────────────────────────┤
+ * │  handleText         – 流式文本片段（用于流式）  │
+ * │  handleAgentAction  – Agent 决定调用某个工具    │
+ * │  handleAgentEnd     – Agent 输出最终结果        │
+ * └─────────────────────────────────────────────────┘
+ */
+
+// ==========================================
+// 一个最简单的自定义 Handler 示例
+// ==========================================
+class MyLoggingHandler extends BaseCallbackHandler {
+  name = "MyLoggingHandler";
+
+  handleLLMStart(llm: { name: string }, prompts: string[]) {
+    console.log(`🤖 [LLM Start] 模型: ${llm.name}`);
+    console.log(`  提示词前 80 字符: ${prompts[0]?.slice(0, 80)}...`);
+  }
+
+  handleLLMEnd(output: { generations: unknown[][] }) {
+    const text = output.generations[0]?.[0]?.text ?? "(无文本)";
+    console.log(`✅ [LLM End] 响应: ${String(text).slice(0, 100)}`);
+  }
+
+  handleToolStart(tool: { name: string }, input: string) {
+    console.log(`🔧 [Tool Start] 工具: ${tool.name}, 输入: ${input.slice(0, 120)}`);
+  }
+
+  handleToolEnd(output: string) {
+    console.log(`✅ [Tool End] 输出: ${String(output).slice(0, 120)}`);
+  }
+}
+
+/**
+ * 使用方式：在 invoke 时传入 callbacks 参数
+ *
+ * const result = await agent.invoke(
+ *   { messages: [/* ... * /] },
+ *   { callbacks: [new MyLoggingHandler()] }
+ * );
+ */</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 事件执行顺序</div>
+        <p>
+          事件是嵌套触发的：Agent 开始 → LLM 开始 → LLM 结束 → Tool 开始 → Tool 结束 → Agent 结束。
+          这意味着你可以通过事件的 start/end 配对来精确测量每个步骤的耗时。
+          LangSmith 正是利用这个机制生成 Trace 时间线图的。
+        </p>
+      </div>
+
+      <h3>概念二：LangSmith 追踪设置</h3>
+
+      <p>
+        <strong>LangSmith</strong> 是 LangChain 官方提供的 LLM 应用可观测性平台。
+        它通过环境变量配置，一旦设置好，所有 Runnable 的执行事件会自动上报，
+        你可以在 LangSmith 的 Web UI 中查看完整的 Trace 信息。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">/**
+ * ==========================================
+ * 步骤 1：安装依赖
+ * ==========================================
+ * npm install langchain @langchain/core @langchain/openai
+ * npm install @langchain/langsmith  // LangSmith SDK (可选，v0.3+ 自动集成)
+ *
+ * ==========================================
+ * 步骤 2：配置环境变量
+ * ==========================================
+ *
+ * 在 .env 文件中设置：
+ *
+ *   # === LangSmith 追踪开关 ===
+ *   LANGSMITH_TRACING=true
+ *
+ *   # === LangSmith API Key（从 https://smith.langchain.com 获取） ===
+ *   LANGSMITH_API_KEY=ls__your_api_key_here
+ *
+ *   # === 项目名称（可选，默认 "default"） ===
+ *   LANGSMITH_PROJECT=my-langchain-app
+ *
+ *   # === OpenAI API Key（你的模型调用凭证） ===
+ *   OPENAI_API_KEY=sk-...
+ *
+ * ==========================================
+ * 步骤 3：从环境变量读取配置（推荐 dotenv）
+ * ==========================================
+ */
+import "dotenv/config";
+
+// LangSmith 自动从环境变量读取配置
+// 设置 LANGSMITH_TRACING=true 后，所有 Runnable 调用自动追踪
+console.log("✅ LangSmith 追踪已启用");
+
+// ==========================================
+// 简单验证：创建 Agent 并调用，Trace 自动上报
+// ==========================================
+import { ChatOpenAI } from "@langchain/openai";
+import { createAgent, tool } from "langchain";
+import { z } from "zod";
+
+const weatherTool = tool(
+  async ({ city }: { city: string }) => {
+    return `${city} 的天气：晴，22°C，湿度 45%`;
+  },
+  {
+    name: "get_weather",
+    description: "查询指定城市的天气信息",
+    schema: z.object({ city: z.string() }),
+  }
+);
+
+async function main() {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+  const agent = await createAgent({
+    model,
+    tools: [weatherTool],
+    systemPrompt: "你是一个天气助手。",
+  });
+
+  // 这次调用的完整 Trace 会自动上报到 LangSmith
+  const result = await agent.invoke({
+    messages: [{ role: "user", content: "北京的天气怎么样？" }],
+  });
+
+  console.log(result.messages[result.messages.length - 1].content);
+}
+
+main();</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 注意事项</div>
+        <p>
+          <code>LANGSMITH_TRACING=true</code> 是全局开关。设置后，<strong>所有</strong> Runnable 调用
+          （包括模型调用、工具调用、Agent 执行）都会被追踪。如果只希望追踪特定调用，
+          可以在 invoke 时传 <code>{ callbacks: [...] }</code> 参数，而不是设置环境变量。
+          生产环境中建议将追踪级别设置为 <code>debug</code> 或按比例采样，避免过度上报影响性能。
+        </p>
+      </div>
+
+      <h3>概念三：Trace UI 概念</h3>
+
+      <p>
+        登录 <a href="https://smith.langchain.com" target="_blank">smith.langchain.com</a> 后，
+        进入项目的 "Traces" 页面，你会看到每次调用都生成一条 Trace 记录。
+        每条 Trace 由多个 <strong>Span（跨度）</strong> 组成，对应嵌套的事件层级。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">JSON (Trace 结构示例)</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-json">{
+  "trace_id": "abc123...",
+  "run_id": "run_001",
+  "name": "Agent",
+  "run_type": "chain",
+  "start_time": "2025-03-15T10:30:00.000Z",
+  "end_time": "2025-03-15T10:30:02.500Z",
+  "duration_ms": 2500,
+  "inputs": { "messages": [{ "role": "user", "content": "北京的天气怎么样？" }] },
+  "outputs": { "messages": [{ "role": "assistant", "content": "北京今天...22°C..." }] },
+  "child_runs": [
+    {
+      "run_id": "llm_001",
+      "name": "ChatOpenAI",
+      "run_type": "llm",
+      "start_time": "2025-03-15T10:30:00.100Z",
+      "end_time": "2025-03-15T10:30:01.200Z",
+      "duration_ms": 1100,
+      "inputs": { "messages": [/* ... */] },
+      "outputs": { "generations": [/* ... */] },
+      "token_usage": {
+        "prompt_tokens": 85,
+        "completion_tokens": 12,
+        "total_tokens": 97
+      }
+    },
+    {
+      "run_id": "tool_001",
+      "name": "get_weather",
+      "run_type": "tool",
+      "start_time": "2025-03-15T10:30:01.300Z",
+      "end_time": "2025-03-15T10:30:01.500Z",
+      "duration_ms": 200,
+      "inputs": { "city": "北京" },
+      "outputs": "北京的天气：晴，22°C，湿度 45%"
+    },
+    {
+      "run_id": "llm_002",
+      "name": "ChatOpenAI",
+      "run_type": "llm",
+      "start_time": "2025-03-15T10:30:01.600Z",
+      "end_time": "2025-03-15T10:30:02.400Z",
+      "duration_ms": 800,
+      "token_usage": { "prompt_tokens": 120, "completion_tokens": 45, "total_tokens": 165 }
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">🔍 Trace UI 核心功能</div>
+        <ul>
+          <li><strong>时间线视图（Timeline）</strong> — 以瀑布图方式展示每个 Span 的耗时和嵌套关系</li>
+          <li><strong>Token 用量</strong> — 每个 LLM Span 显示 prompt_tokens、completion_tokens、total_tokens</li>
+          <li><strong>输入/输出详情</strong> — 点击任一 Span 可查看完整的输入参数和输出结果</li>
+          <li><strong>错误定位</strong> — 出错的 Span 用红色标记，可直接查看错误堆栈</li>
+          <li><strong>搜索与过滤</strong> — 按项目、时间范围、运行类型、标签等条件筛选</li>
+          <li><strong>标注与反馈</strong> — 可为 Trace 添加人工评分（Thumbs up/down）和注释</li>
+        </ul>
+      </div>
+
+      <h3>概念四：Dataset 创建与 Evaluation 评测</h3>
+
+      <p>
+        LangSmith 不仅提供追踪功能，还支持 <strong>Dataset（数据集）</strong> 和
+        <strong>Evaluation（评测）</strong> 能力，让你可以系统化地评估 Agent 的表现。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">/**
+ * ==========================================
+ * 通过 LangSmith SDK 创建 Dataset
+ * ==========================================
+ *
+ * 方式一：在 LangSmith UI 中手动创建（推荐初次使用）
+ *   1. 登录 smith.langchain.com
+ *   2. 进入 "Datasets & Testing" 页面
+ *   3. 点击 "Create Dataset"
+ *   4. 输入名称和描述，逐条添加输入/期望输出
+ *
+ * 方式二：通过代码创建
+ */
+import { Client } from "langsmith";
+
+const client = new Client({
+  apiKey: process.env.LANGSMITH_API_KEY,
+});
+
+// 创建一个天气查询评测数据集
+const dataset = await client.createDataset("weather-qa", {
+  description: "天气助手问答评测集",
+});
+
+// 添加示例数据
+await client.createExamples({
+  datasetId: dataset.id,
+  inputs: [
+    { messages: [{ role: "user", content: "北京今天天气如何？" }] },
+    { messages: [{ role: "user", content: "上海会下雨吗？" }] },
+    { messages: [{ role: "user", content: "深圳明天多少度？" }] },
+  ],
+  outputs: [
+    { expected: "北京今天晴天，22°C" },
+    { expected: "上海今天多云，降水概率 30%" },
+    { expected: "深圳明天多云转晴，26-30°C" },
+  ],
+});
+
+console.log(`✅ Dataset "${dataset.name}" 创建成功，ID: ${dataset.id}`);
+
+/**
+ * ==========================================
+ * 运行 Evaluation 评测
+ * ==========================================
+ *
+ * 评测可以手动在 UI 中执行，或者通过 LangChain 的
+ * RunEvaluator 接口编程运行。
+ */
+import { runOnDataset } from "langchain/smith";
+import { ChatOpenAI } from "@langchain/openai";
+import { createAgent, tool } from "langchain";
+import { z } from "zod";
+
+// 1. 定义评测用的 Agent
+const weatherTool = tool(
+  async ({ city }: { city: string }) => `${city} 天气：晴，22°C`,
+  {
+    name: "get_weather",
+    description: "查询天气",
+    schema: z.object({ city: z.string() }),
+  }
+);
+
+const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+const agent = await createAgent({ model, tools: [weatherTool], systemPrompt: "天气助手" });
+
+// 2. 在数据集上运行评测
+const results = await runOnDataset(agent, "weather-qa", {
+  projectName: "weather-eval-v1",
+  maxConcurrency: 2,
+});
+
+console.log(`评测完成，共 ${results.results.length} 条结果`);
+
+// 3. 在 LangSmith UI 的 "Projects" 页面查看评测结果
+// 可以看到每条输入对应的输出、耗时、Token 用量等</code></pre>
+      </div>
+
+      <h3>概念五：自定义 CallbackHandler</h3>
+
+      <p>
+        当 LangSmith 的默认行为不能满足你的需求时（比如需要将日志写入本地文件、
+        发送指标到 Prometheus、或者对接自建的监控系统），你可以继承
+        <code>BaseCallbackHandler</code> 并重写感兴趣的事件方法。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
+import { Serialized } from "@langchain/core/load/serializable";
+
+interface LogEntry {
+  timestamp: string;
+  type: "llm_start" | "llm_end" | "llm_error" | "chain_start" | "chain_end"
+      | "tool_start" | "tool_end" | "tool_error";
+  name: string;
+  duration_ms?: number;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * ==========================================
+ * 自定义 Handler 示例：文件日志记录器
+ * ==========================================
+ */
+export class FileLoggerHandler extends BaseCallbackHandler {
+  name = "FileLoggerHandler";
+
+  private logs: LogEntry[] = [];
+  private startTimes: Map<string, number> = new Map();
+
+  handleLLMStart(llm: Serialized, prompts: string[]) {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      type: "llm_start",
+      name: llm.id?.join(":") ?? "llm",
+      metadata: { prompt_preview: prompts[0]?.slice(0, 100) },
+    };
+    this.logs.push(entry);
+    this.startTimes.set("llm", Date.now());
+  }
+
+  handleLLMEnd(output: { generations?: unknown[][] }) {
+    const start = this.startTimes.get("llm") ?? Date.now();
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      type: "llm_end",
+      name: "llm",
+      duration_ms: Date.now() - start,
+      metadata: {
+        output_preview: String(output.generations?.[0]?.[0] ?? "").slice(0, 100),
+      },
+    };
+    this.logs.push(entry);
+  }
+
+  handleLLMError(err: Error) {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      type: "llm_error",
+      name: "llm",
+      metadata: { error: err.message },
+    };
+    this.logs.push(entry);
+  }
+
+  handleToolStart(tool: Serialized, input: string) {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      type: "tool_start",
+      name: tool.name ?? "unknown_tool",
+      metadata: { input: input.slice(0, 200) },
+    };
+    this.logs.push(entry);
+    this.startTimes.set(`tool:${tool.name}`, Date.now());
+  }
+
+  handleToolEnd(output: string) {
+    // 由于我们不知道是哪个 tool 结束了，简单记录
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      type: "tool_end",
+      name: "tool",
+      metadata: { output_preview: String(output).slice(0, 200) },
+    };
+    this.logs.push(entry);
+  }
+
+  /**
+   * 将所有日志写入文件
+   */
+  async flushToFile(filePath: string = "./langchain-trace.log") {
+    const fs = await import("fs/promises");
+    const content = this.logs
+      .map((entry) => JSON.stringify(entry))
+      .join("\n");
+    await fs.appendFile(filePath, content + "\n", "utf-8");
+    this.logs = []; // 清空已写入的日志
+    console.log(`✅ 日志已追加到 ${filePath}`);
+  }
+}
+
+/**
+ * ==========================================
+ * 使用示例
+ * ==========================================
+ */
+async function demoFileLogger() {
+  const logger = new FileLoggerHandler();
+
+  const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+  const result = await model.invoke(
+    "用一句话解释什么是机器学习",
+    { callbacks: [logger] }
+  );
+
+  // 将本次调用的日志写入文件
+  await logger.flushToFile("./callbacks-demo.log");
+}
+
+// 运行 demo
+// demoFileLogger();</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">🔧 Handler 组合使用</div>
+        <p>
+          你可以同时传入多个 CallbackHandler。LangSmith 的 <code>LangChainTracer</code>
+          和自定义 Handler 可以共存——一个负责云端上报，一个负责本地日志。
+          LangChain 会依次调用所有注册的 Handler。
+        </p>
+      </div>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：配置 LangSmith 追踪 Agent 执行</h3>
+
+      <p><strong>场景描述：</strong>你正在开发一个客服 Agent，需要将其每一次执行的关键信息
+      （包括 LLM 调用、工具调用、Token 消耗、执行耗时）上报到 LangSmith 平台，便于团队协作调试。</p>
+
+      <p><strong>你的任务：</strong>配置 LangSmith 环境变量，创建一个带工具调用的 Agent，
+      并确认 Trace 成功上报到 LangSmith UI。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">// ==========================================
+// 文件: langsmith-trace-demo.ts
+// ==========================================
+import "dotenv/config";
+import { ChatOpenAI } from "@langchain/openai";
+import { createAgent, tool } from "langchain";
+import { z } from "zod";
+
+/**
+ * 环境变量检查（确保配置正确）
+ */
+function checkEnv() {
+  const required = ["LANGSMITH_TRACING", "LANGSMITH_API_KEY", "OPENAI_API_KEY"];
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    console.error(`❌ 缺少环境变量: ${missing.join(", ")}`);
+    console.error("   请创建 .env 文件并设置以上变量。");
+    process.exit(1);
+  }
+
+  console.log("✅ 环境变量检查通过");
+  console.log(`   LANGSMITH_TRACING = ${process.env.LANGSMITH_TRACING}`);
+  console.log(`   LANGSMITH_PROJECT = ${process.env.LANGSMITH_PROJECT ?? "(默认)"}`);
+}
+
+// ==========================================
+// 1. 定义工具
+// ==========================================
+const searchOrder = tool(
+  async ({ orderId }: { orderId: string }) => {
+    // 模拟数据库查询
+    const orders: Record<string, string> = {
+      "ORD-001": "订单状态：已发货 | 预计送达：2025-03-20 | 物流单号：SF1234567890",
+      "ORD-002": "订单状态：处理中 | 预计送达：2025-03-22",
+      "ORD-003": "订单状态：已取消 | 取消原因：用户申请",
+    };
+    return orders[orderId] ?? `未找到订单 ${orderId}`;
+  },
+  {
+    name: "search_order",
+    description: "根据订单号查询订单状态和物流信息",
+    schema: z.object({ orderId: z.string().describe("订单编号，如 ORD-001") }),
+  }
+);
+
+const transferHuman = tool(
+  async () => {
+    return "已将你的问题转接给人工客服（工单号：TK-20250315-001）";
+  },
+  {
+    name: "transfer_to_human",
+    description: "将当前对话转接给人工客服",
+    schema: z.object({}).describe("无需参数"),
+  }
+);
+
+// ==========================================
+// 2. 创建带追踪的 Agent
+// ==========================================
+async function main() {
+  checkEnv();
+
+  const model = new ChatOpenAI({
+    model: "gpt-4o-mini",
+    temperature: 0,
+  });
+
+  const agent = await createAgent({
+    model,
+    tools: [searchOrder, transferHuman],
+    systemPrompt: `你是一个智能客服助手。你可以：
+1. 查询订单状态 - 使用 search_order 工具
+2. 转接人工客服 - 使用 transfer_to_human 工具
+
+请用中文回答用户问题。如果用户要求转人工或有紧急问题，使用 transfer_to_human。`,
+  });
+
+  // ==========================================
+  // 3. 模拟用户对话（这些调用会被 LangSmith 追踪）
+  // ==========================================
+  console.log("\n🔍 正在查询订单...");
+
+  const response1 = await agent.invoke({
+    messages: [
+      { role: "user", content: "你好，帮我查一下订单 ORD-001 的状态" },
+    ],
+  });
+
+  const answer1 = response1.messages[response1.messages.length - 1].content;
+  console.log(`🤖 助手: ${answer1}`);
+
+  // 第二次对话
+  console.log("\n🔍 正在转接人工...");
+
+  const response2 = await agent.invoke({
+    messages: [
+      { role: "user", content: "我想退款，帮我转人工客服" },
+    ],
+  });
+
+  const answer2 = response2.messages[response2.messages.length - 1].content;
+  console.log(`🤖 助手: ${answer2}`);
+
+  // ==========================================
+  // 4. 查看 Trace 信息
+  // ==========================================
+  console.log("\n✅ 调用完成！请在 LangSmith UI 中查看 Trace：");
+  console.log("   https://smith.langchain.com");
+  console.log("   1. 选择你的项目 (LANGSMITH_PROJECT)");
+  console.log("   2. 进入 'Traces' 页面");
+  console.log("   3. 你可以看到每条调用的：");
+  console.log("      - Agent 执行时间线（Chain → LLM → Tool → LLM）");
+  console.log("      - 每次 LLM 调用的 Token 用量");
+  console.log("      - 工具输入/输出详情");
+  console.log("      - 错误信息（如果有）");
+}
+
+main().catch(console.error);</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">.env</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-bash"># LangSmith 配置
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=ls__你的_API_密钥
+LANGSMITH_PROJECT=learn-langchain-callbacks
+
+# OpenAI
+OPENAI_API_KEY=sk-你的_OpenAI_密钥</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">控制台输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">✅ 环境变量检查通过
+   LANGSMITH_TRACING = true
+   LANGSMITH_PROJECT = learn-langchain-callbacks
+
+🔍 正在查询订单...
+🤖 助手: 您好！我帮您查询了订单 ORD-001，以下是详细信息：
+- **订单状态**：已发货
+- **预计送达**：2025-03-20
+- **物流单号**：SF1234567890
+
+🔍 正在转接人工...
+🤖 助手: 好的，我正在为您转接人工客服。已为您创建工单：
+**工单号：TK-20250315-001**
+请您保持电话畅通，人工客服会在 5 分钟内与您联系。
+
+✅ 调用完成！请在 LangSmith UI 中查看 Trace</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：自定义 CallbackHandler 实现本地日志</h3>
+
+      <p><strong>场景描述：</strong>你的团队还没有接入 LangSmith，或者需要将每次 Agent 调用的详细日志
+      写入本地文件系统，用于后续审计和调试。</p>
+
+      <p><strong>你的任务：</strong>创建一个 <code>DetailedTraceHandler</code>，将 Agent 执行的
+      每个步骤（LLM 调用、工具调用）的详细信息写入 JSON Lines 格式的日志文件。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">// ==========================================
+// 文件: custom-handler-demo.ts
+// ==========================================
+import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
+import { Serialized } from "@langchain/core/load/serializable";
+import { ChatOpenAI } from "@langchain/openai";
+import { createAgent, tool } from "langchain";
+import { z } from "zod";
+import * as fs from "fs/promises";
+import * as path from "path";
+
+// ==========================================
+// 1. 自定义 Handler：输出结构化的 JSON 日志
+// ==========================================
+interface TraceEvent {
+  timestamp: string;
+  run_id: string;
+  type: string;
+  name: string;
+  parent_run_id?: string;
+  input?: unknown;
+  output?: unknown;
+  error?: string;
+  duration_ms?: number;
+  token_usage?: { prompt: number; completion: number; total: number };
+}
+
+export class DetailedTraceHandler extends BaseCallbackHandler {
+  name = "DetailedTraceHandler";
+
+  private events: TraceEvent[] = [];
+  private timers: Map<string, number> = new Map();
+  private logDir: string;
+
+  constructor(logDir: string = "./logs") {
+    super();
+    this.logDir = logDir;
+  }
+
+  private addEvent(partial: Omit<TraceEvent, "timestamp" | "run_id">) {
+    this.events.push({
+      timestamp: new Date().toISOString(),
+      run_id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+      ...partial,
+    });
+  }
+
+  // ---- LLM 事件 ----
+  handleLLMStart(llm: Serialized, prompts: string[]) {
+    const name = llm.id?.join(":") ?? llm.name ?? "ChatOpenAI";
+    this.addEvent({ type: "llm_start", name, input: { prompts } });
+    this.timers.set("llm", Date.now());
+  }
+
+  handleLLMEnd(output: { generations?: unknown[][]; llmOutput?: { tokenUsage?: { promptTokens: number; completionTokens: number; totalTokens: number } } }) {
+    const duration_ms = this.timers.has("llm") ? Date.now() - (this.timers.get("llm") ?? 0) : undefined;
+    const tokenUsage = output.llmOutput?.tokenUsage;
+    this.addEvent({
+      type: "llm_end",
+      name: "ChatOpenAI",
+      output: { text: (output.generations?.[0]?.[0] as any)?.text ?? "(no text)" },
+      duration_ms,
+      token_usage: tokenUsage
+        ? { prompt: tokenUsage.promptTokens, completion: tokenUsage.completionTokens, total: tokenUsage.totalTokens }
+        : undefined,
+    });
+  }
+
+  handleLLMError(err: Error) {
+    this.addEvent({ type: "llm_error", name: "ChatOpenAI", error: err.message });
+  }
+
+  // ---- 工具事件 ----
+  handleToolStart(tool: Serialized, input: string) {
+    const toolName = tool.name ?? "unknown_tool";
+    this.addEvent({ type: "tool_start", name: toolName, input: { raw: input } });
+    this.timers.set(`tool:${toolName}`, Date.now());
+  }
+
+  handleToolEnd(output: string) {
+    this.addEvent({ type: "tool_end", name: "tool", output: { result: output } });
+  }
+
+  handleToolError(err: Error) {
+    this.addEvent({ type: "tool_error", name: "tool", error: err.message });
+  }
+
+  // ---- Chain / Agent 事件 ----
+  handleChainStart(chain: { name: string }, inputs: { inputs?: Record<string, unknown> }) {
+    this.addEvent({ type: "chain_start", name: chain.name, input: inputs });
+    this.timers.set("chain", Date.now());
+  }
+
+  handleChainEnd(outputs: { outputs?: Record<string, unknown> }) {
+    const duration_ms = this.timers.has("chain") ? Date.now() - (this.timers.get("chain") ?? 0) : undefined;
+    this.addEvent({ type: "chain_end", name: "agent", output: outputs, duration_ms });
+  }
+
+  handleChainError(err: Error) {
+    this.addEvent({ type: "chain_error", name: "agent", error: err.message });
+  }
+
+  // ---- 写入日志文件 ----
+  async flush() {
+    await fs.mkdir(this.logDir, { recursive: true });
+    const logFile = path.join(this.logDir, `trace-${Date.now()}.jsonl`);
+    const lines = this.events.map((e) => JSON.stringify(e)).join("\n");
+    await fs.writeFile(logFile, lines, "utf-8");
+    console.log(`✅ 追踪日志已写入: ${logFile} (${this.events.length} 条事件)`);
+    this.events = [];
+  }
+}
+
+// ==========================================
+// 2. 使用自定义 Handler
+// ==========================================
+const searchProduct = tool(
+  async ({ query }: { query: string }) => {
+    const products: Record<string, string> = {
+      "手机壳": "商品：透明防摔手机壳 | 价格：¥29.9 | 库存：充足",
+      "耳机": "商品：蓝牙降噪耳机 Pro | 价格：¥299 | 库存：仅剩 5 件",
+      "充电器": "商品：65W 快充充电器 | 价格：¥89 | 库存：充足",
+    };
+    const matched = Object.entries(products).find(([k]) => query.includes(k));
+    return matched?.[1] ?? `未找到与 "${query}" 相关的商品`;
+  },
+  {
+    name: "search_product",
+    description: "搜索商品信息",
+    schema: z.object({ query: z.string() }),
+  }
+);
+
+async function main() {
+  const logger = new DetailedTraceHandler("./callbacks-logs");
+
+  const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+  const agent = await createAgent({
+    model,
+    tools: [searchProduct],
+    systemPrompt: "你是一个商品查询助手，请用中文回答。",
+  });
+
+  console.log("🔍 正在查询商品...");
+  const result = await agent.invoke(
+    { messages: [{ role: "user", content: "有没有蓝牙耳机卖？多少钱？" }] },
+    { callbacks: [logger] }
+  );
+
+  const answer = result.messages[result.messages.length - 1].content;
+  console.log(`🤖 助手: ${answer}`);
+
+  // 将追踪事件写入日志文件
+  await logger.flush();
+}
+
+main().catch(console.error);</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">日志文件 (callbacks-logs/trace-1710500000000.jsonl)</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-json">{"timestamp":"2025-03-15T10:30:00.100Z","run_id":"a1b2c3d4","type":"chain_start","name":"createAgent","input":{"inputs":{"messages":[{"role":"user","content":"有没有蓝牙耳机卖？多少钱？"}]}}}
+{"timestamp":"2025-03-15T10:30:00.200Z","run_id":"e5f6g7h8","type":"llm_start","name":"langchain:ChatOpenAI","input":{"prompts":["你是一个商品查询助手...\n\n用户: 有没有蓝牙耳机卖？多少钱？"]}}
+{"timestamp":"2025-03-15T10:30:01.100Z","run_id":"i9j0k1l2","type":"llm_end","name":"ChatOpenAI","output":{"text":"好的，我来帮您查询一下蓝牙耳机的信息。"},"duration_ms":900,"token_usage":{"prompt":85,"completion":12,"total":97}}
+{"timestamp":"2025-03-15T10:30:01.200Z","run_id":"m3n4o5p6","type":"tool_start","name":"search_product","input":{"raw":"{\"query\":\"蓝牙耳机\"}"}}
+{"timestamp":"2025-03-15T10:30:01.300Z","run_id":"q7r8s9t0","type":"tool_end","name":"tool","output":{"result":"商品：蓝牙降噪耳机 Pro | 价格：¥299 | 库存：仅剩 5 件"}}
+{"timestamp":"2025-03-15T10:30:01.400Z","run_id":"u1v2w3x4","type":"llm_start","name":"langchain:ChatOpenAI","input":{"prompts":["你是一个商品查询助手...\n工具返回：商品：蓝牙降噪耳机 Pro | 价格：¥299 | 库存：仅剩 5 件"]}}
+{"timestamp":"2025-03-15T10:30:02.200Z","run_id":"y5z6a7b8","type":"llm_end","name":"ChatOpenAI","output":{"text":"有的！我们有一款**蓝牙降噪耳机 Pro**，售价 **¥299**，目前仅剩 5 件库存，建议尽快下单哦！"},"duration_ms":800,"token_usage":{"prompt":120,"completion":45,"total":165}}
+{"timestamp":"2025-03-15T10:30:02.300Z","run_id":"c9d0e1f2","type":"chain_end","name":"agent","output":{"outputs":{"messages":[{"role":"assistant","content":"有的！我们有一款**蓝牙降噪耳机 Pro**..."}]}},"duration_ms":2200}</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧</h2>
+
+      <h3>进阶：RAG 调用链追踪</h3>
+
+      <p>
+        RAG（检索增强生成）流程通常涉及多个步骤：用户输入 → 向量检索 → 文档重排序 →
+        LLM 生成。每个步骤都可能出问题——检索结果不相关、上下文窗口溢出、幻觉等。
+        通过 CallbackHandler + LangSmith 追踪，你可以精确定位 RAG 链中的瓶颈。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 文件: rag-trace-demo.ts
+// ==========================================
+import "dotenv/config";
+import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { createRetrievalChain } from "langchain/chains/retrieval";
+import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
+import { Document } from "@langchain/core/documents";
+
+// ==========================================
+// 1. 自定义 Handler：RAG 专用追踪器
+// ==========================================
+class RAGTraceHandler extends BaseCallbackHandler {
+  name = "RAGTraceHandler";
+
+  handleRetrieverStart(retriever: { name?: string }, query: string) {
+    console.log(`\n📄 [检索开始] 检索器: ${retriever.name ?? "unknown"}`);
+    console.log(`   查询: ${query}`);
+  }
+
+  handleRetrieverEnd(documents: Document[]) {
+    console.log(`📄 [检索结束] 返回 ${documents.length} 个文档:`);
+    documents.forEach((doc, i) => {
+      console.log(`   [${i + 1}] ${doc.metadata.source ?? "(无来源)"} — ${doc.pageContent.slice(0, 60)}...`);
+    });
+  }
+
+  handleLLMStart(llm: { name: string }, prompts: string[]) {
+    console.log(`\n🤖 [LLM 开始] 模型: ${llm.name}`);
+    console.log(`   提示长度: ${prompts[0]?.length ?? 0} 字符`);
+  }
+
+  handleLLMEnd(output: { generations?: unknown[][] }) {
+    const text = (output.generations?.[0]?.[0] as any)?.text ?? "";
+    console.log(`🤖 [LLM 结束] 生成 ${text.length} 字符`);
+  }
+}
+
+// ==========================================
+// 2. 准备示例文档
+// ==========================================
+const docs = [
+  new Document({
+    pageContent: "LangChain.js 是一个用于构建 LLM 应用的 JavaScript 框架。" +
+      "它提供了 Agent、工具、链、检索等核心组件。" +
+      "最新版本 v1.0 于 2025 年发布，支持流式输出和结构化输出。",
+    metadata: { source: "langchain-intro.md" },
+  }),
+  new Document({
+    pageContent: "Callbacks 是 LangChain 的生命周期事件机制。" +
+      "每个 Runnable 在执行时会触发 start/end/error 事件。" +
+      "LangSmith 利用这个机制实现全链路追踪。",
+    metadata: { source: "callbacks-guide.md" },
+  }),
+  new Document({
+    pageContent: "RAG（Retrieval-Augmented Generation）是当前最流行的 LLM 应用架构。" +
+      "它通过检索相关文档来增强 LLM 的生成能力，减少幻觉。" +
+      "典型的 RAG 流程包括：查询向量化 → 向量检索 → 文档组合 → LLM 生成。",
+    metadata: { source: "rag-pattern.md" },
+  }),
+];
+
+// ==========================================
+// 3. 构建 RAG 链
+// ==========================================
+async function buildRAGChain() {
+  // 3a. 文档分割
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 200,
+    chunkOverlap: 20,
+  });
+  const splitDocs = await splitter.splitDocuments(docs);
+
+  // 3b. 创建向量存储
+  const embeddings = new OpenAIEmbeddings({ model: "text-embedding-3-small" });
+  const vectorStore = await MemoryVectorStore.fromDocuments(splitDocs, embeddings);
+
+  // 3c. 创建 Retrieval Chain
+  const retriever = vectorStore.asRetriever(2); // 检索 top-2
+
+  // 3d. 创建文档组合链
+  const combineDocsChain = await createStuffDocumentsChain({
+    llm: new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 }),
+    prompt: ChatPromptTemplate.fromMessages([
+      [
+        "system",
+        `你是 LangChain 技术问答助手。根据以下文档内容回答用户问题。
+如果你不知道答案，请诚实告知，不要编造信息。
+
+参考文档：
+{context}
+
+请用中文回答：`,
+      ],
+      ["human", "{input}"],
+    ]),
+  });
+
+  // 3e. 创建检索链
+  const chain = await createRetrievalChain({
+    retriever,
+    combineDocsChain,
+  });
+
+  return { chain, vectorStore };
+}
+
+// ==========================================
+// 4. 运行并追踪
+// ==========================================
+async function main() {
+  console.log("🔧 正在构建 RAG 链...");
+  const { chain } = await buildRAGChain();
+  console.log("✅ RAG 链构建完成\n");
+
+  const tracer = new RAGTraceHandler();
+
+  // 问题 1：关于 Callbacks
+  console.log("=".repeat(60));
+  console.log("📝 问题 1: LangChain 中的 Callbacks 是什么？");
+  console.log("=".repeat(60));
+
+  const result1 = await chain.invoke(
+    { input: "请解释 LangChain 中的 Callbacks 机制" },
+    { callbacks: [tracer] }
+  );
+  console.log(`\n🤖 回答: ${result1.answer}`);
+
+  // 问题 2：关于 RAG
+  console.log("\n" + "=".repeat(60));
+  console.log("📝 问题 2: 什么是 RAG 架构？它的优势是什么？");
+  console.log("=".repeat(60));
+
+  const result2 = await chain.invoke(
+    { input: "什么是 RAG？它有什么优势？" },
+    { callbacks: [tracer] }
+  );
+  console.log(`\n🤖 回答: ${result2.answer}`);
+
+  console.log("\n✅ 追踪完成！检查 LangSmith UI 或控制台日志。");
+}
+
+main().catch(console.error);
+
+/**
+ * ==========================================
+ * 追踪输出示例（控制台）：
+ * ==========================================
+ *
+ * 📄 [检索开始] 检索器: vector_store
+ *    查询: LangChain 中的 Callbacks 机制
+ * 📄 [检索结束] 返回 2 个文档:
+ *    [1] callbacks-guide.md — Callbacks 是 LangChain 的生命周期事件机制...
+ *    [2] langchain-intro.md — LangChain.js 是一个用于构建 LLM 应用的 JavaScript 框架...
+ *
+ * 🤖 [LLM 开始] 模型: ChatOpenAI
+ *   提示长度: 823 字符
+ * 🤖 [LLM 结束] 生成 186 字符
+ *
+ * 🤖 回答: LangChain 中的 Callbacks 是一种生命周期事件机制...
+ */</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">🔍 RAG 追踪关键指标</div>
+        <ul>
+          <li><strong>检索质量</strong> — 返回的文档是否与问题相关？是否包含足够的上下文？</li>
+          <li><strong>上下文长度</strong> — 检索到的文档总字符数是否接近 LLM 的上下文窗口限制？</li>
+          <li><strong>LLM 延迟</strong> — 模型生成回答的耗时，结合 Token 用量评估性价比</li>
+          <li><strong>错误分析</strong> — 检索失败（空结果）、LLM 超时、上下文溢出等异常情况</li>
+        </ul>
+      </div>
+
+      <h3>进阶技巧：条件性追踪与采样</h3>
+
+      <p>
+        在生产环境中，你不希望每次 API 调用都上报 Trace（可能产生大量数据并影响性能）。
+        可以使用<strong>采样策略</strong>，只追踪一定比例的请求。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
+
+/**
+ * ==========================================
+ * 采样 Handler：只追踪指定比例的调用
+ * ==========================================
+ */
+export class SamplingTracer extends BaseCallbackHandler {
+  name = "SamplingTracer";
+
+  private sampleRate: number; // 0 ~ 1, 如 0.1 表示 10%
+  private innerHandler: BaseCallbackHandler;
+
+  constructor(sampleRate: number, innerHandler: BaseCallbackHandler) {
+    super();
+    this.sampleRate = Math.max(0, Math.min(1, sampleRate));
+    this.innerHandler = innerHandler;
+  }
+
+  // 在 chain start 时决定是否追踪本次调用
+  handleChainStart(chain: { name: string }, inputs: { inputs?: Record<string, unknown> }) {
+    const shouldSample = Math.random() < this.sampleRate;
+    if (!shouldSample) {
+      // 跳过追踪
+      return;
+    }
+    // 将事件转发给内部 Handler
+    return this.innerHandler.handleChainStart?.(chain, inputs);
+  }
+
+  // ... 其他方法类似转发
+}
+
+/**
+ * 使用示例：只追踪 20% 的调用
+ */
+// const sampler = new SamplingTracer(0.2, new LangChainTracer());
+// const result = await agent.invoke(input, { callbacks: [sampler] });</code></pre>
+      </div>
+
+      <h3>进阶技巧：为 Trace 添加自定义标签</h3>
+
+      <p>
+        在 LangSmith UI 中，你可以通过标签（Tags）来分类和筛选 Trace。
+        在 invoke 时传入 <code>tags</code> 参数即可。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 为不同场景添加标签，方便在 LangSmith 中筛选
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "帮我查一下订单" }] },
+  {
+    tags: ["production", "customer-service", "order-query"],
+    metadata: {
+      user_id: "user_12345",
+      session_id: "sess_abc_def",
+      environment: "staging",
+    },
+  }
+);
+
+// 在 LangSmith UI 中，你可以按标签过滤：
+//   production → 只查看生产环境流量
+//   customer-service → 只查看客服相关调用
+//   同时选多个标签进行交叉过滤</code></pre>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. CallbackHandler 的 handleLLMStart 和 handleLLMEnd 事件分别在什么时候触发？它们之间可能嵌套哪些事件？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>handleLLMStart</code> 在 LLM 模型开始接收输入时触发，<code>handleLLMEnd</code> 在模型返回完整输出后触发。在执行 Agent 时，LLM 调用之间可能会嵌套 Tool 调用——比如第一次 LLM 调用决定使用工具，然后触发 Tool 执行，再用第二次 LLM 调用生成最终回答。所以你会看到 LLM Start → LLM End → Tool Start → Tool End → LLM Start → LLM End 这样交替的事件序列。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. 配置 LangSmith 追踪最少需要设置哪几个环境变量？如果只设置 LANGSMITH_TRACING=true 但不设置 API Key 会怎样？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>最少需要设置 <code>LANGSMITH_TRACING=true</code> 和 <code>LANGSMITH_API_KEY=ls__...</code> 两个变量。<code>OPENAI_API_KEY</code> 是模型调用必需的，但不是 LangSmith 必需的。如果只设 <code>LANGSMITH_TRACING=true</code> 而不设 API Key，SDK 会在启动时尝试从配置中读取 API Key，找不到时会降级为不追踪（或者抛出错误，取决于版本）。建议始终将三个变量一起设置以确保功能正常。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. 什么是 Trace 中的 Span？如何通过 Span 的时间线定位性能瓶颈？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>Span（跨度）是 Trace 中的一个执行单元，代表一次完整的操作（如一次 LLM 调用、一次工具执行）。多个 Span 以树形结构组成完整的 Trace。通过 Span 的时间线（Timeline/瀑布图），你可以直观地看到每个步骤的耗时占比。如果 Tool Span 占用了 80% 的总时间，说明工具调用是瓶颈；如果 LLM Span 耗时过长，可能需要考虑更换模型或减少输入长度。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. 自定义 CallbackHandler 和 LangSmith 的 LangChainTracer 可以同时使用吗？它们之间会互相干扰吗？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>可以同时使用，它们之间不会互相干扰。LangChain 的 Callback 机制支持注册多个 Handler，每个 Handler 独立接收事件。LangChainTracer 负责将事件上报到 LangSmith 云端，而你的自定义 Handler 可以做本地日志、指标收集、告警等操作。这种方式非常适合"既有云端可观测性，又有本地审计日志"的企业需求。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">5. 在 RAG 调用链中，如何判断回答质量差的原因是检索失败还是 LLM 生成问题？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>通过追踪事件中的 handleRetrieverEnd 可以查看检索到的文档内容：如果文档与问题不相关或信息不足，说明是检索失败（需要优化 embedding、chunk 策略或检索参数）。如果检索到的文档是正确的，但 LLM 的回答依然不准确，说明是 LLM 生成问题（需要优化提示模板、增加 few-shot 示例，或者检查是否触发了幻觉）。LangSmith 的 Trace UI 中可以清楚看到每个阶段的输入输出，帮助你准确定位问题。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：环境变量未生效，Trace 没有上报</div>
+        <p><strong>症状：</strong>在 LangSmith UI 中看不到任何 Trace 记录。</p>
+        <p><strong>原因：</strong>最常见的原因是：1) 忘记安装 <code>dotenv</code> 或没有在代码中调用 <code>import "dotenv/config"</code>；2) <code>.env</code> 文件不在当前工作目录；3) API Key 无效。</p>
+        <p><strong>解决：</strong>在代码入口文件顶部添加 <code>import "dotenv/config"</code>，确认 <code>.env</code> 文件位于项目根目录，并在终端 <code>echo $LANGSMITH_API_KEY</code>（Unix）或检查环境变量面板（Windows）确认变量已加载。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：自定义 Handler 中的异步方法没有被 await</div>
+        <p><strong>症状：</strong>日志文件写入不完整或写入时机不正确。</p>
+        <p><strong>原因：</strong><code>CallbackHandler</code> 的事件方法默认是同步的，如果你的 flush 操作没有被正确 await，可能在 Agent 完成之前就退出了进程。</p>
+        <p><strong>解决：</strong>确保在 <code>agent.invoke()</code> 完成后调用 <code>await logger.flush()</code>，或者在 handler 中使用同步的 <code>fs.appendFileSync</code>（Node.js 专用）。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：LangSmith API Key 暴露在代码中</div>
+        <p><strong>症状：</strong>代码被推送到公共仓库，API Key 泄露。</p>
+        <p><strong>原因：</strong>将 API Key 硬编码在 <code>.env</code> 文件中并推送到 GitHub。</p>
+        <p><strong>解决：</strong>将 <code>.env</code> 添加到 <code>.gitignore</code> 文件中。如果已经泄露，立即在 LangSmith 后台撤销该 API Key 并生成新的。使用环境变量注入的方式（如 CI/CD Secrets、云平台 Secrets Manager）来管理密钥。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：Dataset 评测时 Agent 返回格式不匹配</div>
+        <p><strong>症状：</strong>运行 <code>runOnDataset</code> 时提示 "Output parsing failed"。</p>
+        <p><strong>原因：</strong>Agent 的输出格式与 Dataset 中期望的输出格式不一致。例如，Dataset 期望一个字符串，但 Agent 返回了一个消息对象。</p>
+        <p><strong>解决：</strong>检查评测函数的输出提取逻辑，确保从 Agent 的响应中提取正确的字段。通常使用 <code>result.messages[result.messages.length - 1].content</code> 获取文本输出。</p>
+      </div>
+
+      <!-- ==================== 最佳实践总结 ==================== -->
+      <h2 id="best-practices" class="anchor-heading">💎 最佳实践总结</h2>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">/**
+ * ==========================================
+ * LangSmith & Callbacks 最佳实践
+ * ==========================================
+ *
+ * 1. 开发环境：全程启用追踪
+ *    LANGSMITH_TRACING=true
+ *    LANGSMITH_PROJECT=my-app-dev
+ *
+ * 2. 生产环境：按比例采样 + 错误全量追踪
+ *    - 使用 SamplingTracer 只追踪 5-10% 的正常请求
+ *    - 错误请求（handleChainError）全量追踪并报警
+ *
+ * 3. 自定义 Handler 只做轻量操作
+ *    - 不要在事件方法中做耗时操作（如网络请求）
+ *    - 使用内存队列 + 定时批量写入，避免阻塞主流程
+ *
+ * 4. 善用 Tags 和 Metadata
+ *    - 为不同业务场景添加标签（"order", "customer-service"）
+ *    - 在 metadata 中添加 user_id、session_id 用于关联分析
+ *
+ * 5. Dataset 评测定期运行
+ *    - 每次模型升级或提示调整后，重新运行评测
+ *    - 关注评测分数变化，防止回归
+ *
+ * 6. RAG 追踪重点关注
+ *    - 检查检索到的文档是否相关（handleRetrieverEnd）
+ *    - 监控上下文总长度，避免溢出
+ *    - 观察首 Token 延迟（Time To First Token）
+ */</code></pre>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 18 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>CallbackHandler 生命周期</strong> — LLM、Chain、Tool 等组件的 start/end/error 事件模型</li>
+          <li><strong>LangSmith 追踪配置</strong> — 通过 <code>LANGSMITH_TRACING</code>、<code>LANGSMITH_API_KEY</code> 等环境变量接入云端可观测性平台</li>
+          <li><strong>Trace UI 使用</strong> — 时间线视图、Token 用量、错误定位、标签筛选等核心功能</li>
+          <li><strong>Dataset 与 Evaluation</strong> — 创建评测数据集并运行自动化评测，量化 Agent 表现</li>
+          <li><strong>自定义 CallbackHandler</strong> — 继承 BaseCallbackHandler 实现本地日志、指标收集等定制需求</li>
+          <li><strong>RAG 链追踪</strong> — 对检索→生成的完整流程进行细粒度监控和问题定位</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 10 章：综合实战 — 构建智能客服助手</h3>
+        <p>
+          下一章是所有知识的综合应用实战。你将把从第 1 章到第 18 章学到的全部内容——
+          模型调用、消息处理、工具调用、流式传输、结构化输出、中间件、记忆系统、
+          LCEL、RAG 以及本章的 Callbacks 追踪——融合到一个完整的智能客服项目中。
+          这是将理论知识转化为工程实践的关键一步！
+        </p>
+        <a href="10-capstone.html" class="btn btn-primary">继续学习第 10 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="17-langgraph.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 18 章 / 共 19 章</span>
+        <a href="10-capstone.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

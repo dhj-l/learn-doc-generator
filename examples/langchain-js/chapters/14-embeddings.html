@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第14章 Embedding 模型 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch14">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html" class="active"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="13-document-loaders.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 14 章 / 共 19 章</span>
+        <a href="15-vector-stores.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>🧬 Embedding Models — 文本向量化与语义表示</h1>
+      <p class="subtitle">将文字转化为数学向量，让计算机理解语义的"距离"</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解文本向量化的原理和余弦相似度的计算方式</li>
+          <li>熟练使用 OpenAIEmbeddings 进行文本向量化</li>
+          <li>掌握 embedQuery() 与 embedDocuments() 的区别和适用场景</li>
+          <li>能够根据维度、成本、性能选择合适的 Embedding 模型</li>
+          <li>使用向量计算实现简单的语义搜索</li>
+          <li>了解 Ollama 本地 Embedding 和批量处理策略</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="13-document-loaders.html">第 13 章：文档加载与分割</a> 的学习，
+        理解 Document 对象的结构和文本分割的基本概念。
+        同时了解 <a href="03-models.html">第 3 章</a> 中调用 LLM 模型的基础方法。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：文本向量化 — 把文字变成数学</h3>
+
+      <p>
+        <strong>文本向量化（Embedding）</strong> 是将自然语言文本转化为一组浮点数向量的过程。
+        这组向量捕捉了文本的<strong>语义信息</strong>——意思相近的文本在向量空间中彼此靠近，
+        意思不同的文本则相距较远。
+      </p>
+
+      <div class="callout info">
+        <div class="callout-title">💡 直观理解</div>
+        <p>想象一下，所有中文词汇都被映射到一个高维空间中。"猫"和"狗"的向量距离很近（都是宠物），
+        而"猫"和"操作系统"的向量距离则很远。Embedding 模型的任务就是学习这种语义映射关系。</p>
+      </div>
+
+      <h4>余弦相似度（Cosine Similarity）</h4>
+
+      <p>
+        衡量两个向量相似度的最常用方法是<strong>余弦相似度</strong>，计算公式为：
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">数学公式</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-text">cosine_similarity(A, B) = (A · B) / (||A|| × ||B||)
+
+其中：
+  A · B   = A 和 B 的点积（对应元素相乘再求和）
+  ||A||   = A 的模（向量长度）
+  ||B||   = B 的模
+
+值域：[-1, 1]
+  1   → 方向完全相同（语义高度相似）
+  0   → 正交（语义无关）
+  -1  → 方向相反（语义相反）</code></pre>
+      </div>
+
+      <h4>向量维度（Dimensions）</h4>
+
+      <p>
+        向量的<strong>维度</strong>决定了模型能捕捉的语义精细程度：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>维度</th><th>代表模型</th><th>特点</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>256 ~ 384</td><td>Ollama (nomic-embed-text), text-embedding-3-small</td><td>轻量、速度快、成本低，适合简单分类</td></tr>
+          <tr><td>768 ~ 1024</td><td>text-embedding-ada-002, BGE-large</td><td>均衡性能，通用场景</td></tr>
+          <tr><td>1536 ~ 3072</td><td>text-embedding-3-large</td><td>高精度，适合深度语义理解</td></tr>
+        </tbody>
+      </table>
+
+      <h3>概念二：OpenAIEmbeddings — 核心 API</h3>
+
+      <p>
+        LangChain.js 通过 <code>OpenAIEmbeddings</code> 类封装了 OpenAI 的 Embedding API。
+        它提供了两个核心方法：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>方法</th><th>用途</th><th>输入</th><th>输出</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>embedQuery(text)</code></td><td>对<strong>查询</strong>文本进行向量化</td><td>单个字符串</td><td>一维数组 <code>number[]</code></td></tr>
+          <tr><td><code>embedDocuments(docs[])</code></td><td>对<strong>文档</strong>集合进行批量向量化</td><td>字符串数组</td><td>二维数组 <code>number[][]</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ embedQuery vs embedDocuments 的区别</div>
+        <p><code>embedQuery</code> 专为<strong>用户查询</strong>设计——它可能使用不同的模型配置（如更短的输入截断），
+        而 <code>embedDocuments</code> 用于<strong>知识库文档</strong>的批量嵌入。
+        在语义搜索中，通常先用 embedDocuments 处理所有文档并存入向量库，
+        用户查询时再调用 embedQuery 将问题向量化进行检索。</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { OpenAIEmbeddings } from "@langchain/openai";
+
+// ==========================================
+// 初始化 Embedding 模型
+// ==========================================
+const embeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-small",   // 默认模型
+  dimensions: 256,                    // 可降低维度以节省成本
+  openAIApiKey: process.env.OPENAI_API_KEY,
+});
+
+// ==========================================
+// 1. 单条查询向量化
+// ==========================================
+const queryVector = await embeddings.embedQuery(
+  "什么是机器学习？"
+);
+console.log(`向量维度：${queryVector.length}`);   // 256
+console.log(`前 5 个值：${queryVector.slice(0, 5)}`);
+
+// ==========================================
+// 2. 批量文档向量化
+// ==========================================
+const docs = [
+  "机器学习是人工智能的一个分支",
+  "深度学习使用神经网络进行学习",
+  "自然语言处理让计算机理解语言",
+];
+
+const docVectors = await embeddings.embedDocuments(docs);
+console.log(`文档数量：${docVectors.length}`);     // 3
+console.log(`向量维度：${docVectors[0].length}`);  // 256</code></pre>
+      </div>
+
+      <h3>概念三：Embedding 模型选型</h3>
+
+      <p>
+        选择合适的 Embedding 模型需要在<strong>维度、成本、性能</strong>之间做权衡：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>模型</th><th>维度</th><th>价格（每 1K tokens）</th><th>最大输入</th><th>适用场景</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>text-embedding-3-small</code></td><td>512（可降维）</td><td>$0.00002</td><td>8191 tokens</td><td>通用场景，性价比最高</td></tr>
+          <tr><td><code>text-embedding-3-large</code></td><td>3072（可降维）</td><td>$0.00013</td><td>8191 tokens</td><td>高精度搜索，语义理解</td></tr>
+          <tr><td><code>text-embedding-ada-002</code></td><td>1536（固定）</td><td>$0.00010</td><td>8191 tokens</td><td>遗留系统兼容</td></tr>
+          <tr><td><code>Ollama (nomic-embed-text)</code></td><td>768</td><td>免费（本地）</td><td>2048 tokens</td><td>本地开发、离线场景</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 降维技巧</div>
+        <p>OpenAI 的 text-embedding-3 系列支持<strong>降维</strong>——你可以在创建时指定 <code>dimensions</code> 参数
+        （如 256 或 512），模型会返回较短但依然保留大部分语义信息的向量。
+        降维后存储成本更低，检索速度更快，且精度损失通常很小。</p>
+      </div>
+
+      <h3>概念四：批量处理策略</h3>
+
+      <p>
+        当需要向量化的文档数量较大时，合理的批量处理策略能显著提升效率：
+      </p>
+
+      <ul>
+        <li><strong>批大小控制：</strong>OpenAI 单次调用最大可以处理 2048 个文档，但推荐每批 100~500 个以平衡速度和稳定性</li>
+        <li><strong>速率限制：</strong>注意 OpenAI API 的 RPM（每分钟请求数）和 TPM（每分钟 Token 数）限制</li>
+        <li><strong>错误重试：</strong>实现指数退避重试机制，应对限流错误</li>
+        <li><strong>并发控制：</strong>使用 p-limit 或类似库控制并发请求数</li>
+      </ul>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：文本向量化与相似度计算</h3>
+
+      <p><strong>场景描述：</strong>你有一组关于 AI 主题的句子，需要计算它们之间的语义相似度，
+      以便将相似主题的句子自动归类。</p>
+
+      <p><strong>你的任务：</strong>使用 OpenAIEmbeddings 将句子向量化，然后计算两两之间的余弦相似度。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { OpenAIEmbeddings } from "@langchain/openai";
+
+// ==========================================
+// 工具函数：计算余弦相似度
+// ==========================================
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error("向量维度不匹配");
+  }
+
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+  return magnitude === 0 ? 0 : dotProduct / magnitude;
+}
+
+// ==========================================
+// 主程序
+// ==========================================
+async function main() {
+  const embeddings = new OpenAIEmbeddings({
+    model: "text-embedding-3-small",
+  });
+
+  const sentences = [
+    "机器学习是人工智能的重要分支",
+    "深度学习利用神经网络进行训练",
+    "自然语言处理让计算机理解人类语言",
+    "今天天气很好适合出去散步",
+    "监督学习需要标注数据进行训练",
+  ];
+
+  // 1. 批量向量化
+  console.log("🔄 正在向量化句子...");
+  const vectors = await embeddings.embedDocuments(sentences);
+
+  // 2. 计算相似度矩阵
+  console.log("\n📊 相似度矩阵：");
+  for (let i = 0; i < sentences.length; i++) {
+    for (let j = i + 1; j < sentences.length; j++) {
+      const sim = cosineSimilarity(vectors[i], vectors[j]);
+      console.log(`[${i}] vs [${j}] ${sim.toFixed(4)}  |  "${sentences[i].slice(0, 20)}..." ~ "${sentences[j].slice(0, 20)}..."`);
+    }
+  }
+
+  // 3. 找最相似的句子对
+  let maxSim = -1;
+  let bestPair = [0, 0];
+  for (let i = 0; i < vectors.length; i++) {
+    for (let j = i + 1; j < vectors.length; j++) {
+      const sim = cosineSimilarity(vectors[i], vectors[j]);
+      if (sim > maxSim) {
+        maxSim = sim;
+        bestPair = [i, j];
+      }
+    }
+  }
+
+  console.log(`\n🏆 最相似的句子对：`);
+  console.log(`  句子 A: "${sentences[bestPair[0]]}"`);
+  console.log(`  句子 B: "${sentences[bestPair[1]]}"`);
+  console.log(`  相似度: ${maxSim.toFixed(4)}`);
+}
+
+main();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出示例</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">🔄 正在向量化句子...
+
+📊 相似度矩阵：
+[0] vs [1] 0.8923  |  "机器学习是人工智能..." ~ "深度学习利用神经网..."
+[0] vs [2] 0.8341  |  "机器学习是人工智能..." ~ "自然语言处理让计算..."
+[0] vs [3] 0.4512  |  "机器学习是人工智能..." ~ "今天天气很好适合出..."
+[0] vs [4] 0.8756  |  "机器学习是人工智能..." ~ "监督学习需要标注数..."
+[1] vs [2] 0.8012  |  "深度学习利用神经网..." ~ "自然语言处理让计算..."
+[1] vs [3] 0.4234  |  "深度学习利用神经网..." ~ "今天天气很好适合出..."
+[1] vs [4] 0.8123  |  "深度学习利用神经网..." ~ "监督学习需要标注数..."
+[2] vs [3] 0.3987  |  "自然语言处理让计算..." ~ "今天天气很好适合出..."
+[2] vs [4] 0.7456  |  "自然语言处理让计算..." ~ "监督学习需要标注数..."
+[3] vs [4] 0.3721  |  "今天天气很好适合出..." ~ "监督学习需要标注数..."
+
+🏆 最相似的句子对：
+  句子 A: "机器学习是人工智能的重要分支"
+  句子 B: "深度学习利用神经网络进行训练"
+  相似度: 0.8923</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：简单语义搜索</h3>
+
+      <p><strong>场景描述：</strong>你有一份简单的文档知识库，用户输入一个查询，
+      系统需要从文档中找到语义上最匹配的结果返回。</p>
+
+      <p><strong>你的任务：</strong>实现一个完整的"查询 → 向量化 → 相似度排序 → 返回结果"的语义搜索流程。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { OpenAIEmbeddings } from "@langchain/openai";
+
+// ==========================================
+// 余弦相似度工具函数
+// ==========================================
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dotProduct = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// ==========================================
+// 简单的语义搜索引擎
+// ==========================================
+class SimpleSemanticSearch {
+  private embeddings: OpenAIEmbeddings;
+  private documents: string[] = [];
+  private vectors: number[][] = [];
+
+  constructor() {
+    this.embeddings = new OpenAIEmbeddings({
+      model: "text-embedding-3-small",
+    });
+  }
+
+  // 添加文档并建立索引
+  async addDocuments(docs: string[]): Promise<void> {
+    this.documents = docs;
+    console.log(`📄 正在索引 ${docs.length} 个文档...`);
+    this.vectors = await this.embeddings.embedDocuments(docs);
+    console.log("✅ 索引完成！");
+  }
+
+  // 搜索最相关的文档
+  async search(query: string, topK: number = 3): Promise<{ text: string; score: number }[]> {
+    console.log(`🔍 搜索: "${query}"`);
+
+    // 1. 将查询向量化
+    const queryVector = await this.embeddings.embedQuery(query);
+
+    // 2. 计算与所有文档的相似度
+    const scores = this.vectors.map((docVector, i) => ({
+      text: this.documents[i],
+      score: cosineSimilarity(queryVector, docVector),
+    }));
+
+    // 3. 按相似度降序排列
+    scores.sort((a, b) => b.score - a.score);
+
+    // 4. 返回 topK 结果
+    return scores.slice(0, topK);
+  }
+}
+
+// ==========================================
+// 测试
+// ==========================================
+async function main() {
+  const searchEngine = new SimpleSemanticSearch();
+
+  // 添加知识库文档
+  await searchEngine.addDocuments([
+    "LangChain 是一个用于构建 LLM 应用的框架，支持 JavaScript 和 Python",
+    "Embedding 模型将文本转化为向量，用于语义搜索和相似度计算",
+    "向量数据库（如 Chroma、Pinecone）专门存储和检索高维向量",
+    "RAG（检索增强生成）结合了搜索和生成，提升回答的准确性",
+    "Prompt Templates 帮助结构化和复用提示词",
+    "Agent 可以自主调用工具来完成复杂任务",
+    "Streaming 允许 LLM 逐字输出结果，提升用户体验",
+    "LCEL 是 LangChain 的声明式链式组合语法",
+  ]);
+
+  // 执行搜索
+  const results = await searchEngine.search("什么是向量数据库？");
+
+  console.log("\n📋 搜索结果：");
+  results.forEach((r, i) => {
+    console.log(`  ${i + 1}. [${(r.score * 100).toFixed(1)}%] ${r.text}`);
+  });
+
+  console.log("\n--- 第二次搜索 ---");
+  const results2 = await searchEngine.search("如何构建 LLM 应用？");
+  results2.forEach((r, i) => {
+    console.log(`  ${i + 1}. [${(r.score * 100).toFixed(1)}%] ${r.text}`);
+  });
+}
+
+main();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出示例</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">📄 正在索引 8 个文档...
+✅ 索引完成！
+🔍 搜索: "什么是向量数据库？"
+
+📋 搜索结果：
+  1. [89.2%] 向量数据库（如 Chroma、Pinecone）专门存储和检索高维向量
+  2. [76.4%] Embedding 模型将文本转化为向量，用于语义搜索和相似度计算
+  3. [68.1%] LangChain 是一个用于构建 LLM 应用的框架，支持 JavaScript 和 Python
+
+--- 第二次搜索 ---
+🔍 搜索: "如何构建 LLM 应用？"
+
+📋 搜索结果：
+  1. [92.3%] LangChain 是一个用于构建 LLM 应用的框架，支持 JavaScript 和 Python
+  2. [78.9%] Agent 可以自主调用工具来完成复杂任务
+  3. [72.5%] LCEL 是 LangChain 的声明式链式组合语法</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧</h2>
+
+      <h3>技巧一：Ollama 本地 Embedding</h3>
+
+      <p>
+        如果你不想依赖 OpenAI 的云端 API，可以使用 <strong>Ollama</strong> 在本地运行 Embedding 模型。
+        Ollama 提供了 <code>nomic-embed-text</code>、<code>all-minilm</code> 等轻量模型，
+        完全离线且免费，非常适合开发和测试场景。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { OllamaEmbeddings } from "@langchain/ollama";
+
+// ==========================================
+// 初始化 Ollama Embedding 模型
+// ==========================================
+// 前置条件：本机已安装 Ollama 并下载模型
+//   $ ollama pull nomic-embed-text
+//   $ ollama pull all-minilm
+
+const embeddings = new OllamaEmbeddings({
+  model: "nomic-embed-text",   // 768 维
+  baseUrl: "http://localhost:11434",  // Ollama 默认地址
+});
+
+// ==========================================
+// 使用方式与 OpenAI 完全一致
+// ==========================================
+
+// 单条查询
+const queryVec = await embeddings.embedQuery("什么是向量数据库？");
+console.log(`维度：${queryVec.length}`);   // 768
+
+// 批量文档
+const docVecs = await embeddings.embedDocuments([
+  "向量数据库专门用于存储和检索高维向量",
+  "语义搜索通过向量相似度找到最匹配的结果",
+]);
+console.log(`文档向量数：${docVecs.length}`);  // 2</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 如何选择本地模型</div>
+        <ul>
+          <li><strong>nomic-embed-text</strong>（768 维）— 综合性能最佳，语义理解能力强，推荐用于生产级本地部署</li>
+          <li><strong>all-minilm</strong>（384 维）— 轻量快速，适合资源受限环境或原型开发</li>
+          <li><strong>snowflake-arctic-embed</strong>（1024 维）— 长文本处理能力较强</li>
+        </ul>
+      </div>
+
+      <h3>技巧二：批量 Embedding 策略</h3>
+
+      <p>
+        当需要处理大量文档时，合理的批量策略可以显著提升效率和稳定性：
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { OpenAIEmbeddings } from "@langchain/openai";
+
+// ==========================================
+// 批量嵌入带重试和并发控制
+// ==========================================
+
+const embeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-small",
+  maxRetries: 3,            // 失败重试次数
+  maxConcurrency: 5,        // 最大并发请求数
+});
+
+/**
+ * 将大型文档列表分批向量化
+ */
+async function batchEmbed(
+  documents: string[],
+  batchSize: number = 100
+): Promise<number[][]> {
+  const allVectors: number[][] = [];
+
+  for (let i = 0; i < documents.length; i += batchSize) {
+    const batch = documents.slice(i, i + batchSize);
+    console.log(`⏳ 处理第 ${i + 1}-${Math.min(i + batchSize, documents.length)} / ${documents.length} 个文档...`);
+
+    try {
+      const vectors = await embeddings.embedDocuments(batch);
+      allVectors.push(...vectors);
+    } catch (error) {
+      console.error(`❌ 批次 ${i / batchSize + 1} 处理失败:`, error);
+      // 可以在此实现指数退避重试
+      throw error;
+    }
+  }
+
+  return allVectors;
+}
+
+// ==========================================
+// 使用示例
+// ==========================================
+async function main() {
+  // 模拟 500 个文档
+  const allDocs = Array.from(
+    { length: 500 },
+    (_, i) => `这是第 ${i + 1} 篇关于机器学习的文档内容...`
+  );
+
+  console.log("🚀 开始批量向量化...");
+  const startTime = Date.now();
+
+  const vectors = await batchEmbed(allDocs, 100);
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`✅ 完成！${vectors.length} 个向量，耗时 ${elapsed} 秒`);
+  console.log(`向量维度: ${vectors[0]?.length ?? "N/A"}`);
+}
+
+main();</code></pre>
+      </div>
+
+      <h3>技巧三：嵌入维度适配与降维</h3>
+
+      <p>
+        不同的向量数据库和索引算法对向量维度有不同的要求：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>向量库</th><th>支持的维度</th><th>推荐维度</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Chroma</td><td>任意</td><td>256 ~ 1536</td><td>无特殊限制</td></tr>
+          <tr><td>Pinecone</td><td>任意（≤ 20000）</td><td>512 ~ 1536</td><td>按维度计费，降维可省钱</td></tr>
+          <tr><td>Milvus</td><td>任意</td><td>128 ~ 1024</td><td>高维度搜索性能下降</td></tr>
+          <tr><td>FAISS</td><td>任意</td><td>64 ~ 1024</td><td>低维度索引速度更快</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 通过 dimensions 参数降维
+// ==========================================
+
+// text-embedding-3-small 默认 512 维，降为 256 维
+const smallEmbeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-small",
+  dimensions: 256,
+});
+
+// text-embedding-3-large 默认 3072 维，降为 1024 维
+const largeEmbeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-large",
+  dimensions: 1024,
+});
+
+// 降维后的向量占用更少的存储空间，
+// 且检索速度更快，精度损失通常 < 5%
+</code></pre>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. 什么是文本向量化？余弦相似度的值域和含义是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>文本向量化是将自然语言转换为浮点数向量的过程。余弦相似度衡量两个向量的方向一致性，值域为 [-1, 1]：1 表示方向完全相同（语义高度相似），0 表示正交（语义无关），-1 表示方向相反（语义相反）。公式为：cos(A, B) = (A·B) / (||A|| × ||B||)。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. embedQuery() 和 embedDocuments() 有什么区别？分别在什么时候使用？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>embedQuery()</code> 接收单个字符串，用于向量化<strong>用户查询</strong>（搜索时的问题），可能使用不同的截断策略。<code>embedDocuments()</code> 接收字符串数组，用于批量处理<strong>知识库文档</strong>。在语义搜索流程中，先用 embedDocuments 预处理全部文档并存入向量库，用户查询时调用 embedQuery 将问题向量化后进行检索。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. 为什么说向量维度越高不一定越好？如何选择合适的维度？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>更高维度虽然能捕捉更精细的语义，但会带来：① 更大的存储开销；② 更慢的检索速度（维度灾难）；③ 更高的 API 调用成本。选择合适的维度需要考虑：① 任务精度要求（简单分类 256 维足够，深度语义搜索 1024+）；② 向量数据库的限制和计费方式；③ OpenAI 的 text-embedding-3 系列支持降维，可在精度和效率间灵活权衡。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. 批量处理大量文档时应该注意哪些问题？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>① <strong>批大小控制：</strong>推荐每批 100~500 个文档，避免单次超限；② <strong>速率限制：</strong>注意 OpenAI 的 RPM/TPM 限制，使用 maxConcurrency 控制并发；③ <strong>错误重试：</strong>实现指数退避重试机制处理 429 限流错误；④ <strong>进度监控：</strong>对大量文档分批处理并记录进度；⑤ <strong>断点续传：</strong>在工程化场景中保存已处理结果，避免重复调用。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">5. Ollama 本地 Embedding 的优势和局限是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><strong>优势：</strong>免费、离线运行、数据不出本机、适合开发和测试、无速率限制。<strong>局限：</strong>模型能力弱于 OpenAI（语义理解精度较低）、支持的最大输入令牌数较少（如 nomic-embed-text 仅 2048 tokens）、对硬件有要求（需要足够的 RAM/VRAM）。建议在开发阶段和敏感数据场景使用 Ollama，在生产级高精度场景使用 OpenAI。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：API Key 未配置</div>
+        <p><strong>症状：</strong><code>AuthenticationError: Incorrect API key provided</code></p>
+        <p><strong>原因：</strong>没有设置 <code>OPENAI_API_KEY</code> 环境变量，或提供的 Key 无效。</p>
+        <p><strong>解决：</strong>在 .env 文件中配置 <code>OPENAI_API_KEY=sk-xxxx</code>，或通过构造函数传入 <code>openAIApiKey</code> 参数。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：向量维度不匹配</div>
+        <p><strong>症状：</strong>计算相似度时抛出 <code>Error: 向量维度不匹配</code></p>
+        <p><strong>原因：</strong>使用不同 Embedding 模型产生的向量维度不同，不能直接比较。</p>
+        <p><strong>解决：</strong>确保查询和文档使用<strong>同一个</strong> Embedding 模型，且 dimensions 参数一致。文档预处理时使用的模型必须与查询时使用的模型相同。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：输入文本超过最大 Token 限制</div>
+        <p><strong>症状：</strong><code>InvalidRequestError: total tokens exceeds maximum</code></p>
+        <p><strong>原因：</strong>输入文本过长，超过了 Embedding 模型的最大输入长度（如 8191 tokens）。</p>
+        <p><strong>解决：</strong>在向量化之前对长文档进行<strong>截断</strong>或<strong>分割</strong>。结合第 13 章学到的文本分割技术（RecursiveCharacterTextSplitter），将长文本切分成合适大小的片段再分别向量化。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：Ollama 连接失败</div>
+        <p><strong>症状：</strong><code>FetchError: request to http://localhost:11434/api/embed failed</code></p>
+        <p><strong>原因：</strong>Ollama 服务未启动或模型未下载。</p>
+        <p><strong>解决：</strong>先运行 <code>ollama serve</code> 启动服务，再用 <code>ollama pull nomic-embed-text</code> 下载模型。确认 <code>baseUrl</code> 地址正确（默认 http://localhost:11434）。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 14 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>文本向量化原理</strong> — 将文字转换为数学向量，用余弦相似度衡量语义距离</li>
+          <li><strong>OpenAIEmbeddings API</strong> — embedQuery（查询向量化）和 embedDocuments（文档批量向量化）</li>
+          <li><strong>Embedding 模型选型</strong> — 在维度（256~3072）、成本、性能之间权衡</li>
+          <li><strong>实战应用</strong> — 向量相似度计算和语义搜索引擎的完整实现</li>
+          <li><strong>本地部署</strong> — 使用 Ollama 运行 nomic-embed-text 等本地模型</li>
+          <li><strong>批量策略</strong> — 批大小控制、并发限制、错误重试、降维技巧</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 15 章：Vector Stores — 向量存储与检索</h3>
+        <p>在下一章中，我们将学习如何将向量化的文档存入专业的向量数据库中，
+        并实现高效的海量语义检索。你将掌握 Chroma、Pinecone 等向量数据库的使用方法。</p>
+        <ul>
+          <li>向量数据库的核心概念（索引、距离度量、过滤）</li>
+          <li>Chroma 本地向量库的安装和使用</li>
+          <li>向量检索：相似度搜索、MMR 多样化检索</li>
+          <li>元数据过滤和混合搜索策略</li>
+        </ul>
+        <a href="15-vector-stores.html" class="btn btn-primary">继续学习第 15 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="13-document-loaders.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 14 章 / 共 19 章</span>
+        <a href="15-vector-stores.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第17章 LangGraph 状态图 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch17">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html" class="active"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="09-memory.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 17 章 / 共 19 章</span>
+        <a href="18-callbacks.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>🔀 LangGraph — 状态图编排与复杂工作流</h1>
+      <p class="subtitle">用图结构编排多步骤 AI 工作流，实现条件分支、循环、人机协同等高级编排模式</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 LangGraph 的核心概念：StateGraph、Node、Edge 以及状态驱动的工作流模型</li>
+          <li>掌握 addNode、addEdge、addConditionalEdges 的用法，构建有向无环图（DAG）工作流</li>
+          <li>使用 createReactAgent 预置 Agent 快速搭建具备工具调用能力的 LangGraph Agent</li>
+          <li>实现条件分支逻辑，让工作流根据中间结果动态选择执行路径</li>
+          <li>理解 Human-in-the-loop（人机协同）模式，使用 interrupt 实现人工审批流程</li>
+          <li>掌握 Checkpoint 持久化机制，让工作流具备可恢复能力</li>
+          <li>学会子图合成（Subgraph Composition），将复杂流程模块化</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="02-agent-basics.html">第 2 章：Agent 基础</a> 的学习，
+        理解 Agent 的基本执行流程和 <code>createAgent</code> 的用法。
+        同时建议先了解 <a href="05-tools.html">第 5 章：工具 Tools</a>，
+        掌握 <code>tool()</code> 函数的定义和工具调用的基本模式。
+      </div>
+
+      <!-- ==================== 为什么需要 LangGraph ==================== -->
+      <h2 id="why-langgraph" class="anchor-heading">💡 为什么需要 LangGraph？</h2>
+
+      <p>
+        在前面的章节中，我们使用的 <code>createAgent</code> 是一个"黑盒"——它内部有一个 Agent 执行循环
+        （思考→调用工具→获取结果→再思考→最终回答），但我们无法干预或定制这个循环的结构。
+      </p>
+
+      <p>
+        想象一下你正在构建一个智能文档处理系统，它需要：
+      </p>
+
+      <ul>
+        <li><strong>步骤 1：</strong>读取并解析文档内容</li>
+        <li><strong>步骤 2：</strong>根据文档类型选择不同的处理策略（合同、报告、邮件……）</li>
+        <li><strong>步骤 3：</strong>如果文档包含敏感信息，需要人工审核才可继续</li>
+        <li><strong>步骤 4：</strong>生成摘要并将结果存储到数据库</li>
+      </ul>
+
+      <p>
+        使用普通的 <code>createAgent</code> 很难实现这样的多步骤、条件分支和人工介入流程。
+        这就是 <strong>LangGraph</strong> 登场的地方。
+      </p>
+
+      <div class="callout info">
+        <div class="callout-title">💡 LangGraph 的核心思想</div>
+        <p>
+          LangGraph 将 AI 工作流建模为<strong>有向图</strong>：图的<strong>节点（Node）</strong>代表
+          一个计算步骤或 Agent 操作，<strong>边（Edge）</strong>代表数据流动和执行顺序，
+          <strong>状态（State）</strong>在整个图中传递，记录每一步的输入、输出和中间结果。
+          你可以添加<strong>条件边（Conditional Edge）</strong>让执行流程根据当前状态动态决策。
+        </p>
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">🧱 核心概念</h2>
+
+      <h3>概念一：StateGraph 与状态定义</h3>
+
+      <p>
+        <code>StateGraph</code> 是 LangGraph 的核心类。你需要先定义一个状态类型（State），
+        然后创建一个 <code>StateGraph</code> 实例来编排工作流。状态是一个数据结构，
+        它贯穿整个图的执行过程，每个节点都可以读取和写入状态。
+      </p>
+
+      <p>
+        使用 <code>Annotation</code> 来定义状态的结构。每个状态字段可以指定一个<strong>归约器（Reducer）</strong>，
+        决定当多个节点向同一字段写入时如何合并。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { StateGraph, Annotation } from "@langchain/langgraph";
+
+// ========== 定义状态结构 ==========
+// 使用 Annotation.Root 创建状态类型
+const GraphState = Annotation.Root({
+  // 简单字段：直接赋值
+  input: Annotation<string>,
+
+  // 使用归约器：当多个节点写入 messages 时，使用 concat 合并
+  messages: Annotation<string[]>({
+    reducer: (left, right) => left.concat(right),
+    default: () => [],
+  }),
+
+  // 带默认值的字段
+  stepCount: Annotation<number>({
+    reducer: (left, right) => left + right,
+    default: () => 0,
+  }),
+
+  // 可选字段
+  result: Annotation<string | null>({
+    default: () => null,
+  }),
+});
+
+// GraphState 的类型可以推导为：
+// {
+//   input: string;
+//   messages: string[];
+//   stepCount: number;
+//   result: string | null;
+// }</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 Reducer 的作用</div>
+        <p>
+          归约器（Reducer）定义了"当图中有多个并行节点或循环节点都向同一个状态字段写入时，如何合并值"。
+          默认行为是<strong>覆盖</strong>（新值替换旧值）。如果你想累积（如追加消息列表），
+          就需要提供自定义 reducer，如上面的 <code>(left, right) => left.concat(right)</code>。
+        </p>
+      </div>
+
+      <h3>概念二：Node（节点）</h3>
+
+      <p>
+        节点是图中的一个计算单元。每个节点是一个<strong>函数</strong>，它接收当前状态作为输入，
+        返回状态的部分更新。使用 <code>addNode()</code> 方法注册节点。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 节点是一个函数：接收 State，返回 Partial&lt;State&gt;
+async function processInput(state: typeof GraphState.State) {
+  console.log(`[processInput] 输入: ${state.input}`);
+  return {
+    messages: [`收到输入: ${state.input}`],
+    stepCount: 1,
+  };
+}
+
+async function analyzeContent(state: typeof GraphState.State) {
+  console.log(`[analyzeContent] 分析中...`);
+  const analysis = `已分析内容 (共 ${state.messages.length} 条消息)`;
+  return {
+    messages: [analysis],
+    result: analysis,
+    stepCount: 1,  // 由于 stepCount 的 reducer 是累加，这个 1 会加给 stepCount
+  };
+}
+
+// 创建 StateGraph 并注册节点
+const workflow = new StateGraph(GraphState)
+  .addNode("process_input", processInput)
+  .addNode("analyze", analyzeContent);</code></pre>
+      </div>
+
+      <h3>概念三：Edge（边）与 START / END</h3>
+
+      <p>
+        边定义了节点之间的连接关系和执行顺序。LangGraph 提供了几种边：
+      </p>
+
+      <ul>
+        <li><strong>普通边（addEdge）</strong> — 从一个节点到另一个节点的固定连接</li>
+        <li><strong>条件边（addConditionalEdges）</strong> — 根据状态动态选择下一个节点</li>
+        <li><strong>入口边（START）</strong> — 图的起点，用 <code>START</code> 常量表示</li>
+        <li><strong>出口边（END）</strong> — 图的终点，用 <code>END</code> 常量表示</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { StateGraph, START, END } from "@langchain/langgraph";
+
+// 接上面的 workflow
+workflow
+  // 从 START 到第一个节点
+  .addEdge(START, "process_input")
+  // process_input 执行完后自动到 analyze
+  .addEdge("process_input", "analyze")
+  // analyze 执行完后到达终点
+  .addEdge("analyze", END);
+
+// 编译图，生成可调用的应用
+const app = workflow.compile();
+
+// 执行
+const result = await app.invoke({
+  input: "这是一份需要处理的文档内容",
+});
+
+console.log(result);
+// {
+//   input: "这是一份需要处理的文档内容",
+//   messages: ["收到输入: 这是一份需要处理的文档内容", "已分析内容 (共 1 条消息)"],
+//   stepCount: 2,
+//   result: "已分析内容 (共 1 条消息)",
+// }</code></pre>
+      </div>
+
+      <h3>概念四：addConditionalEdges（条件边）</h3>
+
+      <p>
+        条件边是 LangGraph 最强大的特性之一。它允许你根据当前状态的值，动态决定下一步执行哪个节点。
+        你需要提供一个<strong>路由函数</strong>，该函数接收状态并返回一个节点名称字符串（或 <code>END</code>）。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 定义三个处理节点
+async function classifyDocument(state: typeof GraphState.State) {
+  const doc = state.input.toLowerCase();
+  let docType = "unknown";
+  if (doc.includes("合同") || doc.includes("协议")) docType = "contract";
+  else if (doc.includes("报告") || doc.includes("总结")) docType = "report";
+  else if (doc.includes("邮件") || doc.includes("email")) docType = "email";
+  return { docType, messages: [`文档分类: ${docType}`] };
+}
+
+async function processContract(state: typeof GraphState.State) {
+  return { messages: ["处理合同: 提取条款、签署方、金额..."] };
+}
+
+async function processReport(state: typeof GraphState.State) {
+  return { messages: ["处理报告: 提取关键发现、数据指标..."] };
+}
+
+async function processEmail(state: typeof GraphState.State) {
+  return { messages: ["处理邮件: 提取发件人、主题、优先级..."] };
+}
+
+// 路由函数：根据 docType 返回下一个节点名称
+function routeByDocType(state: typeof GraphState.State): string {
+  switch (state.docType) {
+    case "contract": return "process_contract";
+    case "report":   return "process_report";
+    case "email":    return "process_email";
+    default:         return END;  // 未知类型直接结束
+  }
+}
+
+const workflow = new StateGraph(GraphState)
+  .addNode("classify", classifyDocument)
+  .addNode("process_contract", processContract)
+  .addNode("process_report", processReport)
+  .addNode("process_email", processEmail)
+  .addEdge(START, "classify")
+  // 条件边：从 classify 出发，使用 routeByDocType 路由函数
+  .addConditionalEdges("classify", routeByDocType)
+  .addEdge("process_contract", END)
+  .addEdge("process_report", END)
+  .addEdge("process_email", END);
+
+const app = workflow.compile();
+
+// 测试：处理一份合同
+const result = await app.invoke({ input: "采购合同-2024-001" });
+console.log(result.messages);
+// ["文档分类: contract", "处理合同: 提取条款、签署方、金额..."]</code></pre>
+      </div>
+
+      <h3>概念五：createReactAgent（预置 ReAct Agent）</h3>
+
+      <p>
+        <code>createReactAgent</code> 是 LangGraph 提供的一个预构建 Agent 节点，
+        它将 ReAct（Reasoning + Acting）循环封装为一个标准的图节点。
+        你可以将它直接插入到你的 StateGraph 中，与其他自定义节点组合使用。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { ChatOpenAI } from "@langchain/openai";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+
+// 定义工具
+const searchDocs = tool(
+  async ({ query }) => `知识库搜索结果: 关于"${query}"的文档...`,
+  {
+    name: "search_docs",
+    description: "搜索内部知识库文档",
+    schema: z.object({ query: z.string().describe("搜索关键词") }),
+  }
+);
+
+const calculate = tool(
+  async ({ expression }) => `计算结果: ${eval(expression)}`,
+  {
+    name: "calculate",
+    description: "执行数学计算",
+    schema: z.object({ expression: z.string().describe("数学表达式") }),
+  }
+);
+
+// 创建 ReAct Agent 节点
+const reactAgentNode = createReactAgent({
+  llm: new ChatOpenAI({ model: "gpt-4o-mini" }),
+  tools: [searchDocs, calculate],
+  // systemPrompt 是可选的系统提示
+  systemPrompt: "你是一个智能助手，可以使用搜索和计算工具帮助用户。",
+});
+
+// 现在 reactAgentNode 可以像普通节点一样加入图中
+// 注意：createReactAgent 返回的是一个 Runnable，需要适配状态接口</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ createReactAgent 的输入/输出格式</div>
+        <p>
+          <code>createReactAgent</code> 返回的对象期望输入和输出中包含 <code>messages</code> 字段（消息数组）。
+          当你将它集成到自定义 StateGraph 时，确保你的状态中有一个 <code>messages</code> 字段，
+          或者使用 <code>.bind()</code> 适配。
+        </p>
+      </div>
+
+      <h3>概念六：Human-in-the-Loop（人机协同）与 Interrupt</h3>
+
+      <p>
+        在某些关键步骤，你可能希望暂停工作流，等待人工审批或输入后再继续。
+        LangGraph 通过 <code>interrupt</code> 机制实现这一点。你可以在节点函数中抛出 <code>interrupt</code>，
+        工作流会暂停并等待外部恢复。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { interrupt } from "@langchain/langgraph";
+
+// 在节点中使用 interrupt 暂停工作流
+async function reviewStep(state: typeof GraphState.State) {
+  // 向审批者发送信息，等待人工响应
+  const approval = await interrupt({
+    type: "human_review",
+    question: "是否批准以下处理结果？",
+    data: state.result,
+    options: ["approve", "reject", "modify"],
+  });
+
+  // 当工作流恢复后，approval 包含人工输入的值
+  return {
+    messages: [`审批结果: ${JSON.stringify(approval)}`],
+    approval: approval,
+  };
+}
+
+// 使用方式：
+// const app = workflow.compile();
+// 
+// 第一次执行会在 reviewStep 处暂停
+// const result1 = await app.invoke({ input: "..." });
+// 
+// 恢复执行：
+// const result2 = await app.invoke(null, {
+//   configurable: { thread_id: "..." },  // 需要 thread_id
+// });</code></pre>
+      </div>
+
+      <h3>概念七：Checkpoint 持久化</h3>
+
+      <p>
+        LangGraph 支持在图的每个步骤自动保存状态快照（Checkpoint）。
+        这让工作流具备<strong>可恢复性</strong>——即使程序崩溃，你也可以从最后一个 Checkpoint 恢复执行。
+        此外，Checkpointer 也是 Human-in-the-loop 的基础——工作流暂停后，状态被保存，
+        你可以稍后恢复。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MemorySaver } from "@langchain/langgraph";
+
+// 创建 Checkpointer
+const checkpointer = new MemorySaver();
+
+// 编译图时传入 Checkpointer
+const app = workflow.compile({ checkpointer });
+
+// 执行时指定 thread_id
+const result = await app.invoke(
+  { input: "处理这份文档" },
+  { configurable: { thread_id: "doc-process-001" } }
+);
+
+// 如果执行被中断或暂停，可以通过相同的 thread_id 恢复
+const resumed = await app.invoke(
+  null,  // 不传新输入，从暂停点继续
+  { configurable: { thread_id: "doc-process-001" } }
+);
+
+// 查看历史状态
+const stateHistory = await app.getStateHistory({
+  configurable: { thread_id: "doc-process-001" },
+});</code></pre>
+      </div>
+
+      <h3>概念八：Subgraph（子图）</h3>
+
+      <p>
+        当工作流变得非常复杂时，你可以将一部分节点封装为<strong>子图（Subgraph）</strong>。
+        子图本身就是一个完整的 StateGraph，可以像普通节点一样嵌入到父图中。
+        这使得你可以模块化地构建和维护复杂工作流。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ========== 定义子图 ==========
+const SubState = Annotation.Root({
+  text: Annotation<string>,
+  result: Annotation<string>,
+});
+
+const subWorkflow = new StateGraph(SubState)
+  .addNode("step1", async (state) => ({
+    result: `子图步骤1: ${state.text}`,
+  }))
+  .addNode("step2", async (state) => ({
+    result: `子图步骤2: ${state.result}`,
+  }))
+  .addEdge(START, "step1")
+  .addEdge("step1", "step2")
+  .addEdge("step2", END);
+
+const subgraph = subWorkflow.compile();
+
+// ========== 在父图中使用子图 ==========
+const ParentState = Annotation.Root({
+  input: Annotation<string>,
+  finalResult: Annotation<string>,
+});
+
+const parentWorkflow = new StateGraph(ParentState)
+  .addNode("preprocess", async (state) => ({
+    // 预处理后将数据传给子图
+  }))
+  // 将子图作为一个节点
+  .addNode("sub_process", subgraph)
+  .addNode("postprocess", async (state) => ({
+    finalResult: `最终结果: ${state.finalResult}`,
+  }))
+  .addEdge(START, "preprocess")
+  .addEdge("preprocess", "sub_process")
+  .addEdge("sub_process", "postprocess")
+  .addEdge("postprocess", END);</code></pre>
+      </div>
+
+      <!-- ==================== 实战一 ==================== -->
+      <h2 id="practice1" class="anchor-heading">🔨 实战一：多步骤文档处理工作流</h2>
+
+      <p><strong>场景描述：</strong>你需要构建一个文档处理流水线，接收原始文档文本，
+      依次执行：内容验证 → 格式清洗 → 信息提取 → 摘要生成。每个步骤独立封装为节点，
+      状态在节点间流动。</p>
+
+      <p><strong>核心知识点：</strong>StateGraph 基础构建、多节点串联、状态传递。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { ChatOpenAI } from "@langchain/openai";
+
+// ==========================================
+// 1. 定义文档处理的状态结构
+// ==========================================
+const DocState = Annotation.Root({
+  rawText: Annotation<string>,                          // 原始文本
+  validated: Annotation<boolean>({ default: () => false }),  // 是否通过验证
+  cleanText: Annotation<string>({ default: () => "" }),     // 清洗后的文本
+  extractedFields: Annotation<Record<string, string>>({     // 提取的字段
+    default: () => ({}),
+  }),
+  summary: Annotation<string>({ default: () => "" }),       // 生成的摘要
+  errors: Annotation<string[]>({
+    reducer: (left, right) => left.concat(right),
+    default: () => [],
+  }),
+});
+
+// ==========================================
+// 2. 定义各个处理节点
+// ==========================================
+
+// 节点 1：内容验证 —— 检查文档是否为空、格式是否有效
+async function validateDocument(state: typeof DocState.State) {
+  const text = state.rawText;
+
+  if (!text || text.trim().length === 0) {
+    return {
+      validated: false,
+      errors: ["文档内容为空，无法处理"],
+    };
+  }
+
+  // 检查最小长度
+  if (text.trim().length < 10) {
+    return {
+      validated: false,
+      errors: ["文档内容过短，无法进行有效分析"],
+    };
+  }
+
+  // 检查是否包含有效内容（简单示例）
+  const hasContent = /[a-zA-Z\u4e00-\u9fa5]/.test(text);
+  if (!hasContent) {
+    return {
+      validated: false,
+      errors: ["文档不包含有效文本内容"],
+    };
+  }
+
+  return {
+    validated: true,
+    messages: ["文档验证通过"],
+  };
+}
+
+// 节点 2：格式清洗 —— 去除多余空格、特殊字符，统一格式
+async function cleanDocument(state: typeof DocState.State) {
+  if (!state.validated) {
+    return { errors: ["跳过清洗步骤：文档未通过验证"] };
+  }
+
+  let cleaned = state.rawText;
+
+  // 去除多余空白行
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  // 去除首尾空格
+  cleaned = cleaned.trim();
+  // 统一换行符
+  cleaned = cleaned.replace(/\r\n/g, "\n");
+  // 去除特殊控制字符（保留换行和制表符）
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+
+  return {
+    cleanText: cleaned,
+    messages: ["文档格式清洗完成"],
+  };
+}
+
+// 节点 3：信息提取 —— 使用 LLM 提取关键字段
+async function extractFields(state: typeof DocState.State) {
+  if (!state.cleanText) {
+    return { errors: ["跳过提取步骤：清洗文本为空"] };
+  }
+
+  const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+
+  // 使用结构化输出提取信息
+  const extractionPrompt = `从以下文档中提取关键信息：
+
+文档内容：
+${state.cleanText.slice(0, 2000)}  // 限制长度
+
+请以 JSON 格式返回以下字段（如果不存在则设为 "未找到"）：
+- title: 文档标题
+- author: 作者
+- date: 日期
+- type: 文档类型
+- keywords: 关键词（逗号分隔）`;
+
+  const response = await model.invoke([
+    { role: "system", content: "你是一个文档信息提取专家。只返回 JSON，不要包含其他内容。" },
+    { role: "human", content: extractionPrompt },
+  ]);
+
+  try {
+    // 尝试从回复中提取 JSON
+    const content = response.content.toString();
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const fields = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+
+    return {
+      extractedFields: fields,
+      messages: [`信息提取完成: 共提取 ${Object.keys(fields).length} 个字段`],
+    };
+  } catch (e) {
+    return {
+      errors: [`信息提取解析失败: ${e}`],
+      extractedFields: { title: "提取失败" },
+    };
+  }
+}
+
+// 节点 4：摘要生成
+async function generateSummary(state: typeof DocState.State) {
+  const fields = state.extractedFields;
+  const text = state.cleanText;
+
+  const summaryText = `📄 **文档摘要**
+━━━━━━━━━━━━━━━━━━
+标题: ${fields.title || "未识别"}
+作者: ${fields.author || "未识别"}
+日期: ${fields.date || "未识别"}
+类型: ${fields.type || "未识别"}
+关键词: ${fields.keywords || "未识别"}
+
+📝 文档长度: ${text.length} 字符
+📊 处理状态: ✅ 完成`;
+
+  return {
+    summary: summaryText,
+    messages: ["摘要生成完成"],
+  };
+}
+
+// ==========================================
+// 3. 组装工作流
+// ==========================================
+const docWorkflow = new StateGraph(DocState)
+  .addNode("validate", validateDocument)
+  .addNode("clean", cleanDocument)
+  .addNode("extract", extractFields)
+  .addNode("summarize", generateSummary)
+  .addEdge(START, "validate")
+  .addEdge("validate", "clean")
+  .addEdge("clean", "extract")
+  .addEdge("extract", "summarize")
+  .addEdge("summarize", END);
+
+const docApp = docWorkflow.compile();
+
+// ==========================================
+// 4. 执行示例
+// ==========================================
+async function runDocumentPipeline() {
+  const sampleDoc = `
+项目总结报告
+
+作者: 张三
+日期: 2024-06-15
+
+一、项目概述
+本项目旨在开发新一代智能客服系统，采用 LangChain.js 框架构建 AI Agent。
+项目周期为 3 个月，总投入 5 人月。
+
+二、关键成果
+1. 完成了基于 RAG 的知识库问答系统
+2. 实现了多轮对话记忆功能
+3. 集成了 8 个外部工具 API
+4. 整体响应时间降低到 1.2 秒
+
+三、下一步计划
+- 支持流式传输
+- 增加更多的预置工具
+- 优化长文档处理能力
+`;
+
+  const result = await docApp.invoke({ rawText: sampleDoc });
+
+  console.log("=== 文档处理结果 ===");
+  console.log(result.summary);
+  console.log("\n提取的字段:", JSON.stringify(result.extractedFields, null, 2));
+  console.log("\n处理过程中的消息:");
+  result.messages?.forEach((msg: string, i: number) => {
+    console.log(`  [步骤 ${i + 1}] ${msg}`);
+  });
+}
+
+runDocumentPipeline();</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 实战二 ==================== -->
+      <h2 id="practice2" class="anchor-heading">🔨 实战二：条件分支客服路由系统</h2>
+
+      <p><strong>场景描述：</strong>构建一个智能客服路由系统，根据用户的问题类型
+      （技术咨询、订单查询、投诉建议、其他）动态路由到不同的处理节点。
+      使用 <code>addConditionalEdges</code> 实现分支逻辑。</p>
+
+      <p><strong>核心知识点：</strong>条件边、路由函数、LLM 辅助决策。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { ChatOpenAI } from "@langchain/openai";
+
+// ==========================================
+// 1. 定义客服状态
+// ==========================================
+const SupportState = Annotation.Root({
+  userMessage: Annotation<string>,
+  category: Annotation<string>({ default: () => "other" }),
+  confidence: Annotation<number>({ default: () => 0 }),
+  response: Annotation<string>({ default: () => "" }),
+  tickets: Annotation<string[]>({
+    reducer: (left, right) => left.concat(right),
+    default: () => [],
+  }),
+  needsHuman: Annotation<boolean>({ default: () => false }),
+});
+
+// ==========================================
+// 2. 分类节点 —— 使用 LLM 判断问题类型
+// ==========================================
+async function classifyIntent(state: typeof SupportState.State) {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+
+  const classificationPrompt = `分析以下用户消息，判断问题类别。
+只返回一个类别名称，不要包含其他内容。
+
+类别列表：
+- technical: 技术咨询（API 使用、SDK 集成、Bug 报告、配置问题）
+- order: 订单查询（订单状态、发货、退款、发票）
+- complaint: 投诉建议（服务不满、产品问题、改进建议）
+- other: 其他（一般咨询、问候、无法分类）
+
+用户消息: "${state.userMessage}"
+
+类别：`;
+
+  const response = await model.invoke([
+    { role: "system", content: "你是一个客服分类专家。只输出类别名称，不要多余内容。" },
+    { role: "human", content: classificationPrompt },
+  ]);
+
+  const category = response.content.toString().trim().toLowerCase();
+  const validCategories = ["technical", "order", "complaint", "other"];
+  const finalCategory = validCategories.includes(category) ? category : "other";
+
+  return {
+    category: finalCategory,
+    confidence: finalCategory === "other" ? 0.5 : 0.85,
+    tickets: [`[分类] 用户问题归类为: ${finalCategory}`],
+  };
+}
+
+// ==========================================
+// 3. 各分类处理节点
+// ==========================================
+async function handleTechnical(state: typeof SupportState.State) {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `你是一个技术支持工程师。请针对用户的技术问题进行专业解答。
+提供清晰的步骤说明和代码示例（如果需要）。
+如果你不确定答案，请如实告知用户。`,
+    },
+    { role: "human", content: state.userMessage },
+  ]);
+
+  return {
+    response: `🔧 **技术支持回复**\n\n${response.content}`,
+    tickets: [`[处理] 技术问题已回复`],
+  };
+}
+
+async function handleOrder(state: typeof SupportState.State) {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `你是一个订单客服专员。你的职责是：
+1. 帮助用户查询订单状态
+2. 处理退换货和退款请求
+3. 回答配送相关问题
+4. 如果需要进一步操作，请引导用户提供订单号
+
+注意：不要询问用户的敏感信息（如密码、身份证号）。`,
+    },
+    { role: "human", content: state.userMessage },
+  ]);
+
+  return {
+    response: `📦 **订单客服回复**\n\n${response.content}`,
+    tickets: [`[处理] 订单查询已回复`],
+  };
+}
+
+async function handleComplaint(state: typeof SupportState.State) {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `你是一个投诉处理专员。处理投诉时遵循以下原则：
+1. **先共情** — 理解用户的不满和情绪
+2. **诚恳道歉** — 代表公司向用户道歉
+3. **分析问题** — 确认投诉的具体内容
+4. **给出方案** — 提供具体的解决方案或补偿措施
+5. **承诺跟进** — 告知用户后续处理计划
+
+重要：如果投诉涉及严重问题（如安全、法律、重大损失），请标记需人工跟进。`,
+    },
+    { role: "human", content: state.userMessage },
+  ]);
+
+  // 检查是否需要人工跟进
+  const needsHuman = response.content.toString().includes("人工") ||
+                     response.content.toString().includes("严重");
+
+  return {
+    response: `💬 **投诉处理回复**\n\n${response.content}`,
+    needsHuman,
+    tickets: [
+      `[处理] 投诉已回复${needsHuman ? "（标记需人工跟进）" : ""}`,
+    ],
+  };
+}
+
+async function handleOther(state: typeof SupportState.State) {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `你是一个通用的客服助手。对于用户的咨询，请提供友好、有帮助的回复。
+如果用户的问题不在你的处理范围内，请引导用户联系相应的支持渠道。`,
+    },
+    { role: "human", content: state.userMessage },
+  ]);
+
+  return {
+    response: `💁 **客服回复**\n\n${response.content}`,
+    tickets: [`[处理] 其他咨询已回复`],
+  };
+}
+
+// ==========================================
+// 4. 路由函数
+// ==========================================
+function routeByCategory(state: typeof SupportState.State): string {
+  switch (state.category) {
+    case "technical": return "handle_technical";
+    case "order":     return "handle_order";
+    case "complaint": return "handle_complaint";
+    default:          return "handle_other";
+  }
+}
+
+// ==========================================
+// 5. 组装工作流
+// ==========================================
+const supportWorkflow = new StateGraph(SupportState)
+  .addNode("classify", classifyIntent)
+  .addNode("handle_technical", handleTechnical)
+  .addNode("handle_order", handleOrder)
+  .addNode("handle_complaint", handleComplaint)
+  .addNode("handle_other", handleOther)
+  .addEdge(START, "classify")
+  // 条件边：根据分类结果路由
+  .addConditionalEdges("classify", routeByCategory)
+  .addEdge("handle_technical", END)
+  .addEdge("handle_order", END)
+  .addEdge("handle_complaint", END)
+  .addEdge("handle_other", END);
+
+const supportApp = supportWorkflow.compile();
+
+// ==========================================
+// 6. 运行测试
+// ==========================================
+async function testSupportSystem() {
+  const testCases = [
+    "我调用你们的 API 一直返回 401 错误，是怎么回事？",
+    "我上周下的订单 #ORD-88888 到现在还没发货，能帮我查一下吗？",
+    "你们的产品质量太差了，用了三天就坏了，我要退货！",
+    "你好，请问你们公司地址在哪里？",
+  ];
+
+  for (const msg of testCases) {
+    console.log(`\n${"═".repeat(50)}`);
+    console.log(`用户: ${msg}`);
+    const result = await supportApp.invoke({ userMessage: msg });
+    console.log(`分类: ${result.category} (置信度: ${result.confidence})`);
+    console.log(`${result.response.slice(0, 100)}...`);
+  }
+}
+
+testSupportSystem();</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 高级实战 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 高级实战：Human-in-the-Loop 审批流程</h2>
+
+      <p><strong>场景描述：</strong>构建一个文档发布审批工作流。用户提交文档后，
+      系统自动进行内容审核和安全检查，如果发现问题则暂停等待人工审批，
+      根据审批结果决定是发布文档、退回修改还是直接拒绝。</p>
+
+      <p><strong>核心知识点：</strong><code>interrupt</code> 暂停机制、
+      Checkpointer 持久化、条件恢复、人工决策集成。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import {
+  StateGraph, Annotation, START, END, interrupt,
+  MemorySaver,
+} from "@langchain/langgraph";
+import { ChatOpenAI } from "@langchain/openai";
+
+// ==========================================
+// 1. 定义审批状态
+// ==========================================
+const ApprovalState = Annotation.Root({
+  docTitle: Annotation<string>({ default: () => "未命名文档" }),
+  docContent: Annotation<string>({ default: () => "" }),
+  author: Annotation<string>({ default: () => "未知" }),
+
+  // 自动审核结果
+  riskLevel: Annotation<string>({ default: () => "low" }),  // low | medium | high
+  reviewReport: Annotation<string>({ default: () => "" }),
+  flaggedIssues: Annotation<string[]>({
+    reducer: (left, right) => left.concat(right),
+    default: () => [],
+  }),
+
+  // 人工审批结果
+  approvalStatus: Annotation<string>({ default: () => "pending" }), // pending | approved | rejected | revision
+  approverComment: Annotation<string>({ default: () => "" }),
+
+  // 发布信息
+  publishedAt: Annotation<string>({ default: () => "" }),
+  publishUrl: Annotation<string>({ default: () => "" }),
+
+  // 执行追踪
+  currentStep: Annotation<string>({ default: () => "submitted" }),
+  logs: Annotation<string[]>({
+    reducer: (left, right) => left.concat(right),
+    default: () => [],
+  }),
+});
+
+// ==========================================
+// 2. 节点：提交文档
+// ==========================================
+async function submitDocument(state: typeof ApprovalState.State) {
+  const now = new Date().toISOString();
+  return {
+    currentStep: "submitted",
+    logs: [`[${now}] 文档已提交: "${state.docTitle}"，作者: ${state.author}`],
+  };
+}
+
+// ==========================================
+// 3. 节点：自动内容审核
+// ==========================================
+async function autoReview(state: typeof ApprovalState.State) {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+
+  const reviewPrompt = `你是一个文档审核员。请审核以下文档内容，输出 JSON 格式的审核报告。
+
+文档标题: ${state.docTitle}
+文档内容:
+${state.docContent.slice(0, 3000)}
+
+请检查以下方面：
+1. 是否包含敏感信息（个人隐私、机密数据、不当言论）
+2. 内容质量（是否清晰、完整、专业）
+3. 合规性（是否符合一般发布规范）
+
+输出格式（JSON）：
+{
+  "riskLevel": "low|medium|high",
+  "issues": ["问题1", "问题2", ...],
+  "summary": "审核总结"
+}`;
+
+  const response = await model.invoke([
+    { role: "system", content: "你是一个严谨的文档审核专家。只输出 JSON。" },
+    { role: "human", content: reviewPrompt },
+  ]);
+
+  let report;
+  try {
+    const match = response.content.toString().match(/\{[\s\S]*\}/);
+    report = match ? JSON.parse(match[0]) : {
+      riskLevel: "low", issues: [], summary: "自动审核完成（解析失败，使用默认值）",
+    };
+  } catch {
+    report = { riskLevel: "low", issues: [], summary: "自动审核完成（使用默认值）" };
+  }
+
+  const now = new Date().toISOString();
+  return {
+    riskLevel: report.riskLevel || "low",
+    flaggedIssues: report.issues || [],
+    reviewReport: report.summary || "无审核摘要",
+    currentStep: "reviewed",
+    logs: [
+      `[${now}] 自动审核完成`,
+      `[${now}] 风险等级: ${report.riskLevel || "low"}`,
+      ...(report.issues?.length
+        ? [`[${now}] 发现问题: ${report.issues.join("; ")}`]
+        : [`[${now}] 未发现问题`]),
+    ],
+  };
+}
+
+// ==========================================
+// 4. 路由函数：根据风险等级决定是否需要人工审批
+// ==========================================
+function routeAfterReview(state: typeof ApprovalState.State): string {
+  // high 风险：直接进入人工审批
+  // medium 风险：进入人工审批
+  // low 风险：自动通过
+  if (state.riskLevel === "high" || state.riskLevel === "medium") {
+    return "human_approval";
+  }
+  return "auto_publish";
+}
+
+// ==========================================
+// 5. 节点：人工审批（含 interrupt）
+// ==========================================
+async function humanApproval(state: typeof ApprovalState.State) {
+  const now = new Date().toISOString();
+
+  // 使用 interrupt 暂停工作流，等待人工输入
+  const approval = await interrupt({
+    type: "document_approval",
+    docTitle: state.docTitle,
+    riskLevel: state.riskLevel,
+    issues: state.flaggedIssues,
+    reviewReport: state.reviewReport,
+    // 给审批者提供的选项
+    options: [
+      { value: "approved", label: "✅ 批准发布", description: "文档通过审核，允许发布" },
+      { value: "revision", label: "✏️ 退回修改", description: "文档需要修改后重新提交" },
+      { value: "rejected", label: "❌ 拒绝发布", description: "文档不符合要求，拒绝发布" },
+    ],
+    question: `请审批文档「${state.docTitle}」的发布请求：`,
+  });
+
+  // 当工作流恢复时，approval 包含审批者的选择
+  const decision = typeof approval === "string" ? approval : (approval as any)?.value || "revision";
+
+  return {
+    approvalStatus: decision,
+    currentStep: `human_${decision}`,
+    logs: [`[${now}] 人工审批结果: ${decision}`],
+  };
+}
+
+// ==========================================
+// 6. 路由函数：根据审批结果决定下一步
+// ==========================================
+function routeAfterApproval(state: typeof ApprovalState.State): string {
+  switch (state.approvalStatus) {
+    case "approved": return "auto_publish";
+    case "revision": return "revision_feedback";
+    case "rejected": return "rejection_notice";
+    default:         return "rejection_notice";
+  }
+}
+
+// ==========================================
+// 7. 节点：自动发布
+// ==========================================
+async function autoPublish(state: typeof ApprovalState.State) {
+  const now = new Date().toISOString();
+  const publishId = `pub-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  return {
+    approvalStatus: "approved",
+    publishedAt: now,
+    publishUrl: `https://docs.example.com/published/${publishId}`,
+    currentStep: "published",
+    logs: [
+      `[${now}] ✅ 文档已自动发布`,
+      `[${now}] 📎 发布链接: https://docs.example.com/published/${publishId}`,
+    ],
+  };
+}
+
+// ==========================================
+// 8. 节点：退回修改通知
+// ==========================================
+async function revisionFeedback(state: typeof ApprovalState.State) {
+  const now = new Date().toISOString();
+  return {
+    currentStep: "revision_requested",
+    logs: [
+      `[${now}] ✏️ 文档已退回修改`,
+      `[${now}] 📝 请参考审核意见修改后重新提交`,
+      `[${now}] 审核意见: ${state.reviewReport}`,
+    ],
+  };
+}
+
+// ==========================================
+// 9. 节点：拒绝通知
+// ==========================================
+async function rejectionNotice(state: typeof ApprovalState.State) {
+  const now = new Date().toISOString();
+  return {
+    currentStep: "rejected",
+    logs: [
+      `[${now}] ❌ 文档发布请求已被拒绝`,
+      `[${now}] 原因: ${state.reviewReport}`,
+    ],
+  };
+}
+
+// ==========================================
+// 10. 组装工作流
+// ==========================================
+const approvalWorkflow = new StateGraph(ApprovalState)
+  .addNode("submit", submitDocument)
+  .addNode("auto_review", autoReview)
+  .addNode("human_approval", humanApproval)
+  .addNode("auto_publish", autoPublish)
+  .addNode("revision_feedback", revisionFeedback)
+  .addNode("rejection_notice", rejectionNotice)
+
+  .addEdge(START, "submit")
+  .addEdge("submit", "auto_review")
+
+  // 条件边：审核后根据风险等级路由
+  .addConditionalEdges("auto_review", routeAfterReview)
+
+  // 低风险：直接发布
+  .addEdge("auto_publish", END)
+
+  // 中高风险：进入人工审批
+  .addConditionalEdges("human_approval", routeAfterApproval)
+
+  .addEdge("revision_feedback", END)
+  .addEdge("rejection_notice", END);
+
+// ==========================================
+// 11. 带 Checkpointer 编译
+// ==========================================
+const checkpointer = new MemorySaver();
+const approvalApp = approvalWorkflow.compile({ checkpointer });
+
+// ==========================================
+// 12. 模拟执行
+// ==========================================
+async function runApprovalFlow() {
+  const threadId = `approval-${Date.now()}`;
+
+  // --- 第一阶段：提交文档并自动审核 ---
+  console.log("=".repeat(60));
+  console.log("📋 第一阶段：提交文档并自动审核");
+  console.log("=".repeat(60));
+
+  const step1Result = await approvalApp.invoke(
+    {
+      docTitle: "2024年Q3技术架构升级方案",
+      docContent: `
+一、背景
+当前系统架构在面对日均百万级请求时出现性能瓶颈，
+需要进行架构升级以支持业务增长。
+
+二、方案概述
+1. 引入微服务架构，将单体应用拆分为 6 个独立服务
+2. 使用 Redis 集群缓存热点数据
+3. 采用消息队列实现异步解耦
+4. 数据库从单库升级为读写分离集群
+
+三、技术选型
+- 服务框架：NestJS + gRPC
+- 消息队列：Apache Kafka
+- 缓存：Redis Cluster
+- 数据库：PostgreSQL 15 + PgBouncer
+
+四、风险说明
+本次升级涉及核心系统改造，预计需要 2 次全量回滚演练。
+`,
+      author: "张工（架构组）",
+    },
+    { configurable: { thread_id: threadId } }
+  );
+
+  console.log(`风险等级: ${step1Result.riskLevel}`);
+  console.log(`审核报告: ${step1Result.reviewReport}`);
+  if (step1Result.flaggedIssues?.length) {
+    console.log(`发现问题: ${step1Result.flaggedIssues.join(", ")}`);
+  }
+  console.log(`当前步骤: ${step1Result.currentStep}`);
+
+  // --- 第二阶段：如果进入人工审批，模拟审批通过 ---
+  if (step1Result.currentStep === "human_approved" ||
+      step1Result.currentStep?.startsWith("human_")) {
+    console.log("\n" + "=".repeat(60));
+    console.log("👤 第二阶段：人工审批（模拟审批通过）");
+    console.log("=".repeat(60));
+
+    // 恢复执行，传入审批结果
+    const step2Result = await approvalApp.invoke(
+      null,  // 不传新输入
+      {
+        configurable: { thread_id: threadId },
+        // 通过 interrupt 传入审批决策
+        interrupt: "approved",
+      }
+    );
+
+    console.log(`审批状态: ${step2Result.approvalStatus}`);
+    console.log(`发布链接: ${step2Result.publishUrl || "未发布"}`);
+    console.log(`最终步骤: ${step2Result.currentStep}`);
+  }
+
+  // 查看完整日志
+  console.log("\n" + "=".repeat(60));
+  console.log("📝 完整执行日志");
+  console.log("=".repeat(60));
+  step1Result.logs?.forEach((log: string) => console.log(`  ${log}`));
+}
+
+runApprovalFlow().catch(console.error);</code></pre>
+        </div>
+      </details>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ interrupt 使用注意事项</div>
+        <ul>
+          <li>必须配合 <strong>Checkpointer</strong> 使用——没有 Checkpointer，interrupt 无法保存状态</li>
+          <li>调用 <code>invoke(null)</code> 可以从上次中断处恢复执行，前提是传入相同的 <code>thread_id</code></li>
+          <li>恢复时可以通过 <code>interrupt</code> 配置参数传递外部输入（如审批结果）</li>
+          <li>中断期间，可以通过 <code>app.getState()</code> 查看当前暂停的状态</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. StateGraph 中的 Reducer（归约器）的作用是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>Reducer 定义了当图中<strong>多个节点向同一个状态字段写入时如何合并值</strong>。默认行为是"覆盖"（新值替换旧值）。通过自定义 reducer，可以实现"追加"（如消息列表的 <code>concat</code>）、"累加"（如计数器求和）等累积行为。如果没有正确配置 reducer，在循环或并行节点中可能会丢失数据。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. addConditionalEdges 和普通 addEdge 有什么区别？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><strong>普通边（addEdge）</strong>定义固定的执行顺序——节点 A 执行完后一定会去节点 B。<strong>条件边（addConditionalEdges）</strong>则根据当前状态的动态值决定下一个节点——你需要提供一个路由函数，接收 State 并返回目标节点名称（或 END）。条件边是实现分支逻辑（if/else、switch-case）的关键工具。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. Human-in-the-loop 中的 interrupt 机制如何工作？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>interrupt()</code> 函数会在当前节点暂停图执行，保存当前状态到 Checkpointer，并向外部返回一个消息对象（包含问题、选项等）。外部系统（如 UI 界面）可以展示这些信息给人工操作者。当操作者做出决策后，调用 <code>app.invoke(null, { configurable: { thread_id } })</code> 恢复执行，interrupt 会返回操作者的输入。整个过程需要 Checkpointer 配合以持久化暂停状态。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. createReactAgent 与自定义 Node 的区别是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>createReactAgent</code> 是一个<strong>预构建的 Agent 节点</strong>，它内部封装了完整的 ReAct 循环（思考→调用工具→观察结果→继续思考→最终回答）。而自定义 Node 只是一个简单的函数，接收状态返回更新。createReactAgent 适合需要工具调用和自主推理的场景；自定义 Node 适合纯粹的确定性计算步骤（如数据清洗、格式转换）。在实际应用中，两者经常组合使用：自定义 Node 做预处理/后处理，createReactAgent 做核心的 LLM 交互。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">5. 子图（Subgraph）解决了什么问题？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>子图解决了<strong>工作流复杂化后的模块化问题</strong>。当一张图包含 20+ 个节点时，管理和维护变得困难。子图允许你将一组相关的节点封装为一个独立的图，然后在父图中像使用普通节点一样引用它。好处包括：（1）关注点分离，每个子图职责单一；（2）子图可以独立测试和复用；（3）降低父图的理解和维护成本。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：忘记安装 @langchain/langgraph 包</div>
+        <p><strong>症状：</strong>导入 <code>StateGraph</code>、<code>Annotation</code> 时报 <code>Cannot find module '@langchain/langgraph'</code>。</p>
+        <p><strong>原因：</strong>LangGraph 是一个独立的包，需要单独安装，它不在 <code>langchain</code> 或 <code>@langchain/core</code> 中。</p>
+        <p><strong>解决：</strong>运行 <code>npm install @langchain/langgraph</code>。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：条件边路由函数返回了不存在的节点名</div>
+        <p><strong>症状：</strong>执行时抛出类似 <code>Node 'xyz' not found in graph</code> 的错误。</p>
+        <p><strong>原因：</strong>路由函数返回的字符串没有匹配到任何已注册的节点名称，包括可能拼写错误或忘记 <code>addNode</code>。</p>
+        <p><strong>解决：</strong>确保路由函数返回的所有可能值都在图中通过 <code>addNode</code> 注册了。常见做法是将路由函数定义为返回联合类型：<code>function router(state: State): "node_a" | "node_b" | typeof END</code>。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：interrupt 使用但没有配置 Checkpointer</div>
+        <p><strong>症状：</strong>调用 <code>interrupt()</code> 时抛出 <code>Interrupt requires a checkpointer to be configured</code> 错误。</p>
+        <p><strong>原因：</strong><code>interrupt</code> 机制依赖 Checkpointer 来保存暂停时的状态，没有 Checkpointer 无法工作。</p>
+        <p><strong>解决：</strong>编译图时传入 Checkpointer 实例：<code>workflow.compile({ checkpointer: new MemorySaver() })</code>。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：状态字段的 Reducer 冲突</div>
+        <p><strong>症状：</strong>图中某些节点的状态更新"丢失"了，或者出现了意料之外的值。</p>
+        <p><strong>原因：</strong>默认的 reducer 是"覆盖"行为。如果多个节点向同一个字段写入，后面的会覆盖前面的。例如在循环中，如果你希望累积消息列表但没有配置 <code>concat</code> reducer，每次循环都会清空之前的消息。</p>
+        <p><strong>解决：</strong>根据预期行为显式配置 reducer：累积用 <code>(left, right) => left.concat(right)</code>，求和用 <code>(left, right) => left + right</code>，保留最新值用默认覆盖。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 17 章！</h2>
+        <p>在本章中，你深入学习了 LangGraph —— LangChain 的图编排框架。这是构建复杂 AI 工作流的基础设施。以下是本章的核心要点：</p>
+        <ul>
+          <li><strong>StateGraph</strong> — 以状态驱动的图结构工作流，状态贯穿整个执行过程</li>
+          <li><strong>Node & Edge</strong> — 节点是计算单元，边定义了执行顺序和数据流向</li>
+          <li><strong>条件边（Conditional Edges）</strong> — 根据状态动态选择执行路径，实现分支逻辑</li>
+          <li><strong>START / END</strong> — 图的入口和出口常量，连接图的边界</li>
+          <li><strong>createReactAgent</strong> — 预置的 ReAct Agent 节点，可嵌入自定义图中</li>
+          <li><strong>Human-in-the-loop</strong> — 通过 interrupt 机制实现人工审批和决策介入</li>
+          <li><strong>Checkpointer 持久化</strong> — 保存每一步的状态快照，支持恢复和回溯</li>
+          <li><strong>Subgraph 子图</strong> — 将复杂流程模块化封装，降低维护成本</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 18 章：Callbacks 与追踪</h3>
+        <p>在下一章中，我们将转向 LangChain 的可观察性层——Callbacks 和追踪系统。你将学习：</p>
+        <ul>
+          <li>Callback 机制的原理和生命周期</li>
+          <li>如何使用 <code>CallbackManager</code> 监听 Agent 执行的各个阶段</li>
+          <li>实现自定义 Callback Handler 记录日志、监控指标</li>
+          <li>使用 LangSmith 进行全链路追踪和调试</li>
+          <li>在生产环境中监控 Agent 的运行状态和性能</li>
+        </ul>
+        <a href="18-callbacks.html" class="btn btn-primary">继续学习第 18 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="09-memory.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 17 章 / 共 19 章</span>
+        <a href="18-callbacks.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

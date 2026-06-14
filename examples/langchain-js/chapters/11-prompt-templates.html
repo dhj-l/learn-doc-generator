@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第11章 Prompt Templates - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch11">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html" class="active"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="10-capstone.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 11 章 / 共 19 章</span>
+        <a href="12-lcel.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>📝 Prompt Templates — 提示模板系统</h1>
+      <p class="subtitle">掌握模板化提示工程，让 Agent 的行为更加可控和可复用</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 PromptTemplate 和 ChatPromptTemplate 的核心概念和区别</li>
+          <li>掌握 MessagesPlaceholder 动态消息槽的用法</li>
+          <li>使用 FewShotChatMessagePromptTemplate 实现少样本学习提示</li>
+          <li>构建可复用的翻译模板系统和 Agent systemPrompt 模板化管理</li>
+          <li>理解模板组合、部分变量等进阶技术</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="04-messages.html">第 4 章：消息 Messages</a> 的学习，
+        理解 SystemMessage、HumanMessage、AIMessage 的基本概念和用法。
+        同时建议先了解 <a href="02-agent-basics.html">第 2 章</a> 中 systemPrompt 的工作原理。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：为什么要使用提示模板？</h3>
+
+      <p>
+        想象你是一个餐厅主厨。如果一个客人来点餐，你每次都从切菜开始做，这没问题。
+        但如果每天有上百个客人点同样的菜呢？你就会提前准备好半成品——切好的菜、调好的酱汁，
+        客人下单时快速组装即可。
+      </p>
+
+      <p>
+        <strong>Prompt Templates（提示模板）</strong>就是 LLM 应用开发中的"半成品"。
+        它让你把那些反复使用的提示结构固定下来，只是在需要时填充不同的变量内容。
+        比如一个翻译助手，它的核心提示结构是固定的——"把以下内容从 X 语言翻译成 Y 语言"，
+        变化的只是源语言、目标语言和待翻译的文本。
+      </p>
+
+      <div class="callout info">
+        <div class="callout-title">💡 为什么这样做？</div>
+        <p>不使用模板时，你可能会在代码中拼接字符串来构造提示，比如用模板字符串 <code>`翻译成${targetLang}: ${text}`</code>。
+        这种做法的问题在于：随着应用复杂度提升，提示会变得越来越长、越来越难以维护。
+        模板将提示的结构和内容分离，让代码更清晰、提示更一致、修改更方便。</p>
+      </div>
+
+      <h3>概念二：PromptTemplate — 基础文本模板</h3>
+
+      <p>
+        <code>PromptTemplate</code> 是最基础的模板形式。它就是一个带变量的字符串模板，
+        使用 <code>{variableName}</code> 语法来声明变量占位。当你调用 <code>format()</code> 或 <code>invoke()</code> 方法时，
+        传入实际值即可生成最终的提示字符串。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { PromptTemplate } from "@langchain/core/prompts";
+
+// 定义一个翻译模板
+const translateTemplate = PromptTemplate.fromTemplate(
+  "请将以下{sourceLang}文本翻译成{targetLang}：\n{text}"
+);
+
+// 填充变量，生成最终的提示
+const formattedPrompt = await translateTemplate.format({
+  sourceLang: "英文",
+  targetLang: "中文",
+  text: "Hello, world!"
+});
+
+console.log(formattedPrompt);
+// 输出：
+// 请将以下英文文本翻译成中文：
+// Hello, world!
+
+// 或者使用 invoke 方法（返回一个字符串）
+const result = await translateTemplate.invoke({
+  sourceLang: "中文",
+  targetLang: "英文",
+  text: "人工智能正在改变世界。"
+});
+
+console.log(result);
+// StringPromptValue 对象，可以用 .text 获取字符串</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">输出</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-text">请将以下英文文本翻译成中文：
+Hello, world!</code></pre>
+      </div>
+
+      <h3>概念三：ChatPromptTemplate — 对话式模板</h3>
+
+      <p>
+        在实际的 Agent 应用中，我们更多使用的是 <code>ChatPromptTemplate</code>。
+        与只输出纯文本的 <code>PromptTemplate</code> 不同，<code>ChatPromptTemplate</code>
+        生成的是<strong>消息数组</strong>——也就是一组 SystemMessage、HumanMessage、AIMessage 的集合。
+        它更符合 LLM 对话接口的需要。
+      </p>
+
+      <p>
+        它的创建方式非常直观：使用 <code>ChatPromptTemplate.fromMessages()</code> 方法，
+        传入一个消息模板数组。每个消息模板可以是系统消息、人类消息、AI 消息，或者
+        <code>MessagesPlaceholder</code> 这样的占位符。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import {
+  ChatPromptTemplate,
+  SystemMessagePromptTemplate,
+  HumanMessagePromptTemplate,
+} from "@langchain/core/prompts";
+
+// 创建一个对话提示模板
+const chatTemplate = ChatPromptTemplate.fromMessages([
+  // 系统消息：定义助手角色
+  ["system", "你是一个{role}专家。请用专业但易懂的方式回答用户问题。"],
+  // 人类消息：用户提问
+  ["human", "请解释{concept}的概念及其在日常生活中的应用。"],
+]);
+
+// 填充变量
+const formattedMessages = await chatTemplate.formatMessages({
+  role: "人工智能",
+  concept: "机器学习",
+});
+
+console.log(formattedMessages);
+// [
+//   SystemMessage { content: "你是一个人工智能专家。请用专业但易懂的方式回答用户问题。" },
+//   HumanMessage { content: "请解释机器学习的概念及其在日常生活中的应用。" }
+// ]
+
+// 这些消息可以直接传给 model.invoke() 或 agent.invoke()
+// const response = await model.invoke(formattedMessages);</code></pre>
+      </div>
+
+      <h3>概念四：MessagesPlaceholder — 动态消息槽</h3>
+
+      <p>
+        <code>MessagesPlaceholder</code> 就像一个"消息插座"——它在模板中预留一个位置，
+        运行时可插入任意数量的消息。这在 Agent 场景中极其有用：你可以在 system prompt 中预留
+        一个 <code>{chat_history}</code> 槽位，然后在每次对话时把历史消息动态填入。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from "@langchain/core/prompts";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
+
+// 创建一个带历史消息槽的模板
+const chatWithHistoryTemplate = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个有帮助的客服助手。请用中文回答用户问题。"],
+  // 历史消息占位符：variableName 是 "chat_history"
+  new MessagesPlaceholder("chat_history"),
+  // 最新用户消息
+  ["human", "{user_question}"],
+]);
+
+// 模拟历史消息
+const historyMessages = [
+  new HumanMessage("我昨天买了一个耳机，但是发现音质有问题。"),
+  new AIMessage("很抱歉听到这个情况。请问您的订单号是什么？我可以帮您查询。"),
+];
+
+// 填充模板
+const promptWithHistory = await chatWithHistoryTemplate.formatMessages({
+  chat_history: historyMessages,
+  user_question: "订单号是 ORD-12345，我应该怎么处理？",
+});
+
+// 现在 promptWithHistory 包含了系统消息、历史对话和最新问题
+// 直接传给模型后，模型就能理解对话的上下文</code></pre>
+      </div>
+
+      <h3>概念五：FewShotChatMessagePromptTemplate — 少样本学习</h3>
+
+      <p>
+        有时我们需要给模型展示几个"输入→输出"的例子，来说明我们希望它如何回答问题。
+        这就是少样本学习（Few-Shot Learning）。<code>FewShotChatMessagePromptTemplate</code>
+        让你可以结构化地组织这些示例。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import {
+  ChatPromptTemplate,
+  FewShotChatMessagePromptTemplate,
+} from "@langchain/core/prompts";
+
+// 定义少样本示例
+const examples = [
+  {
+    input: "什么是量子计算？",
+    output: "🔬 量子计算是利用量子力学原理进行信息处理的技术。\n**核心特点：**\n- 使用量子比特而非经典比特\n- 可以同时处于多个状态的叠加态\n- 在特定问题上比经典计算机快指数级",
+  },
+  {
+    input: "什么是区块链？",
+    output: "⛓️ 区块链是一种分布式账本技术。\n**核心特点：**\n- 数据以区块形式链接存储\n- 去中心化，无需信任中心机构\n- 一旦记录不可篡改",
+  },
+];
+
+// 创建少样本提示模板
+const fewShotTemplate = new FewShotChatMessagePromptTemplate({
+  examplePrompt: ChatPromptTemplate.fromMessages([
+    ["human", "{input}"],
+    ["ai", "{output}"],
+  ]),
+  examples,
+  inputVariables: ["input"],
+});
+
+// 创建最终的聊天模板
+const finalTemplate = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个技术解释专家。请用清晰的结构化方式解释技术概念。"],
+  fewShotTemplate,  // 嵌入少样本示例
+  ["human", "{input}"],
+]);
+
+// 测试
+const result = await finalTemplate.formatMessages({
+  input: "什么是机器学习？",
+});
+
+// 模型会按照示例中的格式来回答，因为它看到了两个"输入→输出"的例子</code></pre>
+      </div>
+
+      <h3>概念六：模板组合与 partial() 方法</h3>
+
+      <p>
+        当你的模板越来越复杂时，你可能需要将多个模板组合在一起使用。
+        <code>partial()</code> 方法允许你<strong>预填充</strong>模板中的部分变量，
+        创建一个"部分求值"的新模板。这在系统提示中有不变的部分（如角色定义）和可变的部分（如具体指令）时非常有用。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatPromptTemplate } from "@langchain/core/prompts";
+
+// 创建一个系统提示模板，其中 role 是不变的
+const baseSystemTemplate = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个{role}。请使用{language}回答。"],
+  ["human", "{user_input}"],
+]);
+
+// 创建一个专门的中文技术助手模板（预填充 role 和 language）
+const chineseTechTemplate = await baseSystemTemplate.partial({
+  role: "资深技术专家",
+  language: "中文",
+});
+
+// 使用时只需传入 user_input
+const messages = await chineseTechTemplate.formatMessages({
+  user_input: "什么是微服务架构？",
+});
+
+// 相当于传入了：
+// system: "你是一个资深技术专家。请使用中文回答。"
+// human: "什么是微服务架构？"</code></pre>
+      </div>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：可复用的翻译模板系统</h3>
+
+      <p><strong>场景描述：</strong>你需要构建一个多语言翻译服务，支持多种语言对之间的翻译，
+      并且要保留原文的格式（如列表、代码块、Markdown 标记）。</p>
+
+      <p><strong>你的任务：</strong>使用 PromptTemplate 和 ChatPromptTemplate 构建一个灵活的翻译模板系统。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
+
+// ==========================================
+// 1. 构建翻译模板
+// ==========================================
+const translationTemplate = ChatPromptTemplate.fromMessages([
+  ["system", `你是一个专业翻译。请遵循以下规则：
+
+1. 将{sourceLang}翻译成{targetLang}
+2. 保留原文的格式（列表、代码块、Markdown 等）
+3. 如果遇到专有名词（人名、品牌名），保留原文并在括号中加注中文
+4. 对于技术术语，使用业界通用的中文翻译
+5. 如果原文是代码，保持代码不变，只翻译注释`],
+  ["human", "请翻译以下内容：\n\n{text}"],
+]);
+
+// ==========================================
+// 2. 创建可复用的翻译函数
+// ==========================================
+async function translate(
+  text: string,
+  sourceLang: string,
+  targetLang: string
+): Promise<string> {
+  const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0.1 });
+
+  // 填充模板
+  const messages = await translationTemplate.formatMessages({
+    sourceLang,
+    targetLang,
+    text,
+  });
+
+  // 调用模型
+  const response = await model.invoke(messages);
+  return response.content as string;
+}
+
+// ==========================================
+// 3. 使用示例
+// ==========================================
+async function main() {
+  const markdownText = `
+# Getting Started with TypeScript
+
+TypeScript is a **strongly typed** programming language that builds on JavaScript.
+
+## Installation
+
+\`\`\`bash
+npm install -g typescript
+\`\`\`
+
+## Key Features
+
+- Static type checking
+- Interface and generics
+  `;
+
+  const chinese = await translate(markdownText, "英文", "中文");
+  console.log(chinese);
+}
+
+main();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text"># TypeScript 入门指南
+
+TypeScript 是一种**强类型**的编程语言，它构建在 JavaScript 基础之上。
+
+## 安装
+
+\`\`\`bash
+npm install -g typescript
+\`\`\`
+
+## 主要特性
+
+- 静态类型检查
+- 接口（Interface）和泛型（Generics）</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：Agent systemPrompt 模板化管理</h3>
+
+      <p><strong>场景描述：</strong>你正在构建一个客服系统，需要为不同渠道（网页聊天、邮件、电话）的 Agent 使用不同的系统提示，
+      但它们共享一部分核心指令（如安全规则、处理流程）。</p>
+
+      <p><strong>你的任务：</strong>使用模板组合 + partial() 方法，创建一个可复用的 Agent 提示管理系统。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { createAgent, tool } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
+
+// ==========================================
+// 1. 核心安全规则（所有渠道共享）
+// ==========================================
+const coreRules = `核心安全规则：
+1. 绝对不要泄露用户的个人信息（姓名、电话、地址等）
+2. 绝对不要编造信息或政策
+3. 如果不确定，请诚实告知用户需要进一步核实
+4. 保持礼貌和专业，使用中文回答`;
+
+// ==========================================
+// 2. 渠道特定的提示模板
+// ==========================================
+const channelTemplates = {
+  webchat: ChatPromptTemplate.fromMessages([
+    ["system", `你是{company}的网页在线客服助手。
+
+${coreRules}
+
+渠道特点：
+- 用户通过网页聊天窗口与你交流
+- 可以发送链接和图片
+- 响应速度要求：30 秒内
+- 语气：亲切友好，使用表情符号适当`],
+    ["human", "{user_input}"],
+  ]),
+
+  email: ChatPromptTemplate.fromMessages([
+    ["system", `你是{company}的邮件客服助手。
+
+${coreRules}
+
+渠道特点：
+- 通过邮件与用户沟通
+- 回复需要正式、结构完整
+- 包含：问候语、问题分析、解决方案、礼貌结尾
+- 响应时间：24 小时内
+- 语气：正式专业`],
+    ["human", "用户邮件内容：\n{user_input}"],
+  ]),
+
+  phone: ChatPromptTemplate.fromMessages([
+    ["system", `你是{company}的电话客服助手。
+
+${coreRules}
+
+渠道特点：
+- 通话中实时回答
+- 回答要简短、口语化
+- 不要使用列表和 Markdown 格式
+- 在转接人工前先说"让我帮您查看一下"
+- 语气：热情亲切`],
+    ["human", "用户问题：{user_input}"],
+  ]),
+};
+
+// ==========================================
+// 3. 创建渠道特定的 Agent 工厂函数
+// ==========================================
+async function createChannelAgent(company: string, channel: "webchat" | "email" | "phone") {
+  const template = channelTemplates[channel];
+  const systemPrompt = await template.format({ company, user_input: "" });
+
+  // 定义通用的客服工具
+  const searchFaq = tool(
+    async ({ query }) => `FAQ 搜索结果：关于"${query}"的相关问题请查看帮助中心。`,
+    {
+      name: "search_faq",
+      description: "搜索常见问题知识库",
+      schema: z.object({ query: z.string() }),
+    }
+  );
+
+  return createAgent({
+    model: new ChatOpenAI({ model: "gpt-4o-mini" }),
+    tools: [searchFaq],
+    systemPrompt: systemPrompt.replace("{user_input}", "").trim(),
+  });
+}
+
+// ==========================================
+// 4. 使用示例
+// ==========================================
+async function main() {
+  const webAgent = await createChannelAgent("智联科技", "webchat");
+
+  const response = await webAgent.invoke({
+    messages: [{ role: "user", content: "你们的产品保修期是多久？" }],
+  });
+
+  console.log(response.messages[response.messages.length - 1].content);
+}
+
+main();</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧</h2>
+
+      <h3>技巧一：模板管道（Pipeline）组合</h3>
+
+      <p>
+        你可以将多个模板串联起来，形成一个处理管线。比如先格式化用户输入，
+        再应用翻译模板，最后生成回答。LangChain 的 <code>RunnableSequence</code> 可以帮我们实现这一点。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { PromptTemplate } from "@langchain/core/prompts";
+import { RunnableSequence } from "@langchain/core/runnables";
+
+// 步骤 1：格式化模板
+const formattingTemplate = PromptTemplate.fromTemplate(
+  "请以专业但友好的语气重新组织以下用户输入，去除不必要的信息：\n{raw_input}"
+);
+
+// 步骤 2：完整的处理管线
+const pipeline = RunnableSequence.from([
+  formattingTemplate,
+  // 可以继续串联模型调用等（后续 LCEL 章节会详细讲解）
+]);
+
+const result = await pipeline.invoke({
+  raw_input: "呃...我想问一下那个...就是...你们的API价格...",
+});
+
+console.log(result);</code></pre>
+      </div>
+
+      <h3>技巧二：根据上下文动态选择模板</h3>
+
+      <p>
+        在实际应用中，你可能需要根据用户的意图、情绪或历史行为动态选择不同的提示模板。
+        这可以通过一个简单的路由函数来实现。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 根据意图选择模板
+function selectTemplate(intent: string) {
+  const templates = {
+    complaint: ChatPromptTemplate.fromMessages([
+      ["system", "你是一个投诉处理专家。先共情、再分析、最后给出解决方案。态度要诚恳。"],
+      ["human", "{user_input}"],
+    ]),
+    inquiry: ChatPromptTemplate.fromMessages([
+      ["system", "你是一个信息查询助手。回答要准确、简洁，提供信息来源。"],
+      ["human", "{user_input}"],
+    ]),
+    technical: ChatPromptTemplate.fromMessages([
+      ["system", "你是一个技术支持专家。请以"问题分析→排查步骤→解决方案"的结构化方式回答。"],
+      ["human", "{user_input}"],
+    ]),
+  };
+
+  return templates[intent] || templates.inquiry;
+}
+
+// 使用方式
+const intent = detectIntent(userInput); // 假设有一个意图检测函数
+const template = selectTemplate(intent);
+const messages = await template.formatMessages({ user_input: userInput });</code></pre>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. PromptTemplate 和 ChatPromptTemplate 的主要区别是什么？分别在什么场景下使用？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>PromptTemplate</code> 生成的是纯文本字符串，适合用于简单的文本格式化场景，如构造单条提示。而 <code>ChatPromptTemplate</code> 生成的是消息数组（SystemMessage、HumanMessage 等），更适合与 LLM 的聊天接口配合使用。在 Agent 和对话式应用中，<code>ChatPromptTemplate</code> 是更常用的选择。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. MessagesPlaceholder 解决了什么实际问题？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>它解决了"在提示模板中预留动态消息插入位置"的问题。在对话场景中，历史消息的数量是不确定的——可能 2 条，也可能 20 条。使用 <code>MessagesPlaceholder("chat_history")</code> 可以在模板中预留一个槽位，运行时可插入任意数量的历史消息，而不需要硬编码消息数量。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. partial() 方法的作用是什么？它和直接传参有什么不同？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>partial()</code> 用于预填充模板中的部分变量，返回一个新的"部分求值"模板。与每次调用都传所有参数不同，partial 允许你将模板中不变的部分预先绑定，之后只需传入变化的变量。这在创建模板"工厂"时非常有用——比如预设好语言、角色等固定信息，生成专门用途的子模板。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. FewShotChatMessagePromptTemplate 最适合什么场景？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>最适合需要模型按照特定格式或风格输出，但又不能用简单的指令精确描述的场景。比如：让模型按照固定的 Q&A 格式回答、生成特定风格的产品描述、或者执行需要上下文理解的结构化任务。通过展示 2-3 个精心设计的示例，模型就能很好地"学会"你期望的输出格式。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：未安装 @langchain/core 提示模板包</div>
+        <p><strong>症状：</strong>导入 PromptTemplate 时报 <code>Cannot find module '@langchain/core/prompts'</code>。</p>
+        <p><strong>原因：</strong><code>PromptTemplate</code>、<code>ChatPromptTemplate</code> 等模板类位于 <code>@langchain/core</code> 包中，而不是 <code>langchain</code> 主包。</p>
+        <p><strong>解决：</strong>运行 <code>npm install @langchain/core</code> 安装核心包。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：formatMessages 与 format 混用</div>
+        <p><strong>症状：</strong>调用 <code>format()</code> 后返回的是字符串而不是消息数组，导致传给模型时报错。</p>
+        <p><strong>原因：</strong><code>ChatPromptTemplate</code> 有两个方法：<code>format()</code> 返回纯字符串（仅适用于某些场景），<code>formatMessages()</code> 返回消息数组。用错了方法类型就不匹配。</p>
+        <p><strong>解决：</strong>如果要将结果传给 <code>model.invoke()</code>，使用 <code>formatMessages()</code>；如果只需要文本，用 <code>format()</code>。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：变量名拼写错误导致注入失败</div>
+        <p><strong>症状：</strong>调用 <code>format()</code> 或 <code>formatMessages()</code> 时提示缺少变量。</p>
+        <p><strong>原因：</strong>模板中声明的变量名与传入的对象属性名不一致。比如模板写的是 <code>{user_input}</code> 但传入了 <code>{userInput}</code>。</p>
+        <p><strong>解决：</strong>统一变量命名规范，建议在模板中使用下划线命名（<code>snake_case</code>），在代码中使用驼峰命名（<code>camelCase</code>），并在传参时做映射。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 11 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>PromptTemplate</strong> — 基础文本模板，使用 <code>{variable}</code> 占位符构造提示字符串</li>
+          <li><strong>ChatPromptTemplate</strong> — 对话模板，生成消息数组，是 Agent 开发中的主力模板类型</li>
+          <li><strong>MessagesPlaceholder</strong> — 动态消息槽，解决了历史消息动态插入的难题</li>
+          <li><strong>FewShotChatMessagePromptTemplate</strong> — 少样本学习模板，通过示例引导模型输出格式</li>
+          <li><strong>模板组合与 partial</strong> — 预填充不变变量，构建可复用的模板工厂</li>
+          <li><strong>实战应用</strong> — 翻译模板系统和渠道化 Agent 提示管理</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 12 章：LCEL 声明式链式组合</h3>
+        <p>在下一章中，我们将深入学习 LangChain Expression Language（LCEL），这是 LangChain 中最强大的特性之一。你将学习：</p>
+        <ul>
+          <li>如何使用管道运算符 <code>|</code> 将组件串联成处理管线</li>
+          <li>Runnable 接口的核心方法：invoke、batch、stream</li>
+          <li>RunnablePassthrough、RunnableLambda 等辅助组件的用法</li>
+          <li>如何用 LCEL 实现简单 Agent 循环</li>
+        </ul>
+        <a href="12-lcel.html" class="btn btn-primary">继续学习第 12 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="10-capstone.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 11 章 / 共 19 章</span>
+        <a href="12-lcel.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

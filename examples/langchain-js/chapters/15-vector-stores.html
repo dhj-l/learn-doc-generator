@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第15章 Vector Stores & Retrievers - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch15">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html" class="active"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="14-embeddings.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 15 章 / 共 19 章</span>
+        <a href="16-rag.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>🗄️ Vector Stores & Retrievers — 向量存储与智能检索</h1>
+      <p class="subtitle">将文本语义向量化存储，并通过相似度、MMR 等多种策略精准检索</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解向量存储（VectorStore）的核心接口：fromDocuments、addDocuments、similaritySearch</li>
+          <li>掌握 MemoryVectorStore（内存向量库）的完整用法</li>
+          <li>了解 Chroma、PineconeStore 等生产级向量数据库的基本接入方式</li>
+          <li>掌握 Retriever 接口及 asRetriever()、k 参数、scoreThreshold 的配置</li>
+          <li>理解 MultiQueryRetriever 和 MMR（最大边际相关性）检索的差异</li>
+          <li>学会使用元数据过滤（Metadata Filtering）来精确定位文档</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="14-embeddings.html">第 14 章：Embedding 向量化</a> 的学习，
+        理解文本嵌入（Embedding）的基本概念和 OpenAI Embeddings 的用法。
+        同时建议复习 <a href="13-document-loaders.html">第 13 章</a> 中 Document 对象的
+        结构（pageContent + metadata）以及文本分割的基本方法。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：VectorStore 接口——向量数据库的统一抽象</h3>
+
+      <p>
+        <strong>VectorStore（向量存储）</strong>是 LangChain 对各种向量数据库的抽象接口。
+        你可以把它想象成一个"超强语义搜索引擎"——传统搜索引擎靠关键词匹配，
+        而向量搜索引擎靠<strong>语义相似度</strong>匹配。当你搜索"人工智能的伦理问题"时，
+        即使文档中从未出现这几个字，但如果有文档讨论了"AI 的道德困境"，它也会被找到。
+      </p>
+
+      <p>
+        在 LangChain.js 中，所有向量存储都实现了 <code>VectorStore</code> 接口，
+        它定义了一组标准的操作方法：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>方法</th><th>用途</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>fromDocuments(docs, embeddings, config?)</code></td><td>从文档数组创建向量库并自动索引</td><td>最常用的初始化方式（类静态方法）</td></tr>
+          <tr><td><code>addDocuments(docs)</code></td><td>向已有向量库添加新文档</td><td>增量更新时使用</td></tr>
+          <tr><td><code>deleteDocuments(ids?)</code></td><td>删除指定 ID 的文档</td><td>部分向量库支持</td></tr>
+          <tr><td><code>similaritySearch(query, k, filter?)</code></td><td>按语义相似度检索最匹配的 k 个文档</td><td>核心查询方法</td></tr>
+          <tr><td><code>similaritySearchVector(queryVector, k, filter?)</code></td><td>直接用向量进行相似度检索</td><td>进阶用法，跳过文本嵌入步骤</td></tr>
+          <tr><td><code>asRetriever(k, filter?)</code></td><td>将向量库包装为 Retriever 接口</td><td>用于 LCEL 链式调用</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { Document } from "@langchain/core/documents";
+
+// ==========================================
+// 从文档列表创建内存向量存储
+// ==========================================
+const embeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-small",
+});
+
+const docs = [
+  new Document({
+    pageContent: "LangChain 是一个用于构建 LLM 应用的开源框架",
+    metadata: { topic: "langchain", language: "zh" },
+  }),
+  new Document({
+    pageContent: "向量数据库将文本语义转换为高维向量进行存储",
+    metadata: { topic: "vector-db", language: "zh" },
+  }),
+];
+
+const vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
+
+// ==========================================
+// 相似度搜索
+// ==========================================
+const results = await vectorStore.similaritySearch("什么是向量数据库", 2);
+
+console.log(results);
+// [
+//   Document { pageContent: "向量数据库将文本语义转换为高维向量进行存储", metadata: {...} },
+//   Document { pageContent: "LangChain 是一个用于构建 LLM 应用的开源框架", metadata: {...} }
+// ]</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 工作原理</div>
+        <p>当你调用 <code>fromDocuments()</code> 时，向量库内部会调用 Embeddings 模型将每篇文档的文本转为向量（embedding vector），
+        然后将这些向量连同原始文本和元数据一起存储。当查询时，<code>similaritySearch()</code> 会将查询文本也转为向量，
+        然后计算查询向量与所有存储向量的<strong>余弦相似度</strong>（cosine similarity），返回最匹配的 k 个结果。</p>
+      </div>
+
+      <h3>概念二：MemoryVectorStore — 轻量级内存向量库</h3>
+
+      <p>
+        <strong>MemoryVectorStore</strong> 是 LangChain.js 内置的内存级向量存储实现。
+        它在应用程序的内存中用数组保存所有向量，适合以下场景：
+      </p>
+
+      <ul>
+        <li><strong>学习和原型开发</strong>——不需要安装任何外部数据库</li>
+        <li><strong>小规模应用</strong>——文档总数量在几千以内</li>
+        <li><strong>测试和 CI 环境</strong>——无需额外的基础设施依赖</li>
+        <li><strong>无状态的 Serverless 函数</strong>——每次冷启动重新加载</li>
+      </ul>
+
+      <p>
+        当然，它也有局限性：<strong>所有数据存储在内存中</strong>，进程退出后数据丢失；
+        不适用于大规模生产环境；不支持持久化存储和分布式查询。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+
+const embeddings = new OpenAIEmbeddings();
+
+// ==========================================
+// 方式一：fromDocuments —— 创建即填充
+// ==========================================
+const store1 = await MemoryVectorStore.fromDocuments(
+  [
+    { pageContent: "Python 是一种动态类型的编程语言", metadata: { lang: "zh" } },
+    { pageContent: "TypeScript 是 JavaScript 的超集", metadata: { lang: "zh" } },
+  ],
+  embeddings
+);
+
+// ==========================================
+// 方式二：new + addDocuments —— 分步创建
+// ==========================================
+const store2 = new MemoryVectorStore(embeddings);
+await store2.addDocuments([
+  { pageContent: "Node.js 是一个 JavaScript 运行时环境", metadata: { lang: "zh" } },
+]);</code></pre>
+      </div>
+
+      <h3>概念三：生产级向量数据库——Chroma / PineconeStore</h3>
+
+      <p>
+        对于生产环境，你需要使用持久化的向量数据库。LangChain.js 支持多种主流方案：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>向量数据库</th><th>特点</th><th>适合场景</th><th>包名</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Chroma</strong></td><td>开源、轻量、支持本地/客户端模式</td><td>中小型项目，快速原型到生产的过渡</td><td><code>langchain/vectorstores/chroma</code></td></tr>
+          <tr><td><strong>Pinecone</strong></td><td>全托管的云原生向量数据库</td><td>大规模生产应用，不需要运维</td><td><code>@langchain/pinecone</code></td></tr>
+          <tr><td><strong>Weaviate</strong></td><td>开源、支持混合搜索（向量+关键词）</td><td>需要综合搜索能力的场景</td><td><code>langchain/vectorstores/weaviate</code></td></tr>
+          <tr><td><strong>Supabase (pgvector)</strong></td><td>基于 PostgreSQL 的向量扩展</td><td>已有 Postgres 基础设施的团队</td><td><code>@langchain/community</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// Chroma 接入示例
+// ==========================================
+import { Chroma } from "@langchain/community/vectorstores/chroma";
+import { OpenAIEmbeddings } from "@langchain/openai";
+
+const chromaStore = await Chroma.fromDocuments(docs, embeddings, {
+  collectionName: "my_collection",
+});
+
+// ==========================================
+// Pinecone 接入示例
+// ==========================================
+import { PineconeStore } from "@langchain/pinecone";
+import { Pinecone } from "@pinecone-database/pinecone";
+
+const pinecone = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY!,
+});
+const pineconeIndex = pinecone.Index("my-index");
+
+const pineconeStore = await PineconeStore.fromDocuments(docs, embeddings, {
+  pineconeIndex,
+});</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 注意</div>
+        <p>以上代码仅为演示各数据库的接入方式。实际使用 Chroma 前需要确保 Chroma 服务正在运行（或使用内存模式）；
+        使用 Pinecone 则需要提前在 Pinecone 控制台创建 Index 并获取 API Key。
+        本章后续示例均使用 <code>MemoryVectorStore</code> 以便于学习。</p>
+      </div>
+
+      <h3>概念四：Retriever 接口——标准化的检索抽象</h3>
+
+      <p>
+        <strong>Retriever（检索器）</strong>是 LangChain 中另一个核心抽象。如果说 VectorStore 关注的是
+        "如何存储和搜索向量"，那么 Retriever 关注的是"如何以统一的方式获取相关文档"。
+      </p>
+
+      <p>
+        Retriever 的核心优势在于它与 LCEL 管道的无缝集成——任何 Retriever 都可以直接用在
+        <code>|</code> 运算符中，成为 RAG 管线的数据源。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>方法/属性</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>invoke(query)</code></td><td>接收查询字符串，返回匹配的 Document 数组</td></tr>
+          <tr><td><code>getRelevantDocuments(query)</code></td><td>同上（早期方法，仍可用但推荐 invoke）</td></tr>
+          <tr><td><code>asRetriever(k?, filter?)</code></td><td>将 VectorStore 包装为 Retriever</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+
+const vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
+
+// ==========================================
+// 创建 Retriever
+// ==========================================
+
+// 基础检索器 —— 默认返回前 4 条
+const retriever = vectorStore.asRetriever();
+
+// 指定 k 值 —— 只返回最相关的 3 条
+const retrieverK3 = vectorStore.asRetriever({
+  k: 3,
+});
+
+// 带分数阈值的检索器 —— 只返回相似度 ≥ 0.8 的结果
+const retrieverThreshold = vectorStore.asRetriever({
+  k: 10,
+  searchType: "similarity",
+  searchKwargs: {
+    scoreThreshold: 0.8,  // 只返回余弦相似度 ≥ 0.8 的文档
+  },
+});
+
+// ==========================================
+// 使用 Retriever 检索
+// ==========================================
+const results = await retrieverK3.invoke("什么是语义搜索？");
+// 返回 Document[]，最多 3 条
+
+// 用于 LCEL 管道
+const chain = retrieverK3.pipe(someLambda);
+const result = await chain.invoke("我的查询");</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 scoreThreshold 的作用</div>
+        <p>当你设置 <code>scoreThreshold</code> 时，LangChain 会先按相似度检索最多 <code>k</code> 条结果，
+        然后<strong>过滤掉</strong>相似度低于阈值的文档。这在需要控制检索质量时非常有用——
+        比如当数据库中没有足够相关的文档时，与其返回低质量的匹配，不如返回空结果让 LLM 自行处理。</p>
+      </div>
+
+      <h3>概念五：MultiQueryRetriever — 多角度查询增强</h3>
+
+      <p>
+        <strong>MultiQueryRetriever</strong> 是一种高级检索策略。它的核心思想是：
+        <strong>用 LLM 从不同角度改写用户的原始查询，生成多个相关问法</strong>，
+        然后分别检索并合并结果。这样可以弥补用户单一问法可能遗漏的相关文档。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MultiQueryRetriever } from "langchain/retrievers/multi_query";
+import { ChatOpenAI } from "@langchain/openai";
+
+// 构建一个 MultiQueryRetriever
+const multiRetriever = MultiQueryRetriever.fromLLM({
+  llm: new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 }),
+  retriever: vectorStore.asRetriever({ k: 2 }),
+  verbose: true,  // 打印生成的多个查询
+});
+
+// 用户只问了一个问题
+const docs = await multiRetriever.invoke("苹果公司的总部在哪里？");
+
+// LLM 可能会自动生成多个变体查询：
+// 1. "苹果公司的总部在哪里？"
+// 2. "Apple Inc. 的总部地址是什么？"
+// 3. "库比蒂诺的苹果总部位置"
+// 4. "苹果公司的主办公地点在哪儿？"
+//
+// 每个查询分别检索，去重合并后返回</code></pre>
+      </div>
+
+      <p>
+        <strong>适用场景：</strong>当用户的查询可能含糊不清、或者同一个概念有多种表达方式时，
+        MultiQueryRetriever 可以显著提高召回率（Recall）。代价是增加了 LLM 调用次数和响应延迟。
+      </p>
+
+      <h3>概念六：MMR（最大边际相关性）检索</h3>
+
+      <p>
+        普通的相似度检索（<code>similaritySearch</code>）往往会返回非常相似的结果——
+        比如搜索"深度学习"，可能会得到三篇都是关于卷积神经网络的文档，而忽略了
+        关于循环神经网络或生成对抗网络的内容。这就是"信息冗余"问题。
+      </p>
+
+      <p>
+        <strong>MMR（Maximum Marginal Relevance，最大边际相关性）</strong>
+        检索在考虑与查询的相关性的同时，也考虑结果之间的<strong>多样性</strong>。
+        它通过一个平衡参数 <code>lambda</code>（也称为 <code>fetchK</code>）来控制：
+      </p>
+
+      <ul>
+        <li><strong>λ = 1</strong>：完全按相似度排序（退化为普通相似度搜索）</li>
+        <li><strong>λ = 0</strong>：完全按多样性排序（结果尽可能不相似）</li>
+        <li><strong>λ = 0.5</strong>：平衡相关性和多样性（常用值）</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// MMR 检索（通过 Retriever 配置）
+// ==========================================
+const mmrRetriever = vectorStore.asRetriever({
+  k: 4,                   // 最终返回 4 条结果
+  searchType: "mmr",      // 使用 MMR 检索
+  searchKwargs: {
+    fetchK: 20,           // 先取 20 条候选
+    lambda: 0.5,          // 相关性 vs 多样性的平衡参数
+  },
+});
+
+const mmrDocs = await mmrRetriever.invoke("机器学习框架比较");
+
+// ==========================================
+// MMR 检索（通过 VectorStore 直接调用）
+// ==========================================
+const mmrResults = await vectorStore.maxMarginalRelevanceSearch(
+  "机器学习框架比较",
+  {
+    k: 4,
+    fetchK: 20,
+    lambda: 0.5,
+  }
+);</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 MMR 的工作流程</div>
+        <p>MMR 分两步进行：
+          ① 首先用普通相似度搜索取 <code>fetchK</code> 个候选结果（比如 20 条）；
+          ② 然后从中挑选出 <code>k</code> 个（比如 4 条）最终结果，在每一步都选择"与查询相关且与已选结果最不相似"的文档。
+          这样保证了最终结果既相关又多样化。</p>
+      </div>
+
+      <h3>概念七：Metadata Filtering — 元数据过滤</h3>
+
+      <p>
+        在实际应用中，你的向量库中可能包含来自多个来源、多种类型、不同时间段的文档。
+        <strong>元数据过滤</strong>允许你在进行语义检索的同时，根据文档的元数据字段
+        缩小搜索范围，实现"先筛选，后检索"的效果。
+      </p>
+
+      <p>
+        不同向量数据库支持不同的过滤语法。在 <code>MemoryVectorStore</code> 中，
+        过滤通过简单的 JavaScript 对象实现（精确匹配）。对于 Chroma、Pinecone 等，
+        过滤语法会更复杂（支持比较运算、逻辑组合等）。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// MemoryVectorStore 的元数据过滤
+// ==========================================
+
+// 方式一：在 similaritySearch 时过滤
+const filteredResults = await vectorStore.similaritySearch(
+  "为什么天空是蓝色的？",
+  5,
+  { language: "zh", category: "science" }  // 只搜索中文科学类文档
+);
+
+// 方式二：在 asRetriever 时预设过滤
+const filteredRetriever = vectorStore.asRetriever({
+  k: 3,
+  filter: { author: "张三", year: 2024 },
+});
+
+// ==========================================
+// Chroma 的过滤语法（支持比较运算）
+// ==========================================
+import { Chroma } from "@langchain/community/vectorstores/chroma";
+
+const chromaFiltered = await chromaStore.similaritySearch(
+  "神经网络",
+  5,
+  { "year": { "$gte": 2023 } }  // 只返回 2023 年及以后的文档
+);
+
+// ==========================================
+// Pinecone 的过滤语法
+// ==========================================
+const pineconeFiltered = await pineconeStore.similaritySearch(
+  "transformer 架构",
+  5,
+  { "category": { "$eq": "deep-learning" } }  // 只返回深度学习类文档
+);</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ 过滤语法因库而异</div>
+        <p>不同向量数据库的过滤语法各不相同：MemoryVectorStore 支持简单的对象键值匹配；
+        Chroma 支持 <code>$eq</code>、<code>$ne</code>、<code>$gt</code>、<code>$gte</code>、<code>$lt</code>、<code>$lte</code>、<code>$in</code> 等运算符；
+        Pinecone 也有自己的一套过滤表达式。建议查阅各数据库的官方文档了解详细语法。</p>
+      </div>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：MemoryVectorStore 完整存储与检索流程</h3>
+
+      <p><strong>场景描述：</strong>你需要构建一个小型知识库，包含 3+ 篇关于人工智能技术的中文文章。
+      用户可以通过自然语言提问来搜索相关内容。</p>
+
+      <p><strong>你的任务：</strong>使用 MemoryVectorStore 完成文档存储、检索的完整流程，
+      并与 LLM 配合实现"知识库问答"。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { Document } from "@langchain/core/documents";
+import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+
+// ==========================================
+// 1. 准备文档（3+ 篇）
+// ==========================================
+const documents = [
+  new Document({
+    pageContent: "Transformer 是谷歌在 2017 年提出的一种基于自注意力机制的神经网络架构，" +
+      "它彻底改变了自然语言处理领域。BERT、GPT 等著名模型都基于 Transformer 构建。" +
+      "其核心创新是自注意力（Self-Attention）机制，能够捕捉序列中任意两个位置间的依赖关系。" +
+      "多头注意力（Multi-Head Attention）进一步增强了模型关注不同表示子空间信息的能力。",
+    metadata: { title: "Transformer 架构详解", category: "deep-learning", year: 2023, language: "zh" },
+  }),
+  new Document({
+    pageContent: "大语言模型（LLM）是指具有数千亿参数的神经网络语言模型。近年来，" +
+      "随着 GPT-4、Claude、Llama 等模型的发布，LLM 在对话、写作、编程等任务上展现出惊人能力。" +
+      "LLM 的核心能力来源于大规模预训练——在海量文本数据上学习语言的统计规律和世界知识。" +
+      "涌现能力（Emergent Abilities）是指当模型规模超过某个阈值时，突然出现的推理、规划等高级能力。",
+    metadata: { title: "大语言模型概述", category: "llm", year: 2024, language: "zh" },
+  }),
+  new Document({
+    pageContent: "RAG（Retrieval-Augmented Generation，检索增强生成）是一种将信息检索与" +
+      "文本生成相结合的技术架构。它的工作流程是：① 将用户问题转化为向量，到向量库中检索相关文档；" +
+      "② 将检索到的文档作为上下文，与原始问题一起提交给 LLM；③ LLM 基于检索到的上下文生成答案。" +
+      "RAG 的核心优势在于可以引用外部知识、减少幻觉、且知识可以实时更新而不需要重新训练模型。",
+    metadata: { title: "RAG 技术原理", category: "rag", year: 2024, language: "zh" },
+  }),
+  new Document({
+    pageContent: "Embedding（嵌入）是将文本、图像等非结构化数据映射到低维连续向量空间的技术。" +
+      "在 NLP 中，文本嵌入将单词、句子或文档转换为固定长度的数值向量。语义相近的文本在向量空间中的距离更近。" +
+      "OpenAI 的 text-embedding-3-small 模型能生成 1536 维的向量。Embedding 是向量检索和 RAG 系统的基石。",
+    metadata: { title: "Embedding 嵌入技术入门", category: "embeddings", year: 2023, language: "zh" },
+  }),
+  new Document({
+    pageContent: "Prompt Engineering（提示工程）是通过精心设计输入提示来引导 LLM 生成期望输出的技术。" +
+      "常见技巧包括：Few-shot（给出示例）、Chain-of-Thought（思维链）、Role-playing（角色扮演）等。" +
+      "好的提示设计可以显著提升 LLM 的输出质量。借助 LangChain 的 PromptTemplate，可以结构化地管理提示。",
+    metadata: { title: "提示工程指南", category: "prompting", year: 2024, language: "zh" },
+  }),
+];
+
+console.log(`📚 共准备了 ${documents.length} 篇文档`);
+
+// ==========================================
+// 2. 创建向量存储
+// ==========================================
+const embeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-small",
+});
+
+const vectorStore = await MemoryVectorStore.fromDocuments(documents, embeddings);
+
+console.log("✅ 向量存储创建成功！");
+console.log(`   向量维度: ${(await embeddings.embedQuery("test")).length}`);
+console.log(`   文档数量: ${documents.length}`);
+
+// ==========================================
+// 3. 相似度搜索测试
+// ==========================================
+async function searchSimilarity(query: string, k: number = 3) {
+  console.log(`\n🔍 搜索: "${query}" (k=${k})`);
+  console.log("-".repeat(60));
+
+  const results = await vectorStore.similaritySearch(query, k);
+
+  results.forEach((doc, i) => {
+    console.log(`\n📄 结果 ${i + 1} [相似度排名 ${i + 1}]`);
+    console.log(`   标题: ${doc.metadata.title}`);
+    console.log(`   分类: ${doc.metadata.category}`);
+    console.log(`   内容: ${doc.pageContent.substring(0, 100)}...`);
+  });
+
+  return results;
+}
+
+// 测试不同的搜索查询
+await searchSimilarity("Transformer 和自注意力机制是什么？", 3);
+await searchSimilarity("如何构建 RAG 系统？", 3);
+
+// ==========================================
+// 4. 结合 LLM 实现知识库问答
+// ==========================================
+async function answerWithKnowledge(query: string) {
+  // 从向量库检索相关文档
+  const relevantDocs = await vectorStore.similaritySearch(query, 2);
+  const context = relevantDocs.map((d) => d.pageContent).join("\n\n---\n\n");
+
+  // 创建带上下文的提示模板
+  const prompt = ChatPromptTemplate.fromMessages([
+    ["system", "你是一个 AI 知识助手。请基于以下提供的参考资料来回答问题。\n" +
+      "如果参考资料不足，请如实说明。用中文回答。\n\n参考资料：\n{context}"],
+    ["human", "{question}"],
+  ]);
+
+  const model = new ChatOpenAI({
+    model: "gpt-4o-mini",
+    temperature: 0.3,
+  });
+
+  const chain = prompt.pipe(model).pipe(new StringOutputParser());
+
+  const answer = await chain.invoke({
+    context,
+    question: query,
+  });
+
+  return answer;
+}
+
+// 测试知识库问答
+async function main() {
+  console.log("\n" + "=".repeat(60));
+  console.log("🤖 知识库问答系统");
+  console.log("=".repeat(60));
+
+  const questions = [
+    "什么是 Transformer 的自注意力机制？",
+    "RAG 技术有哪些优势？",
+    "大语言模型的涌现能力是什么？",
+  ];
+
+  for (const q of questions) {
+    console.log(`\n❓ 问题: ${q}`);
+    const answer = await answerWithKnowledge(q);
+    console.log(`💡 回答: ${answer}`);
+  }
+}
+
+main();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">📚 共准备了 5 篇文档
+✅ 向量存储创建成功！
+   向量维度: 1536
+   文档数量: 5
+
+🔍 搜索: "Transformer 和自注意力机制是什么？" (k=3)
+------------------------------------------------------------
+
+📄 结果 1 [相似度排名 1]
+   标题: Transformer 架构详解
+   分类: deep-learning
+   内容: Transformer 是谷歌在 2017 年提出的一种基于自注意力机制的神经网络架构，...
+
+📄 结果 2 [相似度排名 2]
+   标题: 大语言模型概述
+   分类: llm
+   内容: 大语言模型（LLM）是指具有数千亿参数的神经网络语言模型。近年来，...
+
+📄 结果 3 [相似度排名 3]
+   标题: Embedding 嵌入技术入门
+   分类: embeddings
+   内容: Embedding（嵌入）是将文本、图像等非结构化数据映射到低维连续向量空间的技术。...
+
+============================================================
+🤖 知识库问答系统
+============================================================
+
+❓ 问题: 什么是 Transformer 的自注意力机制？
+💡 回答: 根据参考资料，自注意力（Self-Attention）机制是 Transformer 的核心创新，
+能够捕捉序列中任意两个位置间的依赖关系。多头注意力（Multi-Head Attention）
+进一步增强了模型关注不同表示子空间信息的能力。
+
+❓ 问题: RAG 技术有哪些优势？
+💡 回答: 根据参考资料，RAG 的核心优势包括：
+1. 可以引用外部知识来增强生成内容的准确性
+2. 减少 LLM 的幻觉现象
+3. 知识可以实时更新而不需要重新训练模型
+...</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：Metadata Filtering 元数据过滤示例</h3>
+
+      <p><strong>场景描述：</strong>你有一个包含各种类别文档的知识库。用户只想搜索
+      "深度学习"类别的文档，或者只想搜索 2024 年的文档。</p>
+
+      <p><strong>你的任务：</strong>在检索时使用元数据过滤来精确定位文档。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { Document } from "@langchain/core/documents";
+
+// ==========================================
+// 1. 准备多类别文档
+// ==========================================
+const docs = [
+  new Document({
+    pageContent: "卷积神经网络（CNN）在图像识别任务中表现出色。" +
+      "通过卷积层提取局部特征，池化层降低维度，最终通过全连接层分类。" +
+      "ResNet 引入了残差连接解决梯度消失问题。",
+    metadata: { category: "deep-learning", year: 2023, difficulty: "advanced", author: "Alice" },
+  }),
+  new Document({
+    pageContent: "循环神经网络（RNN）及其变体 LSTM 和 GRU 擅长处理序列数据。" +
+      "LSTM 通过门控机制解决了长期依赖问题。Transformer 的崛起使得 RNN 的使用减少。",
+    metadata: { category: "deep-learning", year: 2023, difficulty: "intermediate", author: "Bob" },
+  }),
+  new Document({
+    pageContent: "GPT-4 是 OpenAI 发布的最新一代大语言模型，支持多模态输入。" +
+      "它在各类 NLP 基准测试中取得了领先成绩，并展示了强大的推理和代码生成能力。",
+    metadata: { category: "llm", year: 2024, difficulty: "beginner", author: "Alice" },
+  }),
+  new Document({
+    pageContent: "LangChain 的 Memory 模块提供了多种记忆实现，包括 BufferMemory、" +
+      "SummaryMemory 和 VectorStoreMemory。开发者可以根据场景选择合适的记忆策略。",
+    metadata: { category: "langchain", year: 2024, difficulty: "intermediate", author: "Charlie" },
+  }),
+  new Document({
+    pageContent: "向量数据库与传统数据库的核心区别在于支持近似最近邻（ANN）搜索。" +
+      "常用的索引算法包括 HNSW、IVF、PQ 等。选择合适的索引需要权衡速度和召回率。",
+    metadata: { category: "vector-db", year: 2024, difficulty: "advanced", author: "Bob" },
+  }),
+  new Document({
+    pageContent: "迁移学习允许将预训练模型的知识迁移到新任务上，大大减少了训练数据需求。" +
+      "在 NLP 中，BERT、GPT 等预训练模型可以通过微调适配各种下游任务。",
+    metadata: { category: "deep-learning", year: 2022, difficulty: "intermediate", author: "Alice" },
+  }),
+  new Document({
+    pageContent: "Prompt Engineering 中的 Chain-of-Thought 方法引导模型逐步推理，" +
+      "显著提高了复杂推理任务的准确率。Few-shot 学习通过提供少量示例来引导模型行为。",
+    metadata: { category: "prompting", year: 2024, difficulty: "beginner", author: "Charlie" },
+  }),
+];
+
+// 创建向量存储
+const embeddings = new OpenAIEmbeddings({ model: "text-embedding-3-small" });
+const vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
+
+// ==========================================
+// 2. 辅助函数：带过滤的搜索
+// ==========================================
+async function searchWithFilter(
+  query: string,
+  filter?: Record<string, any>,
+  k: number = 3,
+) {
+  console.log(`\n🔍 查询: "${query}"`);
+  if (filter) {
+    console.log(`📋 过滤条件: ${JSON.stringify(filter)}`);
+  }
+  console.log("-".repeat(60));
+
+  const results = await vectorStore.similaritySearch(query, k, filter);
+
+  if (results.length === 0) {
+    console.log("(无匹配结果)");
+    return;
+  }
+
+  results.forEach((doc, i) => {
+    console.log(`\n📄 #${i + 1} | ${doc.metadata.title || "无标题"}`);
+    console.log(`   类别: ${doc.metadata.category} | 年份: ${doc.metadata.year}`);
+    console.log(`   内容: ${doc.pageContent.substring(0, 80)}...`);
+  });
+}
+
+// ==========================================
+// 3. 测试不同的过滤组合
+// ==========================================
+
+console.log("=".repeat(60));
+console.log("🧪 元数据过滤测试");
+console.log("=".repeat(60));
+
+// 测试 1：无过滤——搜索所有文档
+await searchWithFilter("神经网络结构");
+
+// 测试 2：按类别过滤——只搜索 deep-learning
+await searchWithFilter("神经网络结构", { category: "deep-learning" });
+
+// 测试 3：按年份过滤——只搜索 2024 年的文档
+await searchWithFilter("深度学习", { year: 2024 });
+
+// 测试 4：多条件过滤——Alice 在 2024 年写的文档
+await searchWithFilter("AI", { author: "Alice", year: 2024 });
+
+// 测试 5：按难度过滤——只搜索中级难度的文档
+await searchWithFilter("模型", { difficulty: "intermediate" });
+
+// 测试 6：组合过滤——高级难度的深度学习文档
+await searchWithFilter(
+  "卷积神经网络",
+  { category: "deep-learning", difficulty: "advanced" },
+);
+
+// ==========================================
+// 4. 使用 Retriever 内置过滤
+// ==========================================
+console.log("\n\n" + "=".repeat(60));
+console.log("🧪 Retriever 内置过滤");
+console.log("=".repeat(60));
+
+const scienceRetriever = vectorStore.asRetriever({
+  k: 2,
+  filter: { category: "deep-learning" },
+});
+
+const scienceDocs = await scienceRetriever.invoke("神经网络");
+console.log(`深度学习的文档检索到 ${scienceDocs.length} 条：`);
+scienceDocs.forEach((doc, i) => {
+  console.log(`  ${i + 1}. [${doc.metadata.category}] ${doc.pageContent.substring(0, 60)}...`);
+});</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">============================================================
+🧪 元数据过滤测试
+============================================================
+
+🔍 查询: "神经网络结构"
+------------------------------------------------------------
+
+📄 #1 | 无标题
+   类别: deep-learning | 年份: 2023
+   内容: 卷积神经网络（CNN）在图像识别任务中表现出色...
+
+📄 #2 | 无标题
+   类别: deep-learning | 年份: 2023
+   内容: 循环神经网络（RNN）及其变体 LSTM 和 GRU 擅长处理序列数据...
+
+🔍 查询: "神经网络结构"
+📋 过滤条件: {"category":"deep-learning"}
+------------------------------------------------------------
+
+📄 #1 | 无标题
+   类别: deep-learning | 年份: 2023
+   内容: 卷积神经网络（CNN）在图像识别任务中表现出色...
+
+📄 #2 | 无标题
+   类别: deep-learning | 年份: 2023
+   内容: 循环神经网络（RNN）及其变体 LSTM 和 GRU 擅长处理序列数据...
+
+🔍 查询: "深度学习"
+📋 过滤条件: {"year":2024}
+------------------------------------------------------------
+
+📄 #1 | 无标题
+   类别: llm | 年份: 2024
+   内容: GPT-4 是 OpenAI 发布的最新一代大语言模型...
+
+📄 #2 | 无标题
+   类别: langchain | 年份: 2024
+   内容: LangChain 的 Memory 模块提供了多种记忆实现...
+
+🔍 查询: "AI"
+📋 过滤条件: {"author":"Alice","year":2024}
+------------------------------------------------------------
+
+📄 #1 | 无标题
+   类别: llm | 年份: 2024
+   内容: GPT-4 是 OpenAI 发布的最新一代大语言模型...
+
+============================================================
+🧪 Retriever 内置过滤
+============================================================
+深度学习的文档检索到 2 条：
+  1. [deep-learning] 卷积神经网络（CNN）在图像识别任务中表现出色...
+  2. [deep-learning] 循环神经网络（RNN）及其变体 LSTM 和 GRU 擅长处理序列数据...</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧</h2>
+
+      <h3>技巧一：不同检索策略对比</h3>
+
+      <p>
+        选择一个合适的检索策略对于构建高效的 RAG 系统至关重要。下面我们比较
+        四种主要检索策略的差异和适用场景。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>策略</th><th>核心思想</th><th>优点</th><th>缺点</th><th>适用场景</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>相似度检索（Similarity）</strong></td>
+            <td>按向量余弦相似度排序取 Top-K</td>
+            <td>简单、快速、结果精确匹配查询意图</td>
+            <td>结果可能高度冗余，缺乏多样性</td>
+            <td>查询意图明确，需要精确匹配的场景</td>
+          </tr>
+          <tr>
+            <td><strong>MMR 检索</strong></td>
+            <td>平衡相关性和多样性</td>
+            <td>结果多样、覆盖不同方面</td>
+            <td>略慢于普通相似度（需要多一步排序）</td>
+            <td>需要全面了解某个主题的不同方面</td>
+          </tr>
+          <tr>
+            <td><strong>MultiQuery 检索</strong></td>
+            <td>LLM 生成多个查询并分别检索</td>
+            <td>召回率高、覆盖不同问法</td>
+            <td>额外 LLM 调用、延迟较高</td>
+            <td>用户查询含糊不清或有多重含义</td>
+          </tr>
+          <tr>
+            <td><strong>得分阈值检索（Score Threshold）</strong></td>
+            <td>设定最低相似度门槛，低于门槛的过滤掉</td>
+            <td>检索质量可控、避免低质量匹配</td>
+            <td>阈值难以确定，太高容易结果为空</td>
+            <td>对检索质量标准严格的场景</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { Document } from "@langchain/core/documents";
+import { MultiQueryRetriever } from "langchain/retrievers/multi_query";
+import { ChatOpenAI } from "@langchain/openai";
+
+// ==========================================
+// 准备丰富的测试文档
+// ==========================================
+const docs = [
+  new Document({
+    pageContent: "Python 是一种解释型、面向对象的高级编程语言。它以其简洁的语法和" +
+      "丰富的标准库而闻名，广泛应用于数据科学、Web 开发和自动化脚本。",
+    metadata: { topic: "programming", language: "python", level: "beginner" },
+  }),
+  new Document({
+    pageContent: "JavaScript 是 Web 开发的三大核心技术之一。Node.js 的出现使其" +
+      "可以在服务器端运行。TypeScript 是 JS 的超集，添加了静态类型检查。",
+    metadata: { topic: "programming", language: "javascript", level: "beginner" },
+  }),
+  new Document({
+    pageContent: "TypeScript 由微软开发，是 JavaScript 的超集语言。它增加了静态类型、" +
+      "接口、泛型等特性，能够显著提高大型项目的代码质量和开发效率。",
+    metadata: { topic: "programming", language: "typescript", level: "intermediate" },
+  }),
+  new Document({
+    pageContent: "Rust 是一门系统编程语言，专注于安全、并发和性能。它的所有权系统" +
+      "在编译时保证内存安全，无需垃圾回收器。被广泛用于基础设施和 WebAssembly 开发。",
+    metadata: { topic: "programming", language: "rust", level: "advanced" },
+  }),
+  new Document({
+    pageContent: "Go 语言由 Google 设计，以其简洁的语法、快速的编译和内置并发支持" +
+      "而著称。goroutine 和 channel 是 Go 并发编程的核心概念。",
+    metadata: { topic: "programming", language: "go", level: "intermediate" },
+  }),
+  new Document({
+    pageContent: "Java 是一种面向对象的编程语言，以其"一次编写，到处运行"的理念" +
+      "而闻名。Spring 框架是目前最流行的 Java 企业级开发框架。",
+    metadata: { topic: "programming", language: "java", level: "intermediate" },
+  }),
+];
+
+const embeddings = new OpenAIEmbeddings({ model: "text-embedding-3-small" });
+const vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
+
+// ==========================================
+// 策略对比函数
+// ==========================================
+async function compareStrategies(query: string) {
+  console.log(`\n📌 查询: "${query}"`);
+  console.log("=".repeat(80));
+
+  // --- 策略 1：普通相似度检索 ---
+  console.log("\n📊 策略一：相似度检索 (Similarity, k=3)");
+  const simResults = await vectorStore.similaritySearch(query, 3);
+  simResults.forEach((d, i) => {
+    console.log(`  ${i + 1}. [${d.metadata.language}] ${d.pageContent.substring(0, 60)}...`);
+  });
+
+  // --- 策略 2：MMR 检索 ---
+  console.log("\n📊 策略二：MMR 检索 (λ=0.5, fetchK=6, k=3)");
+  const mmrResults = await vectorStore.maxMarginalRelevanceSearch(query, {
+    k: 3,
+    fetchK: 6,
+    lambda: 0.5,
+  });
+  mmrResults.forEach((d, i) => {
+    console.log(`  ${i + 1}. [${d.metadata.language}] ${d.pageContent.substring(0, 60)}...`);
+  });
+
+  // --- 策略 3：得分阈值检索 ---
+  console.log("\n📊 策略三：得分阈值检索 (scoreThreshold=0.8, k=10)");
+  const thresholdRetriever = vectorStore.asRetriever({
+    k: 10,
+    searchType: "similarity",
+    searchKwargs: { scoreThreshold: 0.8 },
+  });
+  const thrResults = await thresholdRetriever.invoke(query);
+  if (thrResults.length === 0) {
+    console.log("  (无结果达到阈值)");
+  } else {
+    thrResults.forEach((d, i) => {
+      console.log(`  ${i + 1}. [${d.metadata.language}] ${d.pageContent.substring(0, 60)}...`);
+    });
+  }
+
+  // --- 策略 4：MultiQuery 检索 ---
+  console.log("\n📊 策略四：MultiQuery 检索 (生成 3 个变体查询)");
+  const multiRetriever = MultiQueryRetriever.fromLLM({
+    llm: new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 }),
+    retriever: vectorStore.asRetriever({ k: 2 }),
+  });
+  const mqResults = await multiRetriever.invoke(query);
+  // 去重（按 pageContent）
+  const seen = new Set<string>();
+  const unique = mqResults.filter((d) => {
+    const key = d.pageContent.substring(0, 40);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  unique.forEach((d, i) => {
+    console.log(`  ${i + 1}. [${d.metadata.language}] ${d.pageContent.substring(0, 60)}...`);
+  });
+  console.log(`  (去重后共 ${unique.length} 条独特结果)`);
+}
+
+// ==========================================
+// 运行对比测试
+// ==========================================
+async function main() {
+  console.log("=".repeat(80));
+  console.log("🔬 不同检索策略对比测试");
+  console.log("=".repeat(80));
+
+  // 测试 1：具体语言查询
+  await compareStrategies("TypeScript 编程语言");
+
+  // 测试 2：泛化查询（适合 MMR 展示多样性）
+  await compareStrategies("适合大型项目的编程语言");
+
+  // 测试 3：模糊查询（适合 MultiQuery 展示多角度）
+  await compareStrategies("Web 开发语言");
+}
+
+main();</code></pre>
+      </div>
+
+      <h3>技巧二：自定义分数阈值调优</h3>
+
+      <p>
+        <code>scoreThreshold</code> 的值取决于你的 Embedding 模型和向量库的规模。
+        通常建议先做一次不加阈值的检索，观察返回结果的相似度分数分布，再选择合适的阈值。
+        对于 OpenAI <code>text-embedding-3-small</code> 模型，余弦相似度一般在 0.6~0.95 之间。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 观察相似度分数分布
+// ==========================================
+async function inspectSimilarityScores(store: MemoryVectorStore, query: string) {
+  // 注意：similaritySearchWithScore 会返回 [Document, number] 对
+  // 数值就是余弦相似度分数
+  const resultsWithScore = await store.similaritySearchWithScore(query, 10);
+
+  console.log(`查询: "${query}"`);
+  console.log("相似度分数分布：");
+  resultsWithScore.forEach(([doc, score], i) => {
+    console.log(`  #${i + 1}: score=${score.toFixed(4)} | ${doc.pageContent.substring(0, 50)}...`);
+  });
+
+  // 建议阈值：
+  if (resultsWithScore.length >= 3) {
+    const threshold = resultsWithScore[2][1]; // 取第 3 名的分数作为参考
+    console.log(`\n💡 建议 scoreThreshold ≈ ${threshold.toFixed(4)}（第 3 名的分数）`);
+  }
+}</code></pre>
+      </div>
+
+      <h3>技巧三：将 Retriever 集成到 LCEL 管道</h3>
+
+      <p>
+        Retriever 实现了 <code>Runnable</code> 接口，因此可以直接用在 LCEL 管道中。
+        这是构建 RAG 系统的基础模式。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import { Document } from "@langchain/core/documents";
+
+// ==========================================
+// 构建 RAG 管道
+// ==========================================
+
+// 1. 准备向量存储
+const vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
+const retriever = vectorStore.asRetriever({ k: 3 });
+
+// 2. 定义提示模板
+const ragPrompt = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个知识问答助手。请根据以下参考资料回答问题。\n\n{context}"],
+  ["human", "{question}"],
+]);
+
+// 3. 定义模型和解析器
+const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+const parser = new StringOutputParser();
+
+// 4. 构建 RAG 管道
+//    输入: { question: "..." }
+//    → 检索文档 → 格式化上下文 → 注入提示 → LLM → 解析输出
+const ragChain = {
+  // 先检索并将文档格式化为上下文字符串
+  context: async (input: { question: string }) => {
+    const docs = await retriever.invoke(input.question);
+    return docs.map((d) => d.pageContent).join("\n\n");
+  },
+  // 透传问题
+  question: (input: { question: string }) => input.question,
+}
+  .pipe(ragPrompt)  // 注入到提示模板
+  .pipe(model)      // 调用 LLM
+  .pipe(parser);    // 提取文本
+
+// 5. 使用
+const answer = await ragChain.invoke({
+  question: "什么是向量数据库？",
+});
+console.log(answer);</code></pre>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. VectorStore 的 fromDocuments() 和 addDocuments() 有什么区别？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>fromDocuments()</code> 是一个<strong>类静态方法</strong>，它会创建一个新的向量存储实例，同时将传入的文档全部向量化并存入。而 <code>addDocuments()</code> 是一个<strong>实例方法</strong>，用于向已有的向量存储实例中增量添加新的文档。简单说：fromDocuments 是"创建并填充"，addDocuments 是"追加"。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. Retriever 和 VectorStore 的关系是什么？为什么需要 Retriever 这个抽象？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>Retriever 是 VectorStore 的上层抽象。VectorStore 负责向量数据的存储和搜索，而 Retriever 提供了一个标准化的检索接口（<code>invoke(query)</code>），屏蔽了底层向量库的差异。更重要的是，Retriever 实现了 Runnable 接口，可以无缝集成到 LCEL 管道中。任何 VectorStore 通过 <code>asRetriever()</code> 变成 Retriever 后，就可以和其他 Runnable 组件用 <code>|</code> 运算符组合。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. MMR 检索和普通相似度检索的核心区别是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>普通相似度检索只考虑结果与查询的相关性，可能导致结果高度冗余（比如搜"机器学习框架"，返回的三个结果都是关于 TensorFlow 的）。MMR 则同时考虑两个因素：① 结果与查询的相关性；② 结果之间的多样性。通过 <code>lambda</code> 参数平衡两者，λ 越大越重视相关性，λ 越小越重视多样性。MMR 会先取 <code>fetchK</code> 个候选，再从中挑选出既相关又互不相似的 k 个最终结果。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. MultiQueryRetriever 在什么场景下最有用？它有什么代价？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>MultiQueryRetriever 最适用于以下场景：① 用户查询含糊不清或有多种可能的解读方式；② 同一个概念有多种不同的表述方式（比如"AI""人工智能""大模型"）；③ 需要尽可能高的召回率（Recall）的场景。它的代价是每次检索需要额外调用 LLM 生成多个查询变体，增加了延迟和成本。此外，多个查询的检索结果可能会有大量重复，需要去重处理。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">5. 元数据过滤（Metadata Filtering）是如何工作的？它和语义检索是什么关系？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>元数据过滤是在<strong>语义检索之前或之后</strong>施加的一层结构化筛选条件。比如先通过 <code>filter: { year: { $gte: 2023 } }</code> 选出 2023 年以后的文档，再在这些文档中进行语义相似度搜索。它和语义检索是互补关系：语义检索解决"内容是否相关"的问题，元数据过滤解决"属性是否匹配"的问题。两者结合可以实现精确搜索——既要在语义上相关，又要在属性上匹配特定条件。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：未安装 Embeddings 模型导致运行时错误</div>
+        <p><strong>症状：</strong>调用 <code>fromDocuments()</code> 时抛出 <code>Error: OpenAI API key not found</code> 或模型加载失败。</p>
+        <p><strong>原因：</strong>MemoryVectorStore 本身不需要外部依赖，但它依赖 Embeddings 模型将文本转化为向量。如果使用的 OpenAIEmbeddings 没有配置 API Key，就会失败。</p>
+        <p><strong>解决：</strong>确保设置了 <code>OPENAI_API_KEY</code> 环境变量，或者使用其他 Embeddings 实现（如 <code>FakeEmbeddings</code> 用于测试）。对于离线测试，可以使用 <code>@langchain/community</code> 中的本地嵌入模型。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：scoreThreshold 设置过高导致检索结果为空</div>
+        <p><strong>症状：</strong>设置了 <code>scoreThreshold: 0.95</code>，但检索结果始终为空。</p>
+        <p><strong>原因：</strong>阈值设置过高，没有文档的相似度评分达到该值。不同 Embedding 模型和不同数据集产生的相似度分数分布差异很大。</p>
+        <p><strong>解决：</strong>先用不带阈值的检索观察分数分布，然后根据实际数据选择合适的阈值。通常建议从 0.7 开始尝试，逐步调高。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：MemoryVectorStore 的数据在程序重启后丢失</div>
+        <p><strong>症状：</strong>重新运行程序后，之前存入的向量数据都不见了。</p>
+        <p><strong>原因：</strong>MemoryVectorStore 将数据存储在内存中，进程退出后数据自然消失。这不是 bug，而是它的设计特性。</p>
+        <p><strong>解决：</strong>如果需要在程序重启后保留数据，应该使用持久化向量数据库（如 Chroma、Pinecone），或者将文档源文件和 Embedding 结果缓存到文件系统/数据库中，启动时重新加载。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：不同向量数据库的过滤语法混淆</div>
+        <p><strong>症状：</strong>在 MemoryVectorStore 中使用了 Chroma 的 <code>$gte</code> 过滤语法，导致过滤失效或报错。</p>
+        <p><strong>原因：</strong>不同向量数据库的元数据过滤语法不同。MemoryVectorStore 只支持简单的键值精确匹配，而 Chroma 和 Pinecone 支持更复杂的比较运算符。</p>
+        <p><strong>解决：</strong>查阅你所使用的向量数据库的官方文档，确认其支持的过滤语法。在使用 <code>asRetriever()</code> 时，filter 参数的格式取决于底层 VectorStore 的实现。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 15 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>VectorStore 接口</strong> — fromDocuments（创建并索引）、addDocuments（增量添加）、similaritySearch（语义检索）等核心方法</li>
+          <li><strong>MemoryVectorStore</strong> — 内存级向量库的创建、文档添加、相似度查询的完整流程</li>
+          <li><strong>生产级向量数据库</strong> — Chroma（开源轻量）、PineconeStore（全托管云服务）的基本接入方式</li>
+          <li><strong>Retriever 接口</strong> — asRetriever() 的 k 参数（返回数量）、scoreThreshold（质量阈值）的配置</li>
+          <li><strong>MultiQueryRetriever</strong> — 用 LLM 生成多个查询变体提高召回率</li>
+          <li><strong>MMR 检索</strong> — 最大边际相关性，在相关性和多样性之间取得平衡</li>
+          <li><strong>元数据过滤</strong> — 通过 metadata 字段精确筛选，实现"先筛选后检索"</li>
+          <li><strong>实战应用</strong> — 完整的知识库问答系统、多条件过滤检索、四种检索策略对比</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 16 章：RAG 实战</h3>
+        <p>在下一章中，我们将把前几章学到的知识整合起来，构建一个完整的 RAG（检索增强生成）系统。
+        你将学习如何将文档加载、文本分割、向量存储、检索器和 LLM 串联成一个端到端的智能问答管线。</p>
+        <ul>
+          <li>完整的 RAG 管线搭建（Document → Splitter → VectorStore → Retriever → LLM）</li>
+          <li>上下文窗口管理与提示模板设计</li>
+          <li>来源引用与可追溯性（Citation）</li>
+          <li>RAG 系统的评估与优化策略</li>
+          <li>构建一个 PDF 智能问答机器人</li>
+        </ul>
+        <a href="16-rag.html" class="btn btn-primary">继续学习第 16 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="14-embeddings.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 15 章 / 共 19 章</span>
+        <a href="16-rag.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第16章 RAG 检索增强生成 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch16">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html" class="active"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="15-vector-stores.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 16 章 / 共 19 章</span>
+        <a href="06-streaming.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>🔍 RAG 检索增强生成 — 让 AI 拥有专业知识库</h1>
+      <p class="subtitle">将外部知识注入 LLM，打造能回答私有领域问题的智能系统</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 RAG 的完整架构：Indexing → Retrieval → Generation 流水线</li>
+          <li>掌握在 LangChain v1.x 中用 Agent + retriever tool 实现 RAG 的经典模式</li>
+          <li>使用 LCEL 构建端到端的文档问答系统</li>
+          <li>构建带记忆的多文档 RAG 对话系统</li>
+          <li>理解查询变换、Self-RAG、HyDE 等进阶检索增强技术</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="13-document-loaders.html">第 13 章：文档加载与分割</a>、
+        <a href="14-embeddings.html">第 14 章：Embedding 向量化</a> 和
+        <a href="15-vector-stores.html">第 15 章：向量存储与检索</a> 的学习，
+        理解 Document、TextSplitter、Embeddings、VectorStore 等基础概念。
+        同时建议回顾 <a href="02-agent-basics.html">第 2 章：Agent 基础</a> 中工具调用的机制，
+        以及 <a href="12-lcel.html">第 12 章：LCEL</a> 中的管道组合语法。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：RAG 架构全景 — Indexing → Retrieval → Generation</h3>
+
+      <p>
+        <strong>RAG（Retrieval-Augmented Generation）</strong> 是当前最流行的 LLM 应用范式之一。
+        它的核心思想是：先从一个知识库中检索出与用户问题相关的文档片段，再将它们作为上下文
+        注入到 LLM 的提示中，让模型基于真实知识生成回答。
+      </p>
+
+      <p>
+        为什么要这样做？因为 LLM 的知识截止于训练数据的时间点，而且大模型不具备私有知识。
+        如果直接问"我们公司的退款政策是什么？"，模型要么胡编乱造，要么说"我不知道"。
+        RAG 解决了这个问题——它把公司的退款政策文档导入向量库，用户提问时先检索相关条款，
+        再让模型基于检索到的内容回答。
+      </p>
+
+      <div class="callout info">
+        <div class="callout-title">🏗️ RAG 三阶段架构</div>
+        <p><strong>第一阶段 — 索引（Indexing）：</strong><br>
+        加载文档 → 文本分割 → 向量化 → 存储到向量数据库。<br>
+        这是离线预处理阶段，文档准备好后只需做一次。</p>
+        <p><strong>第二阶段 — 检索（Retrieval）：</strong><br>
+        用户提问 → 将问题向量化 → 在向量库中做相似性搜索 → 返回 Top-K 相关文档片段。<br>
+        这是在线推理的第一步，速度必须快。</p>
+        <p><strong>第三阶段 — 生成（Generation）：</strong><br>
+        将检索到的文档片段 + 用户问题 + 系统提示 拼接到一起 → 传给 LLM → 生成最终回答。<br>
+        模型的任务是"用提供的资料来回答问题"。</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">文本</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-text">RAG 流水线示意图：
+
+   ┌──────────────┐    ┌───────────┐    ┌──────────────┐
+   │  文档加载     │ →  │ 文本分割   │ →  │  向量化嵌入   │
+   │ DocumentLoader │   │ TextSplit │    │  Embeddings  │
+   └──────────────┘    └───────────┘    └──────┬───────┘
+                                               │
+                                               ▼
+                                      ┌─────────────────┐
+                                      │  向量存储          │
+                                      │  VectorStore     │
+                                      └────────┬────────┘
+                                               │
+   ┌──────────────┐    ┌───────────┐           │
+   │  用户问题     │ →  │ 向量化检索  │ ←────────┘
+   │  User Query  │    │ Retriever │
+   └──────────────┘    └─────┬─────┘
+                             │ (相关文档片段)
+                             ▼
+   ┌──────────────┐    ┌───────────┐
+   │  提示组装     │ →  │  LLM 生成  │ → 最终回答
+   │ Prompt+Context│   │ Generation│
+   └──────────────┘    └───────────┘</code></pre>
+      </div>
+
+      <h3>概念二：LangChain v1.x 中的 RAG 实现模式</h3>
+
+      <p>
+        在 LangChain v1.x 中，最典型的 RAG 实现方式有两种：
+      </p>
+
+      <p>
+        <strong>模式 A：Agent + Retriever Tool</strong><br>
+        将向量存储的检索接口封装成一个 tool，然后传给 <code>createAgent</code>。
+        Agent 在思考过程中自主决定何时调用检索工具。这种方式适合需要复杂决策的场景——
+        比如 Agent 可以先用检索工具获取知识，再结合记忆和推理给出最终答案。
+      </p>
+
+      <p>
+        <strong>模式 B：LCEL 管道</strong><br>
+        使用 <code>RunnablePassthrough.assign()</code> 将检索结果注入到提示模板中，
+        形成 <code>context_retriever | prompt | model | parser</code> 的处理管线。
+        这种方式简单直接，数据流清晰，适合确定性较强的 QA 场景。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 模式 A：使用 Agent + Retriever Tool
+// ==========================================
+import { createAgent, tool } from "langchain";
+import { ChatOpenAI } from "@langchain/openai";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { z } from "zod";
+
+// 1. 准备向量存储
+const vectorStore = new MemoryVectorStore(new OpenAIEmbeddings());
+// ... 先存入文档 ...
+
+// 2. 将检索封装为工具
+const searchKnowledgeBase = tool(
+  async ({ query }) => {
+    const results = await vectorStore.similaritySearch(query, 3);
+    return results.map((d) => d.pageContent).join("\n\n---\n\n");
+  },
+  {
+    name: "search_knowledge_base",
+    description: "搜索知识库，获取与问题相关的文档内容",
+    schema: z.object({ query: z.string() }),
+  }
+);
+
+// 3. 创建 Agent
+const agent = await createAgent({
+  model: new ChatOpenAI({ model: "gpt-4o-mini" }),
+  tools: [searchKnowledgeBase],
+  systemPrompt: `你是一个知识助手。当用户提问时，使用 search_knowledge_base 工具
+获取相关信息，然后基于检索到的内容回答问题。如果你不确定答案，请诚实地说不知道。`,
+});
+
+// ==========================================
+// 模式 B：使用 LCEL 管道
+// ==========================================
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { RunnablePassthrough } from "@langchain/core/runnables";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+
+const prompt = ChatPromptTemplate.fromMessages([
+  ["system", `你是一个知识问答助手。请基于以下资料回答问题。
+如果资料中找不到相关信息，请说"资料中没有提到这个问题的答案"。
+
+相关资料：
+{context}`],
+  ["human", "{question}"],
+]);
+
+// 将检索包装成可运行函数
+const retrieveDocs = async (input: { question: string }) => {
+  const docs = await vectorStore.similaritySearch(input.question, 3);
+  return {
+    ...input,
+    context: docs.map((d) => d.pageContent).join("\n\n---\n\n"),
+  };
+};
+
+// LCEL 管道
+const ragChain =
+  RunnablePassthrough.assign({ context: retrieveDocs })
+  | prompt
+  | new ChatOpenAI({ model: "gpt-4o-mini" })
+  | new StringOutputParser();
+
+const answer = await ragChain.invoke({
+  question: "公司的退款政策是什么？",
+});</code></pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ LangChain v1.x 注意事项</div>
+        <p>在 LangChain v1.x 中，<code>createRetrievalChain()</code> 是 v0.3+ 中的概念（对应 @langchain/langgraph 或 langchain/chains 中的实验性 API）。在 v1.x 稳定的 Agent API 中，推荐使用上述两种模式之一：将向量检索封装为 Agent 工具，或使用 LCEL 管道手动构建 RAG 管线。</p>
+      </div>
+
+      <h3>概念三：RAG 提示工程 — 让模型"学会引用"</h3>
+
+      <p>
+        RAG 的成功不仅取决于检索质量，也取决于提示设计。一个好的 RAG 提示需要告诉模型：
+      </p>
+
+      <ul>
+        <li><strong>上下文的来源：</strong>"基于以下资料回答问题"</li>
+        <li><strong>引用要求：</strong>"请引用相关原文支持你的回答"</li>
+        <li><strong>不知道的处理：</strong>"如果资料中没有相关信息，请诚实地回答不知道"</li>
+        <li><strong>格式约束：</strong>"用中文回答，使用 Markdown 格式"</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 一个生产级的 RAG 系统提示模板
+// ==========================================
+const ragSystemPrompt = `你是一个基于知识库的问答助手。你的回答必须遵循以下规则：
+
+## 回答规则
+
+1. **基于检索内容**：你的回答必须基于以下"相关资料"中的内容，不要使用你自己的知识。
+2. **引用来源**：在回答中引用相关原文时，用「引号」标注。
+3. **不知道就说不知道**：如果检索到的资料不足以回答用户问题，
+   请直接说"根据现有资料，我无法回答这个问题"。不要编造答案。
+4. **保持简洁**：回答要直接、准确，不要添加不必要的背景信息。
+5. **中文回答**：请使用中文回答用户问题。
+
+## 相关资料
+
+{context}
+
+## 用户问题
+
+{question}`;
+
+// 当模型看到这个提示时，它会：
+// 1. 优先使用 {context} 中的信息
+// 2. 不会胡编乱造
+// 3. 在必要时引用原文</code></pre>
+      </div>
+
+      <h3>概念四：查询变换 — 让检索更精准</h3>
+
+      <p>
+        在实际应用中，用户的原始提问往往不适合直接用于检索。比如用户问"它贵吗？"
+        ——如果没有上下文，"它"指代不明，直接向量搜索效果会很差。
+        <strong>查询变换（Query Transformation）</strong> 就是在检索之前，
+        先用 LLM 对用户问题做一次"预处理"。
+      </p>
+
+      <p>
+        常见的查询变换策略包括：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>策略</th><th>描述</th><th>示例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>重写（Rewrite）</strong></td><td>将模糊问题改写为清晰、自包含的查询</td><td>"它安全吗？" → "TypeScript 的类型系统安全吗？"</td></tr>
+          <tr><td><strong>分解（Decomposition）</strong></td><td>将复杂问题拆解为多个子查询</td><td>"请比较 React 和 Vue 的优缺点" → ["React 的优点是什么？", "React 的缺点是什么？", "Vue 的优点是什么？", "Vue 的缺点是什么？"]</td></tr>
+          <tr><td><strong>假设回答（HyDE）</strong></td><td>先生成一个假设性回答，再用这个回答去检索</td><td>问题 → LLM 生成伪答案 → 用伪答案检索 → 找到更相关的文档</td></tr>
+          <tr><td><strong>扩展（Expansion）</strong></td><td>用同义词或相关概念扩展查询词</td><td>"退款" → "退款 退货 取消订单 退款政策"</td></tr>
+        </tbody>
+      </table>
+
+      <h3>概念五：Self-RAG 与 HyDE — 进阶 RAG 范式</h3>
+
+      <p>
+        <strong>Self-RAG</strong> 是一种让 LLM 自我反思的 RAG 范式。它的核心流程是：
+      </p>
+
+      <ol>
+        <li>检索相关文档片段</li>
+        <li>LLM 检查每个片段是否与问题相关（相关性判断）</li>
+        <li>只保留相关的片段</li>
+        <li>基于筛选后的片段生成回答</li>
+        <li>LLM 再检查回答是否被检索内容充分支持（事实性检查）</li>
+      </ol>
+
+      <p>
+        <strong>HyDE（Hypothetical Document Embeddings）</strong> 是一种有趣的策略。
+        它的思路是：与其直接用问题去向量库搜索，不如先让 LLM 根据问题生成一个"假设性的理想文档"，
+        然后用这个假设文档的向量去搜索。因为假设文档和真实文档在语义空间上更接近，
+        往往能检索到更相关的内容。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// Self-RAG：带自我反思的检索增强生成
+// ==========================================
+
+// 步骤 1：检索
+const rawDocs = await vectorStore.similaritySearch(question, 5);
+
+// 步骤 2：用 LLM 判断相关性（相关性过滤）
+const relevanceCheckPrompt = `判断以下文档是否与用户问题相关。
+只回答 "相关" 或 "不相关"。
+
+用户问题：{question}
+
+文档内容：{document}`;
+
+const relevanceChain = ChatPromptTemplate.fromTemplate(relevanceCheckPrompt)
+  | model
+  | new StringOutputParser();
+
+const relevantDocs = [];
+for (const doc of rawDocs) {
+  const judgment = await relevanceChain.invoke({
+    question,
+    document: doc.pageContent,
+  });
+  if (judgment.includes("相关")) {
+    relevantDocs.push(doc);
+  }
+}
+
+// 步骤 3：基于筛选后的文档生成回答
+// ... 正常 RAG 生成 ...
+
+// ==========================================
+// HyDE：假设文档嵌入检索
+// ==========================================
+
+// 步骤 1：根据问题生成假设性文档
+const hydePrompt = `请写一段文本，内容是对以下问题的理想解答。
+这段文本将用于相似度搜索，所以请写得像一篇百科知识文章，
+包含具体的细节和解释。
+
+问题：{question}`;
+
+const hydeChain = ChatPromptTemplate.fromTemplate(hydePrompt)
+  | model
+  | new StringOutputParser();
+
+const hypotheticalDoc = await hydeChain.invoke({ question });
+
+// 步骤 2：用生成的假设文档去检索（而非用原问题）
+const searchResults = await vectorStore.similaritySearch(hypotheticalDoc, 3);
+
+// 步骤 3：基于检索到的真实文档生成最终答案
+// 注意：这里使用的是真实文档，不是假设文档
+const finalAnswer = await generateAnswer(question, searchResults);</code></pre>
+      </div>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：完整文档问答系统（LCEL 管道版）</h3>
+
+      <p><strong>场景描述：</strong>你有一个存放公司产品说明书的目录（Markdown 文件），需要构建一个文档 QA 系统，
+      让员工可以自然语言提问，系统自动从文档中找到答案。</p>
+
+      <p><strong>你的任务：</strong>实现完整的 RAG 流水线：加载 → 分割 → 嵌入 → 存储 → 检索 → 生成。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { RunnablePassthrough } from "@langchain/core/runnables";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import * as fs from "fs/promises";
+import * as path from "path";
+
+// ==========================================
+// 第一阶段：索引（Indexing）
+// ==========================================
+
+async function buildKnowledgeBase(docsDir: string) {
+  console.log("📚 正在构建知识库...");
+
+  // 1. 加载文档
+  const files = await fs.readdir(docsDir);
+  const mdFiles = files.filter((f) => f.endsWith(".md"));
+
+  const allDocuments = [];
+  for (const file of mdFiles) {
+    const loader = new TextLoader(path.join(docsDir, file));
+    const docs = await loader.load();
+    // 给每个文档添加文件名作为元数据
+    docs.forEach((doc) => {
+      doc.metadata.source = file;
+    });
+    allDocuments.push(...docs);
+  }
+  console.log(`   ✅ 加载了 ${allDocuments.length} 个文档`);
+
+  // 2. 文本分割
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 500,
+    chunkOverlap: 50,
+    separators: ["\n## ", "\n### ", "\n\n", "\n", " ", ""],
+  });
+
+  const splitDocs = await splitter.splitDocuments(allDocuments);
+  console.log(`   ✅ 分割为 ${splitDocs.length} 个文本块`);
+
+  // 3. 嵌入并存储
+  const embeddings = new OpenAIEmbeddings();
+  const vectorStore = await MemoryVectorStore.fromDocuments(
+    splitDocs,
+    embeddings
+  );
+  console.log(`   ✅ 知识库构建完成！`);
+
+  return vectorStore;
+}
+
+// ==========================================
+// 第二阶段 + 第三阶段：检索 + 生成
+// ==========================================
+
+async function createRagQA(vectorStore: MemoryVectorStore) {
+  // 创建检索器
+  const retriever = vectorStore.asRetriever(3); // 返回 Top-3
+
+  // RAG 提示模板
+  const ragPrompt = ChatPromptTemplate.fromMessages([
+    ["system", `你是一个专业的文档问答助手。请基于以下资料回答用户问题。
+
+## 回答要求
+- 优先使用资料中的信息回答问题
+- 如果资料不足以回答，请说"资料中没有相关说明"
+- 引用资料原文时，用「引号」括起来
+- 回答要简洁、准确
+
+## 相关资料
+{context}`],
+    ["human", "{question}"],
+  ]);
+
+  // 模型
+  const model = new ChatOpenAI({
+    model: "gpt-4o-mini",
+    temperature: 0.2,
+  });
+
+  // 检索函数（用于 LCEL 管道）
+  const formatRetrievedDocs = async (input: { question: string }) => {
+    const docs = await retriever.invoke(input.question);
+    const formatted = docs
+      .map((d, i) => `[片段 ${i + 1}]（来自：${d.metadata.source || "未知"})\n${d.pageContent}`)
+      .join("\n\n");
+    return {
+      ...input,
+      context: formatted,
+    };
+  };
+
+  // 构建 LCEL 管道
+  const ragChain =
+    RunnablePassthrough.assign({ context: formatRetrievedDocs })
+    | ragPrompt
+    | model
+    | new StringOutputParser();
+
+  return ragChain;
+}
+
+// ==========================================
+// 主程序
+// ==========================================
+
+async function main() {
+  // 构建知识库
+  const vectorStore = await buildKnowledgeBase("./docs");
+
+  // 创建 QA 链
+  const qaChain = await createRagQA(vectorStore);
+
+  // 提问
+  const questions = [
+    "产品的保修期是多久？",
+    "如何重置管理员密码？",
+    "支持哪些第三方集成？",
+  ];
+
+  for (const q of questions) {
+    console.log(`\n❓ ${q}`);
+    const answer = await qaChain.invoke({ question: q });
+    console.log(`💡 ${answer}`);
+    console.log("─".repeat(50));
+  }
+}
+
+main().catch(console.error);</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">📚 正在构建知识库...
+   ✅ 加载了 3 个文档
+   ✅ 分割为 24 个文本块
+   ✅ 知识库构建完成！
+
+❓ 产品的保修期是多久？
+💡 根据产品说明书，「标准保修期为 12 个月，自购买之日起计算。」
+高级会员可享受延长至 24 个月的保修服务。
+
+❓ 如何重置管理员密码？
+💡 资料中没有相关说明。请参考《管理员手册》或联系 IT 支持部门。
+
+❓ 支持哪些第三方集成？
+💡 系统支持以下第三方集成：
+- Slack 工作区通知
+- Jira 工单系统
+- GitHub Webhook</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：Agent + Retriever Tool 版文档 QA</h3>
+
+      <p><strong>场景描述：</strong>与实战一相同，但这次使用 Agent 模式——Agent 可以自主决定是否需要检索知识库，
+      并且可以结合多步推理和工具调用来回答更复杂的问题。</p>
+
+      <p><strong>你的任务：</strong>使用 createAgent + retriever tool 实现 Agent 驱动的 RAG。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { createAgent, tool } from "langchain";
+import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import { z } from "zod";
+
+// ==========================================
+// 1. 构建知识库（与实战一相同）
+// ==========================================
+
+async function buildVectorStore() {
+  const loader = new TextLoader("./docs/product-manual.md");
+  const docs = await loader.load();
+
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 500,
+    chunkOverlap: 50,
+  });
+  const splitDocs = await splitter.splitDocuments(docs);
+
+  const embeddings = new OpenAIEmbeddings();
+  const vectorStore = await MemoryVectorStore.fromDocuments(
+    splitDocs,
+    embeddings
+  );
+
+  return vectorStore;
+}
+
+// ==========================================
+// 2. 创建检索工具
+// ==========================================
+
+async function createRetrieverTool(vectorStore: MemoryVectorStore) {
+  return tool(
+    async ({ query }) => {
+      // 执行向量检索
+      const results = await vectorStore.similaritySearch(query, 3);
+
+      if (results.length === 0) {
+        return "知识库中没有找到相关信息。";
+      }
+
+      // 格式化结果
+      return results
+        .map(
+          (doc, i) =>
+            `[结果 ${i + 1}]${doc.metadata.source ? ` (来自: ${doc.metadata.source})` : ""}\n${doc.pageContent}`
+        )
+        .join("\n\n");
+    },
+    {
+      name: "search_documentation",
+      description: `搜索产品文档知识库。当你需要查找产品功能、配置方法、
+        故障排除、API 文档等信息时，使用此工具。输入应该是简洁的搜索查询。`,
+      schema: z.object({
+        query: z.string().describe("搜索关键词，如'如何重置密码'或'保修期'"),
+      }),
+    }
+  );
+}
+
+// ==========================================
+// 3. 创建 Agent
+// ==========================================
+
+async function createRagAgent(vectorStore: MemoryVectorStore) {
+  const retrieverTool = await createRetrieverTool(vectorStore);
+
+  const agent = await createAgent({
+    model: new ChatOpenAI({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+    }),
+    tools: [retrieverTool],
+    systemPrompt: `你是一个专业的产品文档助手。你的工作流程如下：
+
+## 工作流程
+
+1. **理解问题**：仔细分析用户的问题，确定需要查找哪些信息。
+2. **搜索知识库**：使用 search_documentation 工具搜索相关知识。
+3. **分析结果**：阅读检索结果，判断是否充分回答了用户的问题。
+   - 如果信息不足，可以换一个关键词重新搜索。
+   - 如果信息充分，基于检索内容回答。
+4. **给出回答**：
+   - 引用检索到的内容来支持你的回答
+   - 如果检索结果中没有相关信息，诚实地告知用户
+   - 用中文回答，保持专业和友好
+
+## 重要规则
+
+- 不要编造信息——只回答基于检索内容能确认的信息
+- 如果用户的问题很模糊，先搜索再判断是否需要追问`,
+  });
+
+  return agent;
+}
+
+// ==========================================
+// 4. 对话测试
+// ==========================================
+
+async function main() {
+  const vectorStore = await buildVectorStore();
+  const agent = await createRagAgent(vectorStore);
+
+  const questions = [
+    "产品的API速率限制是多少？",
+    "帮我对比一下基础版和专业版的功能差异",
+  ];
+
+  for (const question of questions) {
+    console.log(`\n👤 用户: ${question}`);
+
+    const response = await agent.invoke({
+      messages: [{ role: "user", content: question }],
+    });
+
+    const lastMsg = response.messages[response.messages.length - 1];
+    console.log(`🤖 助手: ${lastMsg.content}`);
+    console.log("─".repeat(60));
+  }
+}
+
+main().catch(console.error);</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">👤 用户: 产品的API速率限制是多少？
+🤖 助手: 根据文档中的说明，API 速率限制如下：
+
+- **免费版**：每分钟 100 次请求
+- **专业版**：每分钟 1000 次请求
+- **企业版**：每分钟 5000 次请求（可联系客服调整）
+
+以上信息来自「产品手册 - API 配置」章节。
+
+👤 用户: 帮我对比一下基础版和专业版的功能差异
+🤖 助手: 根据文档中的「产品版本对比」章节，基础版和专业版的主要差异如下：
+
+| 功能 | 基础版 | 专业版 |
+|------|--------|--------|
+| API 调用 | ❌ 不支持 | ✅ 支持 |
+| 数据导出 | CSV 格式 | CSV + JSON + Excel |
+| 团队协作 | ❌ | ✅ 支持最多 10 人 |
+| 自定义仪表盘 | ❌ | ✅ |
+| 技术支持 | 邮件支持 | 邮件 + 在线聊天 + 电话 |
+
+如需更详细的信息，请问您关注的是哪个具体功能？</code></pre>
+        </div>
+      </details>
+
+      <h3>实战三：多文档 RAG 对话系统（带记忆）</h3>
+
+      <p><strong>场景描述：</strong>用户需要与知识库进行多轮对话，比如先问"我们公司有哪些产品？"，
+      接着问"第一个产品的价格是多少？"。系统需要记住历史对话，理解"第一个"指的是之前提到的产品。</p>
+
+      <p><strong>你的任务：</strong>在多轮对话场景中融合 RAG 和记忆系统。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { createAgent, tool } from "langchain";
+import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import { BufferMemory } from "langchain/memory";
+import { z } from "zod";
+
+// ==========================================
+// 1. 构建多文档知识库
+// ==========================================
+
+async function buildMultiDocStore(docsDir: string) {
+  // 使用 DirectoryLoader 加载目录下所有文档
+  const loader = new DirectoryLoader(docsDir, {
+    ".md": (filePath) => new TextLoader(filePath),
+    ".txt": (filePath) => new TextLoader(filePath),
+  });
+
+  const rawDocs = await loader.load();
+  console.log(`📄 加载了 ${rawDocs.length} 个文档`);
+
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 400,
+    chunkOverlap: 40,
+  });
+
+  const docs = await splitter.splitDocuments(rawDocs);
+  console.log(`✂️ 分割为 ${docs.length} 个文本块`);
+
+  const embeddings = new OpenAIEmbeddings();
+  const vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
+
+  return vectorStore;
+}
+
+// ==========================================
+// 2. 创建带记忆的 RAG Agent
+// ==========================================
+
+async function createMemoryRagAgent(vectorStore: MemoryVectorStore) {
+  // 检索工具
+  const searchDocs = tool(
+    async ({ query }) => {
+      const results = await vectorStore.similaritySearch(query, 4);
+      return results
+        .map(
+          (d, i) =>
+            `[${i + 1}] 来源: ${d.metadata.source || "未知"}\n${d.pageContent}`
+        )
+        .join("\n\n---\n\n");
+    },
+    {
+      name: "search_documents",
+      description: "搜索所有产品文档，获取与查询相关的内容。",
+      schema: z.object({ query: z.string() }),
+    }
+  );
+
+  // 创建带 BufferMemory 的 Agent
+  const memory = new BufferMemory({
+    returnMessages: true,
+    memoryKey: "chat_history",
+  });
+
+  const agent = await createAgent({
+    model: new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0.2 }),
+    tools: [searchDocs],
+    systemPrompt: `你是一个多文档知识助手。你可以访问公司的产品文档库。
+
+## 工作方式
+
+1. 当用户提问时，使用 search_documents 工具搜索相关知识。
+2. 结合对话历史理解用户问题的上下文（比如"它"、"第一个"等指代）。
+3. 基于检索到的内容回答，引用来源。
+4. 如果信息不足，换关键词重新搜索，或告知用户。`,
+    memory,
+  });
+
+  return agent;
+}
+
+// ==========================================
+// 3. 多轮对话测试
+// ==========================================
+
+async function main() {
+  const vectorStore = await buildMultiDocStore("./company-docs");
+  const agent = await createMemoryRagAgent(vectorStore);
+
+  const conversation = [
+    "我们公司有哪些产品？",
+    "第一个产品的定价是多少？",
+    "它支持哪些支付方式？",
+    "第二个产品呢？和第一个有什么不同？",
+  ];
+
+  for (const message of conversation) {
+    console.log(`\n👤 用户: ${message}`);
+
+    const response = await agent.invoke({
+      messages: [{ role: "user", content: message }],
+    });
+
+    const lastMsg = response.messages[response.messages.length - 1];
+    console.log(`🤖 助手: ${lastMsg.content}`);
+    console.log("─".repeat(60));
+  }
+}
+
+main().catch(console.error);</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">👤 用户: 我们公司有哪些产品？
+🤖 助手: 根据产品文档，我们公司目前有以下产品线：
+
+1. **CloudBase Pro** — 云计算基础设施平台
+2. **DataPulse Analytics** — 数据分析与可视化工具
+3. **SecureGate Identity** — 身份认证与访问管理系统
+4. **BotForge AI** — 智能对话机器人平台
+
+─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+
+👤 用户: 第一个产品的定价是多少？
+🤖 助手: 「CloudBase Pro」的定价方案如下：
+
+- **入门版**：$99/月（包含 100GB 存储、1TB 流量）
+- **专业版**：$299/月（包含 500GB 存储、5TB 流量）
+- **企业版**：$899/月（包含 2TB 存储、不限流量）
+
+所有方案均包含 14 天免费试用。
+
+─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+
+👤 用户: 它支持哪些支付方式？
+🤖 助手: CloudBase Pro 支持以下支付方式：
+
+- 信用卡（Visa、MasterCard、American Express）
+- PayPal
+- 银行转账（仅限企业版年付方案）
+- 支付宝（中国区用户）
+- 微信支付（中国区用户）
+
+所有支付均通过 Stripe 处理，确保交易安全。
+
+─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+
+👤 用户: 第二个产品呢？和第一个有什么不同？
+🤖 助手: 「DataPulse Analytics」与 CloudBase Pro 的主要区别：
+
+**DataPulse Analytics 定位：**
+- 专注于数据分析与可视化
+- 支持连接多种数据源（SQL、NoSQL、CSV、API）
+- 提供拖拽式仪表盘和自动化报表
+
+**与 CloudBase Pro 的不同：**
+- CloudBase Pro 是基础设施平台，提供计算和存储资源
+- DataPulse 是上层应用，专注于从数据中获取洞察
+- 两者可以配合使用：CloudBase Pro 提供数据存储，DataPulse 进行分析展示
+
+**DataPulse 定价：**
+- 入门版：$49/月
+- 专业版：$149/月
+- 企业版：$499/月</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧：查询变换技术实战</h2>
+
+      <h3>技巧一：查询重写（Query Rewriting）</h3>
+
+      <p>
+        在多轮对话中，用户的后续问题往往包含指代（"它"、"那个"、"第一个"），
+        直接检索效果很差。查询重写在检索之前，先利用 LLM 和对话历史将模糊问题改写为自包含的查询。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+
+// ==========================================
+// 查询重写组件
+// ==========================================
+
+const rewritePrompt = ChatPromptTemplate.fromMessages([
+  ["system", `你是一个查询重写助手。你的任务是将用户的当前问题，
+结合对话历史，改写成<strong>自包含</strong>的搜索查询。
+
+规则：
+1. 替换所有指代词（它、他、这个、那个、第一个等）为具体名词
+2. 保持原问题的核心意图
+3. 只输出改写后的查询，不要加任何解释
+4. 如果问题已经自包含，保持原样`],
+  ["human", `对话历史：
+{chat_history}
+
+当前问题：{question}
+
+请输出改写后的搜索查询：`],
+]);
+
+const model = new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0 });
+const rewriteChain = rewritePrompt | model | new StringOutputParser();
+
+// ==========================================
+// 在 RAG 管线中使用查询重写
+// ==========================================
+
+async function rewriteQuery(
+  question: string,
+  chatHistory: string
+): Promise<string> {
+  if (!chatHistory) return question; // 首轮无需重写
+
+  const rewritten = await rewriteChain.invoke({
+    chat_history: chatHistory,
+    question,
+  });
+
+  console.log(`   🔄 查询重写: "${question}" → "${rewritten}"`);
+  return rewritten.trim();
+}
+
+// 示例使用
+async function main() {
+  const history = `用户: 你们公司有哪些产品？
+助手: 我们有 CloudBase Pro 和 DataPulse Analytics 两款产品。`;
+
+  const query1 = await rewriteQuery("第一个产品的价格是多少？", history);
+  // → "CloudBase Pro 的价格是多少？"
+
+  const query2 = await rewriteQuery("它支持API吗？", history);
+  // → "CloudBase Pro 是否支持 API？"
+}
+
+main();</code></pre>
+      </div>
+
+      <h3>技巧二：查询分解（Query Decomposition）</h3>
+
+      <p>
+        当用户提一个复杂问题时，将其拆解为多个简单子查询，分别检索后再汇总结果。
+        这能显著提高复杂问题的回答质量。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 查询分解组件
+// ==========================================
+
+const decomposePrompt = ChatPromptTemplate.fromMessages([
+  ["system", `将以下复杂问题拆解为多个简单的子问题。
+每个子问题应该独立可检索，覆盖原问题的不同方面。
+用换行分隔，只输出子问题列表。`],
+  ["human", "{question}"],
+]);
+
+const decomposeChain = decomposePrompt | model | new StringOutputParser();
+
+// ==========================================
+// 多查询检索 + 汇总
+// ==========================================
+
+async function multiQueryRetrieve(
+  question: string,
+  retriever: any
+): Promise<string[]> {
+  const result = await decomposeChain.invoke({ question });
+  const subQueries = result.split("\n").filter((q: string) => q.trim());
+
+  console.log(`   🔗 分解为 ${subQueries.length} 个子查询：`);
+  subQueries.forEach((q: string, i: number) => console.log(`      ${i + 1}. ${q}`));
+
+  // 并行检索每个子查询
+  const allResults = await Promise.all(
+    subQueries.map((q: string) => retriever.invoke(q))
+  );
+
+  // 合并去重（基于文本内容）
+  const seen = new Set<string>();
+  const uniqueDocs = allResults.flat().filter((doc: any) => {
+    const key = doc.pageContent.substring(0, 50);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return uniqueDocs;
+}
+
+// 示例：复杂问题分解
+// "请比较免费版和专业版的功能差异和定价"
+// 分解为：
+// 1. "免费版有哪些功能？"
+// 2. "专业版有哪些功能？"
+// 3. "免费版的价格是多少？"
+// 4. "专业版的价格是多少？"</code></pre>
+      </div>
+
+      <h3>技巧三：检索后重排（Re-ranking）</h3>
+
+      <p>
+        向量相似性搜索的 Top-K 结果不一定都是相关的。检索后重排是在生成最终答案之前，
+        用一个更精确的模型（如 Cross-encoder）或让 LLM 自己重新评估每个检索结果的相关性。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// LLM 重排器：让 LLM 评估每个文档的相关性
+// ==========================================
+
+const rerankPrompt = ChatPromptTemplate.fromMessages([
+  ["system", `你是一个文档相关性评估器。对于每个文档，判断它与用户问题的相关性。
+输出格式：每行一个分数（1-5），5 表示高度相关，1 表示完全不相关。
+
+只输出数字列表，每行一个。`],
+  ["human", `用户问题：{question}
+
+文档列表：
+{documents}
+
+请为每个文档打分（1-5 分）：`],
+]);
+
+const rerankChain = rerankPrompt | model | new StringOutputParser();
+
+async function retrieveAndRerank(
+  question: string,
+  retriever: any,
+  topK: number = 5
+) {
+  // 1. 先检索出较多结果（扩大召回）
+  const docs = await retriever.invoke(question, topK * 2);
+
+  // 2. 让 LLM 评分
+  const docTexts = docs.map((d: any, i: number) => `[${i + 1}] ${d.pageContent}`);
+  const scores = await rerankChain.invoke({
+    question,
+    documents: docTexts.join("\n\n"),
+  });
+
+  // 3. 解析分数并排序
+  const scoreList = scores
+    .split("\n")
+    .map((s: string) => parseInt(s.trim()))
+    .filter((n: number) => !isNaN(n));
+
+  const scored = docs.map((doc: any, i: number) => ({
+    doc,
+    score: scoreList[i] || 1,
+  }));
+
+  scored.sort((a: any, b: any) => b.score - a.score);
+
+  // 4. 返回得分最高的 topK 个
+  return scored.slice(0, topK).map((s: any) => s.doc);
+}
+
+// 使用方式：replace retriever.invoke() with retrieveAndRerank()</code></pre>
+      </div>
+
+      <h3>技巧四：多轮对话中的上下文压缩</h3>
+
+      <p>
+        在多轮 RAG 对话中，历史消息会不断累积，导致检索时上下文过长、噪声增多。
+        <strong>上下文压缩（Contextual Compression）</strong> 的思路是：在检索之后，
+        用 LLM 对检索结果进行"挤压"——只保留最相关的部分，去除与当前问题无关的信息。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 上下文压缩
+// ==========================================
+
+const compressPrompt = ChatPromptTemplate.fromMessages([
+  ["system", `你是一个文档压缩助手。你的任务是从以下文档中提取出与用户问题
+最相关的部分。如果文档中有多个段落，只保留最能回答用户问题的那些。
+
+要求：
+1. 保留原文中的关键数据、数字、事实
+2. 去除无关的示例、铺垫语言
+3. 如果整个文档都不相关，输出"无相关信息"
+4. 输出要简洁，直接给出压缩后的内容`],
+  ["human", `用户问题：{question}
+
+原始文档：
+{document}
+
+请输出压缩后的相关内容：`],
+]);
+
+const compressChain = compressPrompt | model | new StringOutputParser();
+
+async function compressRetrievedDocs(
+  question: string,
+  docs: any[]
+): Promise<string> {
+  const combined = docs.map((d) => d.pageContent).join("\n\n");
+
+  const compressed = await compressChain.invoke({
+    question,
+    document: combined,
+  });
+
+  return compressed;
+}
+
+// ==========================================
+// 完整的多轮 RAG 管线（含查询重写 + 上下文压缩）
+// ==========================================
+
+async function advancedRagPipeline(
+  question: string,
+  chatHistory: string,
+  vectorStore: MemoryVectorStore
+) {
+  // Step 1: 查询重写
+  const rewrittenQuery = await rewriteQuery(question, chatHistory);
+
+  // Step 2: 检索
+  const rawDocs = await vectorStore.similaritySearch(rewrittenQuery, 5);
+
+  // Step 3: 上下文压缩
+  const compressedContext = await compressRetrievedDocs(rewrittenQuery, rawDocs);
+
+  // Step 4: 生成回答
+  const answer = await ragChain.invoke({
+    question: question, // 用原问题（保留用户原始意图）
+    context: compressedContext,
+  });
+
+  return answer;
+}</code></pre>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. RAG 的三阶段架构是什么？每个阶段的核心任务是什么？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><strong>Indexing（索引）</strong>：加载文档 → 文本分割 → 嵌入向量化 → 存储到向量数据库。这是离线预处理阶段。</p>
+            <p><strong>Retrieval（检索）</strong>：用户提问 → 问题向量化 → 在向量库中做相似性搜索 → 返回 Top-K 相关文档片段。这是在线推理的第一步。</p>
+            <p><strong>Generation（生成）</strong>：检索到的文档片段 + 用户问题 + 系统提示 → 传给 LLM → 生成最终回答。模型的任务是"用提供的资料来回答问题"。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. 在 LangChain v1.x 中，实现 RAG 有哪两种主要模式？各有什么优缺点？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><strong>模式 A：Agent + Retriever Tool</strong> — 将检索封装为工具传给 createAgent。优点：Agent 可以自主决策何时检索、结合记忆和多步推理；缺点：Agent 调用有开销，适用于需要复杂决策的场景。</p>
+            <p><strong>模式 B：LCEL 管道</strong> — 使用 RunnablePassthrough.assign() 注入检索结果。优点：轻量、直观、数据流清晰、流式支持好；缺点：确定性管线，缺乏 Agent 的自主决策能力。适用于简单的 QA 场景。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. 什么是查询变换？常见的查询变换策略有哪些？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>查询变换是在检索之前，用 LLM 对用户问题做预处理，使检索更精准。常见策略包括：</p>
+            <ul>
+              <li><strong>重写（Rewrite）</strong> — 将模糊问题改写为自包含查询，解决指代问题</li>
+              <li><strong>分解（Decomposition）</strong> — 将复杂问题拆解为多个子查询，分别检索后汇总</li>
+              <li><strong>HyDE</strong> — 先生成一个假设性回答，用该回答去检索（假设文档与真实文档语义更接近）</li>
+              <li><strong>扩展（Expansion）</strong> — 用同义词和相关概念扩展查询词</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. RAG 的提示设计中，"不知道"的处理为什么重要？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>因为 LLM 天生有"编造倾向"（幻觉/Hallucination）。如果检索到的资料不包含答案，模型可能会强行用其训练数据中的知识来回答，导致信息不准确。在提示中明确要求"如果资料中找不到相关信息，请说不知道"，能显著降低幻觉率。这是 RAG 系统从"可用"到"可靠"的关键之一。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">5. Self-RAG 和 HyDE 有什么区别？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><strong>Self-RAG</strong> 是在检索后让模型自我反思：判断每个检索结果是否相关（相关性过滤），生成答案后再检查是否有充分的事实支持（事实性验证）。它是一个"检索→判断→生成→验证"的循环。</p>
+            <p><strong>HyDE</strong> 是在检索前先让模型生成一个假设性的"理想文档"，然后用这个假设文档的向量去检索真实文档。它的出发点是：假设文档在语义空间上比原始问题更接近真实文档，因此能检索到更相关的内容。</p>
+            <p>简单说：Self-RAG 是"检后反思"，HyDE 是"检前假设"。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：chunkSize 和 chunkOverlap 设置不合理</div>
+        <p><strong>症状：</strong>检索到的文档片段要么太短缺失关键信息，要么太长包含大量噪声。</p>
+        <p><strong>原因：</strong>chunkSize 太小（&lt;200）导致每个片段信息量不足；太大（&gt;2000）导致片段噪声过多。chunkOverlap 太小（&lt;10）导致上下文断裂。</p>
+        <p><strong>解决：</strong>一般推荐 chunkSize=500-1000，chunkOverlap=50-200。同时根据文档结构选择合适的分隔符（如 Markdown 标题）。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：检索结果未正确注入提示，模型仍依赖自有知识</div>
+        <p><strong>症状：</strong>模型回答的内容在检索结果中并不存在，模型仍然使用了训练数据中的知识。</p>
+        <p><strong>原因：</strong>提示模板中的 context 变量没有被正确注入，或者注入后模型被"允许"忽略它。常见于提示中缺少"请基于以上资料回答"的明确指令。</p>
+        <p><strong>解决：</strong>在 system prompt 中明确写死规则："你的回答必须基于以下资料。不要使用你自己的知识。"同时检查 LCEL 管道中的数据流是否正确传递了 context 字段。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：多轮对话中指代未解析导致检索失效</div>
+        <p><strong>症状：</strong>第二轮提问"它的价格是多少？"时，检索返回的内容与第一轮提到的产品无关。</p>
+        <p><strong>原因：</strong>直接用原始问题检索，"它的价格"没有包含产品名，向量搜索无法找到相关文档。</p>
+        <p><strong>解决：</strong>在检索之前先做查询重写（Query Rewriting），利用 LLM 和对话历史将"它"替换为具体名词，得到一个自包含的搜索查询。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：Agent Tool 的 description 写得太模糊</div>
+        <p><strong>症状：</strong>Agent 在需要检索时没有调用检索工具，或者在不该调用时调用了。</p>
+        <p><strong>原因：</strong>在 createAgent 模式中，Agent 根据工具的描述来决定是否调用。如果 description 写得太笼统（如"搜索知识库"），Agent 无法判断何时应该使用。</p>
+        <p><strong>解决：</strong>写具体、可操作的 description。例如："当你需要查找产品文档中的功能说明、配置方法、故障排除步骤时使用此工具。不要用它来回答常识性问题。"</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 5：未处理检索结果为空的边界情况</div>
+        <p><strong>症状：</strong>当知识库中没有相关内容时，模型仍然给出了答案（可能编造）。</p>
+        <p><strong>原因：</strong>提示中没有处理"资料不足"的情况，模型倾向于"尽力回答"而非"诚实说不知道"。</p>
+        <p><strong>解决：</strong>在提示中明确加入："如果提供的资料不足以回答问题，请直接说'资料中没有相关信息'。"并在代码层面检查检索结果是否为空。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 16 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>RAG 架构</strong> — Indexing（索引）→ Retrieval（检索）→ Generation（生成）三阶段流水线</li>
+          <li><strong>两种实现模式</strong> — Agent + Retriever Tool（自主决策）vs LCEL 管道（轻量确定）</li>
+          <li><strong>RAG 提示设计</strong> — 明确要求模型"基于资料回答"、"不知道就说不知道"、引用原文</li>
+          <li><strong>实战一</strong> — 完整的文档 QA 系统：加载 → 分割 → 嵌入 → 存储 → 检索 → 生成</li>
+          <li><strong>实战二</strong> — Agent + Retriever Tool 版文档 QA，支持多步推理</li>
+          <li><strong>实战三</strong> — 多文档 RAG 对话系统（带 BufferMemory），支持多轮上下文</li>
+          <li><strong>查询变换</strong> — 查询重写（解决指代）、查询分解（复杂问题）、上下文压缩、检索重排</li>
+          <li><strong>进阶范式</strong> — Self-RAG（检后反思）、HyDE（检前假设）</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 06 章：流式传输 Streaming</h3>
+        <p>在下一章中，我们将进入进阶特性模块，学习 LangChain 的流式传输机制。
+        你将学会如何让 AI 的回答像真人打字一样逐字输出，提升用户体验。具体包括：</p>
+        <ul>
+          <li>理解流式传输的核心价值和实现原理</li>
+          <li>使用 model.stream() 实现逐 Token 输出</li>
+          <li>在 Agent 和 LCEL 管道中实现流式响应</li>
+          <li>结合回调实现实时 UI 更新</li>
+          <li>流式输出的错误处理和边界情况管理</li>
+        </ul>
+        <a href="06-streaming.html" class="btn btn-primary">继续学习第 06 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="15-vector-stores.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 16 章 / 共 19 章</span>
+        <a href="06-streaming.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

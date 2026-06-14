@@ -35,6 +35,18 @@
       <a href="../chapters/05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
     </div>
     <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="../chapters/11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="../chapters/12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="../chapters/13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="../chapters/14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="../chapters/15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="../chapters/16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
       <div class="section-title">进阶特性</div>
       <a href="../chapters/06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
       <a href="../chapters/07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
@@ -43,7 +55,13 @@
     <div class="sidebar-section">
       <div class="section-title">高级应用</div>
       <a href="../chapters/09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
-      <a href="../chapters/10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+      <a href="../chapters/17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="../chapters/18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="../chapters/10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="../chapters/19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
     </div>
     <div class="sidebar-section">
       <div class="section-title">附录</div>
@@ -57,7 +75,7 @@
     <div class="content-wrapper">
 
       <h1>附录 B · 常见错误排错指南</h1>
-      <p class="subtitle">LangChain.js 开发中 18 个高频错误的原因分析与解决方案</p>
+      <p class="subtitle">LangChain.js 开发中 29 个高频错误的原因分析与解决方案</p>
 
       <div class="callout info">
         <div class="callout-title">📋 使用说明</div>
@@ -896,6 +914,483 @@ await agent.invoke(
 const result = await agent.invoke(
   { messages: [{ role: "user", content: "我的爱好是什么？" }] },
   user1Session.config
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类九：RAG 相关 -->
+      <!-- ============================================================ -->
+      <h2>📚 RAG 检索增强生成</h2>
+
+      <!-- 错误 19 -->
+      <div class="card">
+        <h3>❌ 文档加载失败 — Document Loader Error</h3>
+        <p><strong>错误信息：</strong><code>Error: Failed to load document: ENOENT: no such file or directory</code> 或 <code>Error fetching URL: 404 Not Found</code></p>
+        <p><strong>原因分析：</strong>Document Loader 在读取文件或抓取网页时失败。常见原因包括：文件路径错误、PDF 文件损坏、目标 URL 不可达或返回了非预期的状态码。对于 <code>PDFLoader</code>，还可能是缺少底层解析依赖（如 <code>pdf-parse</code>）。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>确认文件路径是绝对路径或相对于工作目录的正确路径</li>
+          <li>使用 <code>fs.existsSync()</code> 提前检查文件是否存在</li>
+          <li>对于网页加载器，添加 <code>User-Agent</code> 请求头避免被拦截</li>
+          <li>安装 PDF 解析依赖：<code>npm install pdf-parse</code></li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { WebBaseLoader } from "@langchain/community/document_loaders/web/confluence";
+import fs from "fs";
+
+// 方案一：加载前检查文件是否存在
+const filePath = "./data/report.pdf";
+if (!fs.existsSync(filePath)) {
+  throw new Error(`文件不存在: ${filePath}`);
+}
+const loader = new PDFLoader(filePath);
+const docs = await loader.load();
+
+// 方案二：WebBaseLoader 自定义请求头
+const webLoader = new WebBaseLoader("https://example.com/docs", {
+  headers: {
+    "User-Agent": "Mozilla/5.0 (compatible; LangChainBot/1.0)",
+  },
+});
+const webDocs = await webLoader.load();</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 20 -->
+      <div class="card">
+        <h3>❌ Embedding 维度不匹配</h3>
+        <p><strong>错误信息：</strong><code>Error: Query vector dimension (1536) does not match index dimension (3072)</code></p>
+        <p><strong>原因分析：</strong>查询向量和索引库中向量的维度不一致。通常是因为使用了不同的 Embedding 模型（如 <code>text-embedding-3-small</code> 输出 1536 维，而 <code>text-embedding-3-large</code> 输出 3072 维），或者在切换模型后没有重建向量索引。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>始终使用同一个 Embedding 模型进行向量化和检索</li>
+          <li>如果更换了 Embedding 模型，必须删除旧索引并重新构建</li>
+          <li>在 <code>MemoryVectorStore</code> 等本地存储中，重启进程后需重新添加文档</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { OpenAIEmbeddings } from "@langchain/openai";
+import { MemoryVectorStore } from "@langchain/core/vectorstores";
+
+// 正确做法：始终使用同一个 Embeddings 实例
+const embeddings = new OpenAIEmbeddings({
+  model: "text-embedding-3-small", // 固定模型
+});
+
+// 创建向量存储并添加文档时自动使用该 embeddings
+const vectorStore = new MemoryVectorStore(embeddings);
+await vectorStore.addDocuments(docs);
+
+// 检索时也必须使用相同的 embeddings 实例
+const results = await vectorStore.similaritySearch("查询内容", 3);
+// 如果换了 embeddings 实例，需要重建 vectorStore</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 21 -->
+      <div class="card">
+        <h3>❌ 检索结果为空 — Empty Retrieval</h3>
+        <p><strong>错误信息：</strong><code>Retrieved documents array is empty</code> 或 <code>Warning: no relevant documents found for the query</code></p>
+        <p><strong>原因分析：</strong>向量检索未找到任何匹配结果。常见原因有：向量库中尚未添加任何文档、查询语句与已有文档语义差异过大、<code>k</code> 值设置过小、或者文档被意外清空。在使用 <code>MemoryVectorStore</code> 时，如果应用重启后未重新加载文档也会出现该问题。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>调用 <code>similaritySearch</code> 前确认向量库中有文档：<code>const count = await vectorStore.countDocuments()</code></li>
+          <li>增大 <code>k</code> 值（如从 3 改为 10）扩大检索范围</li>
+          <li>调整 <code>scoreThreshold</code> 降低相似度门槛</li>
+          <li>使用 <code>MultiQueryRetriever</code> 自动生成多个查询变体</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { MultiQueryRetriever } from "langchain/retrievers/multi_query";
+
+// 方案一：增大 k 值
+const retriever = vectorStore.asRetriever({ k: 10 });
+
+// 方案二：使用 MultiQueryRetriever 提升检索覆盖率
+const model = new ChatOpenAI({ model: "gpt-4o" });
+const multiQueryRetriever = MultiQueryRetriever.fromLLM({
+  llm: model,
+  retriever: vectorStore.asRetriever({ k: 5 }),
+  queryCount: 3, // 自动生成 3 个查询变体
+});
+
+const results = await multiQueryRetriever.getRelevantDocuments("查询内容");
+console.log(`找到 ${results.length} 个相关文档`);</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 22 -->
+      <div class="card">
+        <h3>❌ 上下文窗口超出限制 — Context Window Exceeded</h3>
+        <p><strong>错误信息：</strong><code>BadRequestError: 400 context_length_exceeded: This model's maximum context length is 128000 tokens</code></p>
+        <p><strong>原因分析：</strong>RAG 检索返回的文档片段过多或过长，累积的 Token 数超过了模型的上下文窗口限制。通常是因为 <code>chunkSize</code> 设置得太大、<code>k</code> 值过高、或者检索到的文档块之间冗余度过高。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>减小文本分割的 <code>chunkSize</code>（如从 2000 改为 500）</li>
+          <li>降低检索的 <code>k</code> 值（如从 10 改为 3）</li>
+          <li>在将文档注入 Prompt 前进行 Token 计数和截断</li>
+          <li>使用 <code>Rerank</code> 技术对检索结果重排序后只取 Top-N</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { TokenTextSplitter } from "@langchain/textsplitters";
+
+// 方案一：使用更小的 chunkSize
+const splitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 500,  // 减小块大小
+  chunkOverlap: 50,
+});
+
+// 方案二：对检索结果进行 Token 计数和截断
+function truncateDocuments(docs, maxTokens = 4000) {
+  let totalTokens = 0;
+  const truncated = [];
+  for (const doc of docs) {
+    const tokenCount = doc.pageContent.length / 4; // 粗略估算
+    if (totalTokens + tokenCount > maxTokens) break;
+    truncated.push(doc);
+    totalTokens += tokenCount;
+  }
+  return truncated;
+}
+
+const docs = await vectorStore.similaritySearch("查询", 10);
+const safeDocs = truncateDocuments(docs, 3000); // 限制 3000 tokens</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 23 -->
+      <div class="card">
+        <h3>❌ 检索结果不相关 — Irrelevant Retrieval</h3>
+        <p><strong>错误信息：</strong>没有明确报错，但模型生成的回答与问题不相关或使用了错误的信息</p>
+        <p><strong>原因分析：</strong>向量检索返回了与查询语义不相关的文档片段。常见原因包括：文本分割策略不当导致切块丢失上下文、Embedding 模型对特定领域理解不足、文档本身质量低或包含噪声信息。这是 RAG 系统中最隐蔽但最常见的问题。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>优化文本分割策略，增加 <code>chunkOverlap</code> 保持上下文连贯性</li>
+          <li>使用更高质量的 Embedding 模型（如 <code>text-embedding-3-large</code>）</li>
+          <li>在检索后添加 <code>Reranker</code>（重排序）过滤掉不相关的结果</li>
+          <li>在 Prompt 中明确指示：如果检索内容不相关，请告知用户而非编造</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// 方案一：增加 chunkOverlap 保持上下文
+const splitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 1000,
+  chunkOverlap: 300, // 增加重叠量
+});
+
+// 方案二：在 Prompt 中添加安全指令
+const RAG_PROMPT = ChatPromptTemplate.fromMessages([
+  ["system", `你是一个基于文档回答的助手。如果提供的文档内容与问题无关，
+请明确告知"我无法从提供的文档中找到相关信息"，不要编造答案。
+
+文档内容：
+{context}`],
+  ["user", "{question}"],
+]);
+
+// 方案三：使用 Cohere 重排序（需安装 @langchain/cohere）
+// const reranker = new CohereRerank({ model: "rerank-english-v3.0" });
+// const reranked = await reranker.compressDocuments(docs, query);</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类十：LCEL 相关 -->
+      <!-- ============================================================ -->
+      <h2>⛓️ LCEL 链式组合</h2>
+
+      <!-- 错误 24 -->
+      <div class="card">
+        <h3>❌ Pipe 类型不匹配 — Type Mismatch in LCEL Chain</h3>
+        <p><strong>错误信息：</strong><code>TypeError: Cannot pipe RunnableA to RunnableB: input type mismatch</code> 或 <code>TS2345: Argument of type 'Runnable<string, string>' is not assignable to parameter of type 'Runnable<string, string[]>'</code></p>
+        <p><strong>原因分析：</strong>LCEL 使用管道操作符 <code>|</code> 或 <code>.pipe()</code> 串联 Runnable 时，前一个 Runnable 的输出类型与后一个 Runnable 的输入类型不匹配。例如，<code>PromptTemplate</code> 输出 <code>BaseMessage[]</code> 但后续组件期望 <code>string</code>，或者链中缺少必要的类型转换步骤。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>检查链中各 Runnable 的输入/输出类型签名</li>
+          <li>在类型不匹配的步骤之间插入 <code>RunnableLambda</code> 进行转换</li>
+          <li>使用 TypeScript 泛型显式标注 Runnable 类型</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
+
+// 错误示范：类型不匹配
+// const badChain = promptTemplate.pipe(model); // PromptTemplate 输出 string，model 期望 BaseMessage[]
+
+// 正确示范：使用 ChatPromptTemplate 或添加转换步骤
+const chatPrompt = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个翻译助手"],
+  ["user", "请翻译：{text}"],
+]);
+
+// 方式一：直接串联正确匹配的类型
+const goodChain = chatPrompt.pipe(model).pipe(outputParser);
+
+// 方式二：使用 RunnableLambda 做显式类型转换
+const toString = RunnableLambda.from((msgs: BaseMessage[]) => msgs[0].content as string);
+const chain = chatPrompt.pipe(model).pipe(toString);
+
+// 方式三：使用 RunnableSequence 的 from() 方法（自动类型推断）
+const sequence = RunnableSequence.from([chatPrompt, model, outputParser]);</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 25 -->
+      <div class="card">
+        <h3>❌ stream 与 invoke 混淆 — Streaming vs Invoke Confusion</h3>
+        <p><strong>错误信息：</strong>调用 <code>.stream()</code> 后只收到一个完整块而非逐步 token，或调用 <code>.invoke()</code> 时报 <code>Cannot read properties of undefined</code></p>
+        <p><strong>原因分析：</strong>对 LCEL 链的流式行为理解有偏差。<code>.stream()</code> 返回的是 <code>AsyncIterable</code>，按链中各步骤的顺序向外输出事件块（chunks），而非输出单个完整结果。如果链中包含不支持流式的步骤（如某些 OutputParser），流会降级为一次性输出。而 <code>.invoke()</code> 与 <code>.stream()</code> 的返回值结构不同，混用会导致访问不存在的属性。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>明确区分：<code>.invoke()</code> 返回最终结果，<code>.stream()</code> 返回中间事件流</li>
+          <li>流式结果通常需要逐块聚合：<code>for await (const chunk of stream) { aggregate(chunk); }</code></li>
+          <li>确认链中所有组件都支持流式传输（实现 <code>transform()</code> 方法）</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// 错误示范：混淆 stream 与 invoke
+// const stream = await chain.invoke(input); // invoke 不返回流
+// for await (const chunk of stream) { ... } // 报错！
+
+// 正确用法一：invoke — 获取完整结果
+const result = await chain.invoke({ text: "Hello" });
+console.log(result); // 完整响应
+
+// 正确用法二：stream — 逐块消费
+const stream = await chain.stream({ text: "Hello" });
+let fullContent = "";
+for await (const chunk of stream) {
+  if (typeof chunk === "string") {
+    fullContent += chunk;
+  } else if (chunk?.content) {
+    fullContent += chunk.content;
+  }
+  console.log("收到块:", chunk);
+}
+console.log("聚合结果:", fullContent);
+
+// 流式链需要确保所有组件支持 streaming
+// 可以在组件上调用 .isStreamable() 检查</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类十一：LangGraph 状态图 -->
+      <!-- ============================================================ -->
+      <h2>🔀 LangGraph 状态图</h2>
+
+      <!-- 错误 26 -->
+      <div class="card">
+        <h3>❌ 缺少 Reducer — Missing Reducer for State Key</h3>
+        <p><strong>错误信息：</strong><code>Error: No reducer provided for state key "messages"</code> 或 <code>ValueError: Cannot update state key without a reducer</code></p>
+        <p><strong>原因分析：</strong>LangGraph 使用 Reducer 函数来合并多个节点对同一状态键的更新。当在 <code>StateGraph</code> 中定义状态 <code>channels</code> 时，如果某个键被多个节点写入（如多个节点都添加消息），就必须为它指定一个 Reducer（如 <code>addMessagesReducer</code>），否则 LangGraph 不知道如何合并这些并行更新。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>为需要合并的状态键显式配置 Reducer</li>
+          <li>对于消息列表，使用预置的 <code>addMessagesReducer</code> 或 <code>MessagesState</code></li>
+          <li>自定义 Reducer 需要满足 <code>(prev: V, next: V) => V</code> 签名</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { StateGraph, MessagesState } from "@langchain/langgraph";
+import {
+  addMessagesReducer,
+  MessagesReducer,
+} from "@langchain/langgraph/dist/reducers";
+
+// 正确方式一：使用预置的 MessagesState
+const graph = new StateGraph(MessagesState);
+// MessagesState 自带 messages 字段和 addMessagesReducer
+
+// 正确方式二：手动配置 Reducer
+interface MyState {
+  messages: BaseMessage[];
+  score: number;
+}
+
+const graph2 = new StateGraph<MyState>({
+  channels: {
+    messages: {
+      value: (prev: BaseMessage[], next: BaseMessage[]) =>
+        prev.concat(next), // 自定义 reducer：追加消息
+      default: () => [],
+    },
+    score: {
+      value: (prev: number, next: number) => next, // 直接替换
+      default: () => 0,
+    },
+  },
+});
+
+// 错误示范：没有为 messages 配置 reducer
+// const badGraph = new StateGraph({
+//   channels: {
+//     messages: { default: () => [] }, // 缺少 value reducer！
+//   },
+// });</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 27 -->
+      <div class="card">
+        <h3>❌ Recursion Limit 达到上限 — Recursion Limit Reached</h3>
+        <p><strong>错误信息：</strong><code>GraphRecursionError: Recursion limit of 25 reached without reaching a terminal node</code></p>
+        <p><strong>原因分析：</strong>LangGraph 图在执行时超过了最大递归步数（默认 25 步），通常是因为图中存在无限循环或条件边未能正确导向终止节点。常见于 Agent 工具调用场景：模型持续请求调工具但从未生成最终回复，或者条件边的判断逻辑存在漏洞导致始终返回"继续"。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>增加 <code>recursionLimit</code> 配置（临时方案）</li>
+          <li>检查条件边的判断逻辑，确保有明确的终止条件</li>
+          <li>限制工具调用的最大轮数，超出后强制生成最终回复</li>
+          <li>在 Prompt 中明确告知模型何时应该停止调用工具</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">import { createReactAgent } from "@langchain/langgraph/prebuilt";
+
+const agent = createReactAgent({
+  llm: model,
+  tools: [searchTool],
+});
+
+// 方案一：增加递归限制
+const result = await agent.invoke(
+  { messages: [new HumanMessage("搜索相关信息")] },
+  {
+    configurable: { thread_id: "test" },
+    recursionLimit: 50, // 从默认 25 增加到 50
+  }
+);
+
+// 方案二：在条件边中限制工具轮数
+let toolCallCount = 0;
+const MAX_TOOL_CALLS = 5;
+
+function shouldContinue(state) {
+  const lastMessage = state.messages[state.messages.length - 1];
+  if (lastMessage instanceof AIMessage && !lastMessage.tool_calls?.length) {
+    return "end"; // 模型没有调工具 → 结束
+  }
+  toolCallCount++;
+  if (toolCallCount >= MAX_TOOL_CALLS) {
+    return "end"; // 超出最大轮数 → 强制结束
+  }
+  return "continue";
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- 错误 28 -->
+      <div class="card">
+        <h3>❌ 状态定义错误 — State Definition Errors</h3>
+        <p><strong>错误信息：</strong><code>TypeError: Cannot read properties of undefined (reading 'messages')</code> 或 <code>Error: State key "context" not found in channel schema</code></p>
+        <p><strong>原因分析：</strong>在节点函数中访问了未定义的状态键，或者状态对象的类型定义与实际运行时返回的数据结构不一致。LangGraph 的状态是强类型的，所有在节点中读写的键都必须在 <code>StateGraph</code> 构造时声明。如果节点返回的更新中包含未声明的键，或者访问了不存在的键，都会触发此错误。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>在 <code>StateGraph</code> 构造函数中完整声明所有会用到的状态键</li>
+          <li>节点函数返回的更新对象只应包含已声明的键</li>
+          <li>使用 TypeScript 接口严格定义状态类型以获取编译期检查</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">interface AgentState {
+  messages: BaseMessage[];
+  context: string[];
+  agentOutput?: string;
+}
+
+// 正确：完整声明所有状态键
+const graph = new StateGraph<AgentState>({
+  channels: {
+    messages: {
+      value: addMessagesReducer,
+      default: () => [],
+    },
+    context: {
+      value: (prev: string[], next: string[]) => prev.concat(next),
+      default: () => [],
+    },
+    agentOutput: {
+      value: (prev: string | undefined, next: string) => next,
+      default: () => undefined,
+    },
+  },
+});
+
+// 节点函数：只读写已声明的键
+const agentNode = async (state: AgentState) => {
+  // 正确：访问已声明的 messages
+  const lastMsg = state.messages[state.messages.length - 1];
+
+  // 错误：访问未声明的键会导致运行时错误
+  // console.log(state.unknownKey);
+
+  return {
+    messages: [new AIMessage("回复内容")],
+    // 不返回未声明的键
+  };
+};
+
+graph.addNode("agent", agentNode);</code></pre>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- 分类十二：Callbacks 与追踪 -->
+      <!-- ============================================================ -->
+      <h2>📊 Callbacks & LangSmith 追踪</h2>
+
+      <!-- 错误 29 -->
+      <div class="card">
+        <h3>❌ LangSmith 未追踪 — Traces Not Appearing in LangSmith</h3>
+        <p><strong>错误信息：</strong>代码正常运行，但在 LangSmith 平台上看不到任何 Trace（追踪记录）</p>
+        <p><strong>原因分析：</strong>LangSmith 追踪默认是关闭的，需要设置环境变量显式启用。常见遗漏包括：未设置 <code>LANGSMITH_TRACING=true</code>、<code>LANGSMITH_API_KEY</code> 缺失或无效、<code>.env</code> 文件未在入口文件加载、或者在非 HTTPS 的生产环境中被安全策略拦截。此外，如果使用了自定义 <code>CallbackHandler</code> 但未正确传递 <code>callbacks</code> 参数，自定义追踪也不会生效。</p>
+        <p><strong>解决方案：</strong></p>
+        <ol>
+          <li>确认设置了 <code>LANGSMITH_TRACING=true</code> 和 <code>LANGSMITH_API_KEY</code></li>
+          <li>在项目入口文件顶部加载 <code>dotenv</code>：<code>import \"dotenv/config\"</code></li>
+          <li>在 LangSmith UI 中确认项目名称与 <code>LANGSMITH_PROJECT</code> 一致</li>
+          <li>对于自定义回调，需通过 <code>callbacks</code> 参数传入组件</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-header"><span class="lang-tag">TypeScript</span><button class="copy-btn">📋 复制</button></div>
+          <pre><code class="language-typescript">// .env 文件 — 确保包含以下内容
+// LANGSMITH_TRACING=true
+// LANGSMITH_API_KEY=lsv2_pt_xxxxxxxxxxxxxxxxxxxx
+// LANGSMITH_PROJECT=my-langchain-app
+
+// 入口文件 — 最顶部加载 dotenv
+import "dotenv/config";
+
+// 验证环境变量
+console.log("Tracing:", process.env.LANGSMITH_TRACING); // 应为 "true"
+console.log("Project:", process.env.LANGSMITH_PROJECT);
+console.log("API Key set:", !!process.env.LANGSMITH_API_KEY);
+
+// 自定义 CallbackHandler 示例
+import { BaseCallbackHandler } from "@langchain/core/callbacks/base";
+
+class MyLogger extends BaseCallbackHandler {
+  name = "MyLogger";
+
+  async handleLLMStart(llm, prompts) {
+    console.log(`[LLM Start] 模型: ${llm.name}, prompts: ${prompts.length}`);
+  }
+
+  async handleLLMEnd(output) {
+    console.log(`[LLM End] Token 用量:`, output.llmOutput?.tokenUsage);
+  }
+}
+
+// 在模型调用时传入自定义回调
+const model = new ChatOpenAI({ model: "gpt-4o" });
+const response = await model.invoke(
+  [new HumanMessage("你好")],
+  { callbacks: [new MyLogger()] } // 关键：传递 callbacks
 );</code></pre>
         </div>
       </div>

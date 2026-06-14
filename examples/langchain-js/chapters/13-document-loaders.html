@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第13章 文档加载与分割 - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch13">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html" class="active"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="12-lcel.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 13 章 / 共 19 章</span>
+        <a href="14-embeddings.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>📄 Document Loaders & Text Splitters — 文档加载与智能分割</h1>
+      <p class="subtitle">加载各种格式的文档，并将其智能分割成适合 LLM 处理的片段 <span class="tag tag-intermediate">进阶</span></p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 Document 对象的结构（<code>pageContent</code> + <code>metadata</code>）及其作用</li>
+          <li>掌握 TextLoader、PDFLoader、CheerioWebBaseLoader、JSONLoader、CSVLoader 等核心加载器</li>
+          <li>使用 RecursiveCharacterTextSplitter 智能分割长文本</li>
+          <li>理解 TokenTextSplitter 和 CharacterTextSplitter 的区别</li>
+          <li>掌握 chunkSize 和 chunkOverlap 的调优策略</li>
+          <li>从 Markdown 文件、网页等来源加载数据并分割</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="11-prompt-templates.html">第 11 章：Prompt Templates</a> 的学习，
+        了解模板格式化的基本概念。同时熟悉 TypeScript 的异步编程（async/await）。
+        本章是 RAG（检索增强生成）专题的第一篇，后续章节将在此基础上构建完整的 RAG 系统。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：Document 对象 — 文档的"护照"</h3>
+
+      <p>
+        在 LangChain 中，所有文档加载器返回的数据都是 <strong>Document</strong> 对象。
+        Document 是一个极其简单的数据结构，它只有两个字段：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>pageContent</code></td><td><code>string</code></td><td>文档的文本内容</td></tr>
+          <tr><td><code>metadata</code></td><td><code>Record&lt;string, any&gt;</code></td><td>文档的元数据（来源、页码、标题等）</td></tr>
+        </tbody>
+      </table>
+
+      <p>
+        你可以把 Document 想象成一本护照：<code>pageContent</code> 是你的照片和基本信息，
+        而 <code>metadata</code> 是签证页和出入境记录——记录了文档的"身份"和"来源"。
+        正是 metadata 的存在，使得 RAG 系统能够追踪每个片段来自哪个文件、哪一页，
+        从而在回答问题时引用准确的来源。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { Document } from "@langchain/core/documents";
+
+// 创建一个 Document 对象
+const doc = new Document({
+  pageContent: "LangChain 是一个用于构建 LLM 应用的框架。",
+  metadata: {
+    source: "intro.md",
+    author: "LangChain Team",
+    page: 1,
+    created: "2024-01-15",
+  },
+});
+
+console.log(doc.pageContent); // "LangChain 是一个用于构建 LLM 应用的框架。"
+console.log(doc.metadata.source); // "intro.md"
+
+// Document 对象也可以直接序列化为 JSON
+console.log(JSON.stringify(doc, null, 2));
+/* {
+ *   "pageContent": "LangChain 是一个用于构建 LLM 应用的框架。",
+ *   "metadata": { "source": "intro.md", "author": "LangChain Team", ... }
+ * } */</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 为什么 metadata 如此重要？</div>
+        <p>当 RAG 系统从向量数据库中检索到某个文档片段时，metadata 告诉你这个片段来自哪里。比如用户问"去年的营收是多少"，系统检索到了对应的片段，通过 metadata 中的 <code>source</code> 和 <code>page</code> 字段，最终回答可以附上引用："根据 2023 年度财报第 12 页……"。没有 metadata，你就无法做来源追溯。</p>
+      </div>
+
+      <h3>概念二：文档加载器 — 从各种来源读取数据</h3>
+
+      <p>
+        LangChain 提供了丰富的文档加载器，每种加载器对应一种数据源。
+        加载器的职责只有一个：<strong>读取原始数据 → 转为 Document 对象数组</strong>。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>加载器</th><th>来源</th><th>安装命令</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>TextLoader</code></td><td>纯文本 / Markdown 文件</td><td>内置在 <code>@langchain/community</code></td></tr>
+          <tr><td><code>PDFLoader</code></td><td>PDF 文档（逐页加载）</td><td><code>npm install pdf-parse</code></td></tr>
+          <tr><td><code>CheerioWebBaseLoader</code></td><td>网页 HTML 内容</td><td><code>npm install cheerio</code></td></tr>
+          <tr><td><code>JSONLoader</code></td><td>JSON / JSONL 文件</td><td>内置</td></tr>
+          <tr><td><code>CSVLoader</code></td><td>CSV 表格文件</td><td>内置</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// TextLoader — 加载纯文本/Markdown 文件
+// ==========================================
+import { TextLoader } from "@langchain/community/document_loaders/fs/text";
+
+const textLoader = new TextLoader("./data/readme.md");
+const docs = await textLoader.load();
+// docs[0].pageContent  → 文件的完整文本内容
+// docs[0].metadata     → { source: "./data/readme.md" }
+
+// ==========================================
+// PDFLoader — 加载 PDF（逐页拆分）
+// ==========================================
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+
+const pdfLoader = new PDFLoader("./data/report.pdf");
+const pdfDocs = await pdfLoader.load();
+// pdfDocs.length  → PDF 页数
+// pdfDocs[0].metadata → { source: "./data/report.pdf", page: 1, ... }
+
+// ==========================================
+// CheerioWebBaseLoader — 加载网页
+// ==========================================
+import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
+
+const webLoader = new CheerioWebBaseLoader("https://js.langchain.com/docs/introduction/");
+const webDocs = await webLoader.load();
+// webDocs[0].pageContent → 网页的文本内容（去除了 HTML 标签）
+
+// ==========================================
+// JSONLoader — 加载 JSON 文件
+// ==========================================
+import { JSONLoader } from "@langchain/community/document_loaders/fs/json";
+
+const jsonLoader = new JSONLoader("./data/data.json");
+const jsonDocs = await jsonLoader.load();
+// 每个 JSON 对象中的字符串字段会被提取为独立的 Document
+
+// ==========================================
+// CSVLoader — 加载 CSV 文件
+// ==========================================
+import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
+
+const csvLoader = new CSVLoader("./data/products.csv");
+const csvDocs = await csvLoader.load();
+// 每一行 CSV 记录变为一个 Document</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 为什么需要不同的加载器？</div>
+        <p>不同文件格式的内部结构天差地别——PDF 要解析页面布局和文本流，网页要去除 HTML 标签提取正文，JSON 要处理嵌套结构。LangChain 把这种复杂性封装在各自的加载器中，你只需要调用 <code>loader.load()</code>，就能获得统一的 Document 数组，后续的向量化、检索流程完全不用关心原始格式。</p>
+      </div>
+
+      <h3>概念三：文本分割器 — 将长文档切成"一口能吃下"的片段</h3>
+
+      <p>
+        LLM 有上下文窗口限制（如 GPT-4 的 128K token），但并不意味着你可以直接把一本 500 页的书塞进去。
+        大多数场景下，RAG 系统需要将文档分割成较小的块（chunk），每个块包含足够的信息但又不会浪费上下文空间。
+        这就是 TextSplitter 的职责。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>分割器</th><th>分割依据</th><th>适用场景</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>RecursiveCharacterTextSplitter</code></td><td>递归地按分隔符列表分割</td><td>通用文档（推荐首选）</td></tr>
+          <tr><td><code>CharacterTextSplitter</code></td><td>按固定字符分割</td><td>简单文本、日志文件</td></tr>
+          <tr><td><code>TokenTextSplitter</code></td><td>按 token 数量分割</td><td>需要精确控制 token 用量时</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { TokenTextSplitter } from "@langchain/textsplitters";
+import { CharacterTextSplitter } from "@langchain/textsplitters";
+
+// ==========================================
+// RecursiveCharacterTextSplitter（推荐）
+// ==========================================
+// 按优先级递归分割：\n\n → \n → 句号 → 感叹号 → 空格 → 字符
+const recursiveSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 500,      // 每块约 500 字符
+  chunkOverlap: 50,    // 相邻块重叠 50 字符
+  separators: ["\n\n", "\n", "。", ".", "！", "？", " "],
+});
+
+const chunks = await recursiveSplitter.splitDocuments(docs);
+// chunks[0].pageContent → 第一块内容
+// chunks[0].metadata    → 保留了原始文档的 metadata
+
+// ==========================================
+// TokenTextSplitter — 按 token 分割
+// ==========================================
+const tokenSplitter = new TokenTextSplitter({
+  chunkSize: 1000,     // 每块约 1000 token
+  chunkOverlap: 100,   // 重叠 100 token
+  encodingName: "cl100k_base", // OpenAI 使用的编码器
+});
+
+const tokenChunks = await tokenSplitter.splitDocuments(docs);
+
+// ==========================================
+// CharacterTextSplitter — 按字符分割
+// ==========================================
+const charSplitter = new CharacterTextSplitter({
+  separator: "\n\n",   // 按段落分割
+  chunkSize: 300,      // 每块约 300 字符
+  chunkOverlap: 30,
+});
+
+const charChunks = await charSplitter.splitDocuments(docs);</code></pre>
+      </div>
+
+      <h3>概念四：chunkSize 和 chunkOverlap 的调优策略</h3>
+
+      <p>
+        <code>chunkSize</code> 和 <code>chunkOverlap</code> 是分割器的两个核心参数，
+        它们的取值直接影响 RAG 系统的检索效果和 LLM 的回答质量。
+      </p>
+
+      <div class="card">
+        <h4>参数详解与调优建议</h4>
+        <table>
+          <thead>
+            <tr><th>参数</th><th>含义</th><th>调优建议</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>chunkSize</code></td><td>每个 chunk 的目标大小</td><td>500-1000 字符（约 100-200 token）适合问答场景；1500-3000 字符适合摘要/分析场景</td></tr>
+            <tr><td><code>chunkOverlap</code></td><td>相邻 chunk 之间的重叠字符数</td><td>通常为 chunkSize 的 10%-20%。例如 chunkSize=1000，则 overlap=100~200</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h4>调优策略速查</h4>
+        <ul>
+          <li><strong>小 chunk（~500 字符）</strong>：适合精确检索，每个 chunk 聚焦一个点，但可能缺乏上下文</li>
+          <li><strong>大 chunk（~2000 字符）</strong>：保留更多上下文，但可能包含无关信息，降低检索精度</li>
+          <li><strong>重叠不足</strong>：关键信息可能恰好被分割边界切断，导致上下不连贯</li>
+          <li><strong>重叠过多</strong>：产生大量冗余数据，增加向量存储和 LLM 推理的成本</li>
+        </ul>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// chunkSize / chunkOverlap 的直观演示
+const sampleText = `
+LangChain 是一个强大的 LLM 应用框架。
+它提供了丰富的工具和抽象。
+开发者可以用它构建复杂的 AI 应用。
+其中，文档加载器和文本分割器是 RAG 的基础组件。
+
+RAG（检索增强生成）通过检索相关文档来增强 LLM 的回答。
+这个模式广泛应用于问答系统、客服机器人等场景。
+`;
+
+const splitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 50,
+  chunkOverlap: 10,
+  separators: ["\n\n", "\n", "。", "！", "？"],
+});
+
+const result = await splitter.createDocuments([sampleText]);
+console.log(`分割成 ${result.length} 块`);
+result.forEach((doc, i) => {
+  console.log(`--- 块 ${i + 1} (${doc.pageContent.length} 字符) ---`);
+  console.log(doc.pageContent);
+});
+/* 输出示例：
+ * --- 块 1 (49 字符) ---
+ * LangChain 是一个强大的 LLM 应用框架。
+ * 它提供了丰富的工具和抽象。
+ * --- 块 2 (46 字符) ---
+ * 它提供了丰富的工具和抽象。
+ * 开发者可以用它构建复杂的 AI 应用。
+ * ...
+ */</code></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 为什么需要 chunkOverlap？</div>
+        <p>想象你在一本书中查找"特朗普的贸易政策"。如果分割边界恰好把"特朗普的贸易政策对环境的影响"从中间切断，第一块以"特朗普的贸易政策"结尾，第二块以"对环境的影响"开头——那检索"贸易政策"时只能找到第一块，但它缺少"对环境的影响"这一关键信息。chunkOverlap 确保边界处的信息在相邻块中都有出现，避免了这种"信息断裂"。</p>
+      </div>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：加载 Markdown 文件并智能分割</h3>
+
+      <p><strong>场景描述：</strong>你有一个 Markdown 格式的产品文档（<code>product-guide.md</code>），
+      需要将内容分割成适合问答的片段，每段聚焦一个功能点。</p>
+
+      <p><strong>你的任务：</strong>使用 TextLoader 加载文件，然后用 RecursiveCharacterTextSplitter 分割。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { TextLoader } from "@langchain/community/document_loaders/fs/text";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import * as fs from "fs/promises";
+import * as path from "path";
+
+// ==========================================
+// 1. 创建示例 Markdown 文件
+// ==========================================
+const markdownContent = `
+# Product Guide v2.0
+
+## 安装
+
+使用 npm 安装我们的包：
+
+\`\`\`bash
+npm install my-product
+\`\`\`
+
+## 配置
+
+在项目根目录创建 \`config.yaml\`：
+
+\`\`\`yaml
+api_key: your-key-here
+debug: false
+\`\`\`
+
+## 快速开始
+
+### 初始化客户端
+
+\`\`\`typescript
+import { Client } from "my-product";
+
+const client = new Client({
+  apiKey: process.env.API_KEY,
+});
+\`\`\`
+
+### 发送第一个请求
+
+\`\`\`typescript
+const response = await client.chat.completions.create({
+  model: "gpt-4",
+  messages: [{ role: "user", content: "你好" }],
+});
+\`\`\`
+
+## 高级用法
+
+### 流式响应
+
+设置 \`stream: true\` 来启用流式输出。
+
+### 错误处理
+
+所有 API 错误都会抛出 \`ApiError\` 异常，建议使用 try-catch 捕获。
+`;
+
+const testFile = path.join(process.cwd(), "product-guide.md");
+await fs.writeFile(testFile, markdownContent, "utf-8");
+
+// ==========================================
+// 2. 加载 Markdown 文件
+// ==========================================
+const loader = new TextLoader(testFile);
+const docs = await loader.load();
+
+console.log(`加载了 ${docs.length} 个文档`);
+console.log(`总字符数: ${docs[0].pageContent.length}`);
+
+// ==========================================
+// 3. 智能分割
+// ==========================================
+// 对于 Markdown 文档，用 ## 标题作为主要分隔符
+const splitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 300,
+  chunkOverlap: 30,
+  separators: ["\n## ", "\n### ", "\n\n", "\n", " "],
+});
+
+const chunks = await splitter.splitDocuments(docs);
+
+console.log(`分割成 ${chunks.length} 个片段`);
+
+// ==========================================
+// 4. 查看分割结果
+// ==========================================
+chunks.forEach((chunk, i) => {
+  console.log(`\n--- 片段 ${i + 1} (${chunk.pageContent.length} 字符) ---`);
+  console.log(chunk.pageContent.slice(0, 150) + "...");
+  console.log(`来源: ${chunk.metadata.source}`);
+});
+
+// ==========================================
+// 5. 清理临时文件
+// ==========================================
+await fs.unlink(testFile);
+
+/* 预期输出：
+ * 加载了 1 个文档
+ * 总字符数: 683
+ * 分割成 4 个片段
+ * --- 片段 1 ---
+ * # Product Guide v2.0
+ * ## 安装
+ * 使用 npm 安装我们的包：...
+ * --- 片段 2 ---
+ * ## 配置
+ * 在项目根目录创建 config.yaml：...
+ * --- 片段 3 ---
+ * ## 快速开始
+ * 初始化客户端 发送第一个请求...
+ * --- 片段 4 ---
+ * ## 高级用法
+ * 流式响应 错误处理...
+ */</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">加载了 1 个文档
+总字符数: 683
+分割成 4 个片段
+
+--- 片段 1 (121 字符) ---
+# Product Guide v2.0
+
+## 安装
+
+使用 npm 安装我们的包：
+
+```bash
+npm install my-product
+```...
+来源: product-guide.md
+
+--- 片段 2 (103 字符) ---
+## 配置
+
+在项目根目录创建 config.yaml：
+
+```yaml
+api_key: your-key-here
+...```
+来源: product-guide.md
+
+--- 片段 3 (189 字符) ---
+## 快速开始
+...
+来源: product-guide.md
+
+--- 片段 4 (159 字符) ---
+## 高级用法
+...
+来源: product-guide.md</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：加载网页并提取正文</h3>
+
+      <p><strong>场景描述：</strong>你想抓取 LangChain.js 官方文档的"快速开始"页面，
+      提取其中的文本内容，然后分割成适合 LLM 阅读的片段。</p>
+
+      <p><strong>你的任务：</strong>使用 CheerioWebBaseLoader 加载网页，然后用 TextSplitter 分割。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+
+// ==========================================
+// 1. 加载网页
+// ==========================================
+const loader = new CheerioWebBaseLoader(
+  "https://js.langchain.com/docs/introduction/",
+  {
+    // 可选：自定义选择器，只提取特定区域的内容
+    // selector: "main",  // 不传则提取整个 body 的文本
+  }
+);
+
+const docs = await loader.load();
+
+console.log(`加载了 ${docs.length} 个文档`);
+console.log(`网页内容长度: ${docs[0].pageContent.length} 字符`);
+console.log(`前 200 个字符预览:\n${docs[0].pageContent.slice(0, 200)}`);
+console.log(`元数据:`, docs[0].metadata);
+
+// ==========================================
+// 2. 分割网页内容
+// ==========================================
+const splitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 500,
+  chunkOverlap: 50,
+  separators: ["\n\n", "\n", ". ", "。", "! ", "？"],
+});
+
+const chunks = await splitter.splitDocuments(docs);
+
+console.log(`\n分割成 ${chunks.length} 个片段`);
+
+// ==========================================
+// 3. 查看每个片段
+// ==========================================
+chunks.forEach((chunk, i) => {
+  console.log(`\n=== 片段 ${i + 1} ===`);
+  console.log(chunk.pageContent.slice(0, 200));
+  if (chunk.pageContent.length > 200) console.log("...");
+  console.log(`来源: ${chunk.metadata.source}`);
+});
+
+/* 预期输出结构：
+ * 加载了 1 个文档
+ * 网页内容长度: ~3000 字符（视实际页面而定）
+ * 分割成 6-8 个片段
+ */</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">加载了 1 个文档
+网页内容长度: 3247 字符
+前 200 个字符预览:
+LangChain.js 官方简介
+LangChain 是一个用于构建 LLM 应用的框架...
+元数据: {
+  source: "https://js.langchain.com/docs/introduction/"
+}
+
+分割成 7 个片段
+
+=== 片段 1 ===
+LangChain.js 官方简介
+LangChain 是一个用于构建 LLM 应用的框架...
+
+=== 片段 2 ===
+核心特性包括：
+1. 统一的模型接口
+2. 工具和代理系统
+3. 文档加载和转换...
+...</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧</h2>
+
+      <h3>技巧一：针对不同文档类型选择分割策略</h3>
+
+      <p>
+        不同的文档类型有不同的结构特点，选择合适的分割策略可以显著提升 RAG 的检索效果。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>文档类型</th><th>推荐分割器</th><th>关键 separator</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Markdown</td><td>RecursiveCharacterTextSplitter</td><td><code>\n## </code>、<code>\n### </code></td><td>按标题层级分割，保留语义结构</td></tr>
+          <tr><td>代码文件</td><td>RecursiveCharacterTextSplitter</td><td><code>\n\n</code>、<code>\n</code></td><td>按函数/类定义分割，避免切断代码语句</td></tr>
+          <tr><td>PDF 报告</td><td>PDFLoader + TokenTextSplitter</td><td>按 token 分割</td><td>PDF 页面已有自然边界，用 token 控制每块大小</td></tr>
+          <tr><td>JSON 数据</td><td>JSONLoader + RecursiveCharacterTextSplitter</td><td><code>\n</code></td><td>先将 JSON 转为文本，再用 separator 分割</td></tr>
+          <tr><td>CSV 表格</td><td>CSVLoader</td><td>每行一条记录</td><td>CSVLoader 本身已按行分割，无需额外分割</td></tr>
+          <tr><td>长篇文学作品</td><td>TokenTextSplitter</td><td>按 token 分割</td><td>文学作品没有固定结构，用 token 确保每块大小一致</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// Markdown 分割策略：保留标题层级
+// ==========================================
+const mdSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 400,
+  chunkOverlap: 40,
+  separators: ["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " "],
+});
+
+// ==========================================
+// 代码文件分割策略：按函数/类分割
+// ==========================================
+const codeSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 600,
+  chunkOverlap: 80,
+  separators: ["\n\n", "\n", ";", "}", "{"],
+});
+
+// ==========================================
+// 学术论文分割策略：按段落 + token 控制
+// ==========================================
+import { TokenTextSplitter } from "@langchain/textsplitters";
+
+const paperSplitter = new TokenTextSplitter({
+  chunkSize: 512,     // 512 tokens 约等于 1 个段落
+  chunkOverlap: 64,   // 10% 重叠
+  encodingName: "cl100k_base",
+});
+
+// ==========================================
+// 自定义 metadata 增强
+// ==========================================
+// 分割后可以给每个 chunk 添加额外 metadata
+const rawDocs = await loader.load();
+const splitDocs = await splitter.splitDocuments(rawDocs);
+
+const enrichedDocs = splitDocs.map((doc, index) => ({
+  ...doc,
+  metadata: {
+    ...doc.metadata,
+    chunkIndex: index,           // 片段序号
+    totalChunks: splitDocs.length, // 总片段数
+    charCount: doc.pageContent.length, // 字符数
+  },
+}));
+// 这样在检索时可以根据 chunkIndex 重建文档的原始顺序</code></pre>
+      </div>
+
+      <h3>技巧二：增量加载与流式处理</h3>
+
+      <p>
+        对于大文件（如 GB 级别的日志或数据集），一次性加载到内存可能不现实。
+        LangChain 的某些加载器和分割器支持增量处理。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 使用 lazyLoad 增量加载大文件
+// ==========================================
+// 某些加载器支持 lazyLoad 方法，返回 AsyncIterable<Document[]>
+// 适用于大文件的流式处理
+
+import { TextLoader } from "@langchain/community/document_loaders/fs/text";
+
+const loader = new TextLoader("./large-file.txt");
+
+// 逐块处理，避免内存溢出
+for await (const batch of loader.lazyLoad()) {
+  // batch 是一批 Document 对象
+  const chunks = await splitter.splitDocuments(batch);
+  // 将 chunks 存入向量数据库或做其他处理
+  console.log(`处理了 ${chunks.length} 个片段`);
+}
+
+// ==========================================
+// 自定义加载器
+// ==========================================
+// 你可以继承 BaseDocumentLoader 实现自定义加载器
+import { BaseDocumentLoader } from "langchain/document_loaders/base";
+import { Document } from "@langchain/core/documents";
+
+class MyCustomLoader extends BaseDocumentLoader {
+  constructor(private filePath: string) {
+    super();
+  }
+
+  async load(): Promise<Document[]> {
+    // 实现自定义加载逻辑
+    const content = await this.customFetch(this.filePath);
+    return [new Document({ pageContent: content, metadata: { source: this.filePath } })];
+  }
+
+  private async customFetch(path: string): Promise<string> {
+    // 你的自定义读取逻辑
+    return "文件内容...";
+  }
+}</code></pre>
+      </div>
+
+      <h3>技巧三：Metadata 的传递与扩增</h3>
+
+      <p>
+        分割后的 chunks 会自动继承原始文档的 metadata。但你也可以利用这一点，
+        在加载阶段就为文档附加丰富的元信息。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// ==========================================
+// 加载时附加自定义 metadata
+// ==========================================
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+
+const loader = new PDFLoader("./report-2024.pdf", {
+  // 自定义 metadata 会在每个页面中保留
+  // 也可以通过 splitDocuments 后的 map 操作添加
+});
+
+const rawDocs = await loader.load();
+
+// 为每页文档添加业务相关的 metadata
+const enrichedDocs = rawDocs.map((doc, index) => {
+  return new Document({
+    pageContent: doc.pageContent,
+    metadata: {
+      ...doc.metadata,
+      // 业务字段
+      year: 2024,
+      department: "engineering",
+      documentType: "annual_report",
+      // 内容特征
+      hasCharts: doc.pageContent.includes("chart"),
+      wordCount: doc.pageContent.split(/\s+/).length,
+    },
+  });
+});
+
+// 分割时 metadata 会自动传递到每个 chunk
+const chunks = await splitter.splitDocuments(enrichedDocs);
+// chunks[0].metadata 包含原始的所有字段 + chunkIndex 等</code></pre>
+      </div>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. Document 对象的两个核心字段是什么？为什么 metadata 在 RAG 系统中非常重要？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>两个核心字段是 <code>pageContent</code>（文档文本内容）和 <code>metadata</code>（文档元数据）。metadata 在 RAG 系统中非常重要，因为它记录了文档的来源（如文件名、页码、URL 等），使得系统在检索到某个片段后能够追溯到原始出处，在回答问题时附上可靠的引用信息。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. RecursiveCharacterTextSplitter 是如何决定在哪里分割文本的？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>它按照传入的 <code>separators</code> 数组优先级依次尝试分割。默认顺序是 <code>["\n\n", "\n", " ", ""]</code>，即先尝试按段落分割，不行再按行分割，再不行按空格，最后按字符。这种递归策略确保尽可能在语义自然的位置分割，尽量避免在句子中间切断。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. chunkSize 和 chunkOverlap 的典型取值范围是多少？如果 chunkOverlap 设置为 0 会有什么风险？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>chunkSize 的典型范围是 500-2000 字符（约 100-500 token），具体取决于应用场景。chunkOverlap 通常设为 chunkSize 的 10%-20%。如果 chunkOverlap 为 0，则分割边界处的信息可能会被丢失——例如一个关键术语恰好位于第一块的末尾和第二块的开头，两部分都缺少完整上下文，导致检索时都无法找到这个术语。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. 如果你想从网页中提取内容，但只想提取某个特定 <code>&lt;div&gt;</code> 区域的内容，应该用什么加载器？如何配置？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>使用 <code>CheerioWebBaseLoader</code>，在构造函数中传入 <code>selector</code> 选项来指定 CSS 选择器。例如：<code>new CheerioWebBaseLoader(url, { selector: "main" })</code> 只提取 <code>&lt;main&gt;</code> 标签内的内容。如果不指定 selector，则默认提取整个 <code>&lt;body&gt;</code> 的文本。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：忘记安装必需的依赖</div>
+        <p><strong>症状：</strong>使用 PDFLoader 时报错 <code>Cannot find module 'pdf-parse'</code>，或使用 CheerioWebBaseLoader 时报 <code>Cannot find module 'cheerio'</code>。</p>
+        <p><strong>原因：</strong>某些加载器需要额外的第三方包来处理文件格式。</p>
+        <p><strong>解决：</strong>根据加载器文档安装对应的依赖包：<code>npm install pdf-parse cheerio</code>。TextLoader、JSONLoader、CSVLoader 不需要额外依赖。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：chunkSize 设置过大导致 LLM 溢出</div>
+        <p><strong>症状：</strong>LLM 调用时报错 <code>context length exceeded</code>，或者回答质量急剧下降。</p>
+        <p><strong>原因：</strong>chunkSize 设置过大（如 10000 字符），导致检索到的多个 chunk 拼接后超过了 LLM 的上下文窗口。</p>
+        <p><strong>解决：</strong>根据目标 LLM 的上下文限制设置合理的 chunkSize。对于 GPT-4，建议单个 chunk 不超过 2000 token（约 8000 字符）；并控制检索时返回的 chunk 数量。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：分割后丢失了文档结构信息</div>
+        <p><strong>症状：</strong>检索到的 chunk 内容不完整，例如代码块被从中间截断，或者表格数据被分开。</p>
+        <p><strong>原因：</strong>使用的 separator 列表没有考虑到文档的特殊结构，分割器在代码块或表格内部进行了切割。</p>
+        <p><strong>解决：</strong>为特定类型的文档自定义 separators 列表。例如 Markdown 代码块用 <code>\n```</code> 作为分隔符，表格用 <code>\n|</code>。或者考虑使用更保守的 chunkSize 和更大的 overlap。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 4：网页加载器因反爬机制返回空内容</div>
+        <p><strong>症状：</strong>CheerioWebBaseLoader 加载网页成功，但 pageContent 为空或包含"请验证你不是机器人"等提示。</p>
+        <p><strong>原因：</strong>目标网站有反爬虫机制（如 Cloudflare、CAPTCHA）或需要 JavaScript 渲染。</p>
+        <p><strong>解决：</strong>对于需要 JS 渲染的 SPA 网站，考虑使用 PuppeteerWebBaseLoader 或 PlaywrightWebBaseLoader。对于反爬虫，可以设置 User-Agent 请求头或使用代理。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 13 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>Document 对象</strong> — pageContent（文本内容）和 metadata（元数据）的双字段结构，以及 metadata 在来源追溯中的关键作用</li>
+          <li><strong>文档加载器</strong> — TextLoader（文本/Markdown）、PDFLoader（PDF）、CheerioWebBaseLoader（网页）、JSONLoader（JSON）、CSVLoader（CSV）的安装与使用</li>
+          <li><strong>文本分割器</strong> — RecursiveCharacterTextSplitter（递归分割，推荐首选）、TokenTextSplitter（按 token 分割）、CharacterTextSplitter（按字符分割）的区别与适用场景</li>
+          <li><strong>参数调优</strong> — chunkSize（500-2000 字符）和 chunkOverlap（10%-20%）的选取策略</li>
+          <li><strong>实战演练</strong> — 从 Markdown 文件加载并智能分割、从网页抓取内容并分割</li>
+          <li><strong>进阶技巧</strong> — 针对不同文档类型选择分割策略、增量加载大文件、metadata 的传递与扩增</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 14 章：Embedding 向量化 — 将文本转化为语义向量</h3>
+        <p>在下一章中，我们将学习如何将文本转换为向量表示（Embedding），这是 RAG 系统的核心环节。</p>
+        <ul>
+          <li>文本向量化的原理：为什么需要将文本转换为向量</li>
+          <li>OpenAI Embedding 模型的使用和参数配置</li>
+          <li>文档批量向量化与缓存策略</li>
+          <li>向量相似度计算：余弦相似度、点积等</li>
+        </ul>
+        <a href="14-embeddings.html" class="btn btn-primary">继续学习第 14 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="12-lcel.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 13 章 / 共 19 章</span>
+        <a href="14-embeddings.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>

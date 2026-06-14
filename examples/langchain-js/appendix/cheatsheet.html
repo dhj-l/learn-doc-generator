@@ -103,6 +103,18 @@
       <a href="../chapters/05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
     </div>
     <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="../chapters/11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="../chapters/12-lcel.html"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="../chapters/13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="../chapters/14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="../chapters/15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="../chapters/16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
       <div class="section-title">进阶特性</div>
       <a href="../chapters/06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
       <a href="../chapters/07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
@@ -111,7 +123,13 @@
     <div class="sidebar-section">
       <div class="section-title">高级应用</div>
       <a href="../chapters/09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
-      <a href="../chapters/10-capstone.html"><span class="chapter-num">10</span> 综合实战项目</a>
+      <a href="../chapters/17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="../chapters/18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="../chapters/10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="../chapters/19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
     </div>
     <div class="sidebar-section">
       <div class="section-title">附录</div>
@@ -126,7 +144,7 @@
 
       <!-- 章节导航 -->
       <div class="chapter-nav">
-        <a href="../chapters/10-capstone.html" class="nav-link">← 第 10 章</a>
+        <a href="../chapters/19-capstone-advanced.html" class="nav-link">← 第 19 章</a>
         <span class="chapter-progress">附录 A</span>
         <a href="troubleshooting.html" class="nav-link">常见错误排错 →</a>
       </div>
@@ -150,6 +168,14 @@
         <a href="#structured"><span class="toc-icon">📐</span> 结构化输出</a>
         <a href="#middleware"><span class="toc-icon">🔗</span> 中间件 Middleware</a>
         <a href="#memory"><span class="toc-icon">🧩</span> 记忆系统</a>
+        <a href="#prompt-templates"><span class="toc-icon">📝</span> Prompt Templates</a>
+        <a href="#lcel"><span class="toc-icon">⛓️</span> LCEL 链式组合</a>
+        <a href="#document-loaders"><span class="toc-icon">📄</span> 文档加载器</a>
+        <a href="#text-splitters"><span class="toc-icon">✂️</span> 文本分割器</a>
+        <a href="#embeddings"><span class="toc-icon">🧬</span> Embedding</a>
+        <a href="#vector-stores"><span class="toc-icon">🗄️</span> 向量存储与检索</a>
+        <a href="#langgraph"><span class="toc-icon">🔀</span> LangGraph</a>
+        <a href="#callbacks"><span class="toc-icon">📊</span> Callbacks & LangSmith</a>
         <a href="#env"><span class="toc-icon">⚙️</span> 环境变量</a>
       </div>
 
@@ -888,7 +914,321 @@ const result = await agent.invoke(
 );</code></pre></div>
       </section>
 
-      <!-- ==================== 10. 环境变量 ==================== -->
+      <!-- ==================== 11. Prompt Templates ==================== -->
+      <section class="cheatsheet-section" id="prompt-templates">
+        <h2><span class="icon">📝</span> Prompt Templates</h2>
+        <p>Prompt Templates 提供模板化提示词管理，支持字符串模板、消息占位符和少样本示例等模式。对应第 11 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>PromptTemplate</code></td>
+              <td>字符串提示模板，通过 <code>{变量}</code> 插值</td>
+              <td><code>new PromptTemplate("你好，{name}！")</code></td>
+            </tr>
+            <tr>
+              <td><code>ChatPromptTemplate</code></td>
+              <td>消息列表模板，支持 system/user/ai 占位</td>
+              <td><code>ChatPromptTemplate.fromMessages([["system", "你是{role}"], ["user", "{input}"]])</code></td>
+            </tr>
+            <tr>
+              <td><code>MessagesPlaceholder</code></td>
+              <td>消息占位符，在运行时插入完整消息列表</td>
+              <td><code>new MessagesPlaceholder("chat_history")</code></td>
+            </tr>
+            <tr>
+              <td><code>FewShotChatMessagePromptTemplate</code></td>
+              <td>少样本示例模板，预置若干对话示例引导模型</td>
+              <td><code>FewShotChatMessagePromptTemplate.fromExamples([...])</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 12. LCEL ==================== -->
+      <section class="cheatsheet-section" id="lcel">
+        <h2><span class="icon">⛓️</span> LCEL 声明式链式组合</h2>
+        <p>LCEL (LangChain Expression Language) 使用 <code>|</code> 管道符组合可运行组件，构建声明式调用链。对应第 12 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>|</code> 管道操作符</td>
+              <td>将多个 Runnable 串联为一条链，前一个输出作为后一个输入</td>
+              <td><code>const chain = prompt.pipe(model).pipe(parser)</code></td>
+            </tr>
+            <tr>
+              <td><code>RunnablePassthrough</code></td>
+              <td>透传输入不做修改，常用于注入上下文或拆分数据流</td>
+              <td><code>RunnablePassthrough.assign({ ctx: async () => fetchContext() })</code></td>
+            </tr>
+            <tr>
+              <td><code>RunnableLambda</code></td>
+              <td>将任意函数包装为 Runnable，用于自定义转换逻辑</td>
+              <td><code>RunnableLambda.from((x: string) => x.toUpperCase())</code></td>
+            </tr>
+            <tr>
+              <td><code>RunnableParallel</code></td>
+              <td>并行执行多个 Runnable，合并结果为一个对象</td>
+              <td><code>RunnableParallel.of({ summary: chain1, detail: chain2 })</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 13. Document Loaders ==================== -->
+      <section class="cheatsheet-section" id="document-loaders">
+        <h2><span class="icon">📄</span> Document Loaders</h2>
+        <p>Document Loaders 从不同数据源加载文档为 <code>Document</code> 对象。对应第 13 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>TextLoader</code></td>
+              <td>加载纯文本文件（.txt），每文件一个 Document</td>
+              <td><code>new TextLoader("data.txt")</code></td>
+            </tr>
+            <tr>
+              <td><code>PDFLoader</code></td>
+              <td>加载 PDF 文档，支持多页拆分</td>
+              <td><code>new PDFLoader("doc.pdf")</code></td>
+            </tr>
+            <tr>
+              <td><code>WebBaseLoader</code></td>
+              <td>从 URL 抓取网页内容并提取文本</td>
+              <td><code>new WebBaseLoader("https://example.com")</code></td>
+            </tr>
+            <tr>
+              <td><code>Document</code> 接口</td>
+              <td>包含 <code>pageContent</code>（文本）和 <code>metadata</code>（元数据）</td>
+              <td><code>doc.pageContent + doc.metadata.source</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 14. Text Splitters ==================== -->
+      <section class="cheatsheet-section" id="text-splitters">
+        <h2><span class="icon">✂️</span> Text Splitters 文本分割</h2>
+        <p>Text Splitters 将长文档拆分为语义完整的小块，为后续向量化和检索做准备。对应第 13 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>RecursiveCharacterTextSplitter</code></td>
+              <td>递归按分隔符拆分，优先保持段落/句子完整</td>
+              <td><code>new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 })</code></td>
+            </tr>
+            <tr>
+              <td><code>TokenTextSplitter</code></td>
+              <td>基于 Token 数量拆分，适配模型上下文窗口</td>
+              <td><code>new TokenTextSplitter({ chunkSize: 500, chunkOverlap: 50 })</code></td>
+            </tr>
+            <tr>
+              <td><code>chunkSize</code></td>
+              <td>每个切块的最大大小（字符数或 Token 数）</td>
+              <td><code>chunkSize: 1000</code></td>
+            </tr>
+            <tr>
+              <td><code>chunkOverlap</code></td>
+              <td>相邻切块间的重叠大小，避免切分丢失上下文</td>
+              <td><code>chunkOverlap: 200</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 15. Embeddings ==================== -->
+      <section class="cheatsheet-section" id="embeddings">
+        <h2><span class="icon">🧬</span> Embeddings 向量化</h2>
+        <p>Embedding 模型将文本转换为高维向量，用于语义相似度计算和检索。对应第 14 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>OpenAIEmbeddings</code></td>
+              <td>OpenAI 文本嵌入模型（text-embedding-3-small 等）</td>
+              <td><code>new OpenAIEmbeddings({ model: "text-embedding-3-small" })</code></td>
+            </tr>
+            <tr>
+              <td><code>embedQuery()</code></td>
+              <td>将用户查询（短文本）转为向量</td>
+              <td><code>const vector = await embeddings.embedQuery("什么是 RAG？")</code></td>
+            </tr>
+            <tr>
+              <td><code>embedDocuments()</code></td>
+              <td>批量将文档列表转为向量矩阵</td>
+              <td><code>const vectors = await embeddings.embedDocuments([doc1, doc2, doc3])</code></td>
+            </tr>
+            <tr>
+              <td>余弦相似度</td>
+              <td>计算两个向量的语义相似程度，值越接近 1 越相似</td>
+              <td><code>cosineSimilarity(vectorA, vectorB)</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 16. Vector Stores & Retrievers ==================== -->
+      <section class="cheatsheet-section" id="vector-stores">
+        <h2><span class="icon">🗄️</span> 向量存储与检索</h2>
+        <p>Vector Store 将文档向量化后存储并提供相似性检索，Retriever 是面向应用层的统一检索接口。对应第 15 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>MemoryVectorStore</code></td>
+              <td>内存向量存储，适合开发测试，数据重启后丢失</td>
+              <td><code>new MemoryVectorStore(embeddings)</code></td>
+            </tr>
+            <tr>
+              <td><code>vectorStore.addDocuments()</code></td>
+              <td>向向量库中添加文档并自动向量化</td>
+              <td><code>await vectorStore.addDocuments(docs)</code></td>
+            </tr>
+            <tr>
+              <td><code>similaritySearch()</code></td>
+              <td>按向量相似度检索最相关的 Top-K 文档</td>
+              <td><code>const results = await vectorStore.similaritySearch(query, 3)</code></td>
+            </tr>
+            <tr>
+              <td><code>asRetriever()</code></td>
+              <td>将向量存储转换为 Retriever 接口，便于在 LCEL 链中使用</td>
+              <td><code>const retriever = vectorStore.asRetriever({ k: 5 })</code></td>
+            </tr>
+            <tr>
+              <td><code>MultiQueryRetriever</code></td>
+              <td>自动生成多个查询变体以提升检索覆盖率</td>
+              <td><code>MultiQueryRetriever.fromLLM({ llm: model, retriever })</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 17. LangGraph ==================== -->
+      <section class="cheatsheet-section" id="langgraph">
+        <h2><span class="icon">🔀</span> LangGraph 状态图</h2>
+        <p>LangGraph 是构建有状态、多步骤 Agent 工作流的图框架，支持节点编排、条件路由和循环。对应第 17 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>StateGraph</code></td>
+              <td>定义有状态图结构，节点共享一个状态对象</td>
+              <td><code>new StateGraph({ channels: { messages: MessagesState } })</code></td>
+            </tr>
+            <tr>
+              <td><code>addNode()</code></td>
+              <td>在图中注册一个节点（节点是接收状态并返回更新的函数）</td>
+              <td><code>graph.addNode("agent", agentNode)</code></td>
+            </tr>
+            <tr>
+              <td><code>addEdge()</code></td>
+              <td>在两个节点之间添加固定边（始终按顺序执行）</td>
+              <td><code>graph.addEdge("start", "agent")</code></td>
+            </tr>
+            <tr>
+              <td><code>addConditionalEdges()</code></td>
+              <td>根据条件函数的结果动态选择下一个节点</td>
+              <td><code>graph.addConditionalEdges("agent", shouldContinue, ["tools", "end"])</code></td>
+            </tr>
+            <tr>
+              <td><code>createReactAgent()</code></td>
+              <td>预构建的 ReAct Agent，封装了工具调用循环</td>
+              <td><code>createReactAgent({ llm: model, tools: [myTool] })</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 18. Callbacks & LangSmith ==================== -->
+      <section class="cheatsheet-section" id="callbacks">
+        <h2><span class="icon">📊</span> Callbacks & LangSmith</h2>
+        <p>Callback 系统提供对 LLM 调用生命周期的细粒度监听，LangSmith 实现云端全链路追踪与评估。对应第 18 章内容。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>API</th>
+              <th>说明</th>
+              <th>快速示例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>BaseCallbackHandler</code></td>
+              <td>自定义回调处理器的基类，重写生命周期方法</td>
+              <td><code>class MyHandler extends BaseCallbackHandler { handleLLMEnd(output) { ... } }</code></td>
+            </tr>
+            <tr>
+              <td><code>LANGSMITH_TRACING</code></td>
+              <td>环境变量，设为 <code>"true"</code> 启用 LangSmith 追踪</td>
+              <td><code>LANGSMITH_TRACING=true</code></td>
+            </tr>
+            <tr>
+              <td><code>LANGSMITH_API_KEY</code></td>
+              <td>LangSmith 平台 API 密钥</td>
+              <td><code>LANGSMITH_API_KEY=lsv2_pt-xxxx</code></td>
+            </tr>
+            <tr>
+              <td><code>LANGSMITH_PROJECT</code></td>
+              <td>指定追踪归属的项目名称</td>
+              <td><code>LANGSMITH_PROJECT=my-rag-app</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ==================== 19. 环境变量 ==================== -->
       <section class="cheatsheet-section" id="env">
         <h2><span class="icon">⚙️</span> 环境变量</h2>
         <p>LangChain 通过环境变量配置 API 密钥和调试选项。推荐使用 <code>.env</code> 文件配合 <code>dotenv</code> 包管理敏感信息。</p>

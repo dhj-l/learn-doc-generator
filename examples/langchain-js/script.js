@@ -173,7 +173,7 @@ function initProgressTracker() {
   const progressFill = document.querySelector('.progress-fill');
   const progressText = document.querySelector('.progress-text');
   if (progressFill && progressText) {
-    const total = document.querySelectorAll('.roadmap-card').length || 10;
+    const total = document.querySelectorAll('.roadmap-card').length || 19;
     const completed = Object.keys(progress).length;
     const percent = Math.round((completed / total) * 100);
     progressFill.style.width = percent + '%';

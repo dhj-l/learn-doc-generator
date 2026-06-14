@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第12章 LCEL - LangChain.js</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body data-page="ch12">
+  <div class="progress-bar"></div>
+
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <a href="../index.html" class="logo"><span>🦜</span> LangChain.js 学习文档</a>
+    <div class="actions">
+      <button class="btn-icon menu-toggle" id="sidebar-toggle">☰</button>
+      <button class="btn-icon" id="theme-toggle">🌙</button>
+      <a href="https://docs.langchain.com/oss/javascript/langchain/overview" target="_blank" class="btn-icon" title="官方文档">📖</a>
+      <a href="https://github.com/langchain-ai/langchainjs" target="_blank" class="btn-icon" title="GitHub">🐙</a>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">开始学习</div>
+      <a href="../index.html"><span class="chapter-num">🏠</span> 首页</a>
+      <a href="01-introduction.html"><span class="chapter-num">01</span> 概述与环境搭建</a>
+      <a href="02-agent-basics.html"><span class="chapter-num">02</span> Agent 基础</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">核心组件</div>
+      <a href="03-models.html"><span class="chapter-num">03</span> 模型 Models</a>
+      <a href="04-messages.html"><span class="chapter-num">04</span> 消息 Messages</a>
+      <a href="05-tools.html"><span class="chapter-num">05</span> 工具 Tools</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">提示与组合</div>
+      <a href="11-prompt-templates.html"><span class="chapter-num">11</span> Prompt Templates</a>
+      <a href="12-lcel.html" class="active"><span class="chapter-num">12</span> LCEL 链式组合</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">RAG 专题</div>
+      <a href="13-document-loaders.html"><span class="chapter-num">13</span> 文档加载与分割</a>
+      <a href="14-embeddings.html"><span class="chapter-num">14</span> Embedding 向量化</a>
+      <a href="15-vector-stores.html"><span class="chapter-num">15</span> 向量存储与检索</a>
+      <a href="16-rag.html"><span class="chapter-num">16</span> RAG 实战</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">进阶特性</div>
+      <a href="06-streaming.html"><span class="chapter-num">06</span> 流式传输 Streaming</a>
+      <a href="07-structured-output.html"><span class="chapter-num">07</span> 结构化输出</a>
+      <a href="08-middleware.html"><span class="chapter-num">08</span> 中间件 Middleware</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">高级应用</div>
+      <a href="09-memory.html"><span class="chapter-num">09</span> 记忆系统</a>
+      <a href="17-langgraph.html"><span class="chapter-num">17</span> LangGraph 状态图</a>
+      <a href="18-callbacks.html"><span class="chapter-num">18</span> Callbacks 与追踪</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">综合实战</div>
+      <a href="10-capstone.html"><span class="chapter-num">10</span> 基础实战：智能客服</a>
+      <a href="19-capstone-advanced.html"><span class="chapter-num">19</span> 进阶实战：RAG 智能助手</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">附录</div>
+      <a href="../appendix/cheatsheet.html">📋 API 速查表</a>
+      <a href="../appendix/troubleshooting.html">🐛 常见错误排错</a>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="content-wrapper">
+
+      <!-- 章节导航 -->
+      <div class="chapter-nav">
+        <a href="11-prompt-templates.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 12 章 / 共 19 章</span>
+        <a href="13-document-loaders.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <h1>🔗 LCEL — 声明式链式组合</h1>
+      <p class="subtitle">用管道操作符构建可组合、可流式的 AI 处理管线</p>
+
+      <!-- ==================== 本章目标 ==================== -->
+      <h2 id="objectives" class="anchor-heading">🎯 本章目标</h2>
+
+      <div class="objectives">
+        <div class="objectives-title">学完本章，你将能够：</div>
+        <ul>
+          <li>理解 LCEL 的设计哲学和核心价值</li>
+          <li>掌握 Runnable 接口的核心方法：invoke、batch、stream</li>
+          <li>熟练使用管道运算符 <code>|</code> 构建处理管线</li>
+          <li>掌握 RunnablePassthrough、RunnableLambda、RunnableParallel 等辅助组件</li>
+          <li>理解 LCEL 与 createAgent 的区别和各自的适用场景</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 前置知识 ==================== -->
+      <h2 id="prerequisites" class="anchor-heading">📋 前置知识</h2>
+
+      <div class="prerequisites">
+        <strong>⚠️ 前置要求：</strong>请确保你已完成
+        <a href="11-prompt-templates.html">第 11 章：Prompt Templates</a> 的学习，
+        理解 ChatPromptTemplate 和模板格式化的基本概念。
+        同时熟悉 <a href="03-models.html">第 3 章</a> 中模型 invoke/stream 的调用方式。
+      </div>
+
+      <!-- ==================== 核心概念 ==================== -->
+      <h2 id="core-concepts" class="anchor-heading">💡 核心概念</h2>
+
+      <h3>概念一：LCEL 是什么？</h3>
+
+      <p>
+        <strong>LangChain Expression Language（LCEL）</strong> 是 LangChain 中最强大的特性之一。
+        你可以把它想象成 Unix 管道命令——在 Unix 中，<code>cat file | grep hello | sort</code> 把三个命令串联起来，
+        每个命令的输出自动成为下一个命令的输入。LCEL 做的就是同样的事情，只不过操作的是 AI 组件。
+      </p>
+
+      <p>
+        LCEL 的核心就是 <code>|</code> 管道运算符。通过它，你可以把提示模板、模型、输出解析器等组件
+        像搭积木一样串联起来：<code>prompt | model | parser</code>。这种声明式语法让代码
+        直观到几乎不需要注释——一眼就能看出数据流动的路径。
+      </p>
+
+      <div class="callout info">
+        <div class="callout-title">💡 为什么这样做？</div>
+        <p>传统的函数调用方式是嵌套的：<code>parser(model(prompt.format(data)))</code>。
+        这看起来不够直观，特别是当管线变长时。LCEL 用 <code>|</code> 运算符改写为
+        <code>prompt | model | parser</code>，数据从左到右流动，一目了然。
+        此外，LCEL 自动支持流式（streaming）、批处理（batch）、回退（fallback）等高级特性，
+        这些在嵌套调用中需要大量额外代码才能实现。</p>
+      </div>
+
+      <h3>概念二：Runnable 接口</h3>
+
+      <p>
+        在 LCEL 中，所有可组合的组件都实现了 <code>Runnable</code> 接口。
+        这个接口定义了三种核心方法：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>方法</th><th>用途</th><th>返回类型</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>invoke(input)</code></td><td>单次调用，等待完整结果</td><td>单个输出</td></tr>
+          <tr><td><code>batch(inputs[])</code></td><td>批量调用，并行处理多个输入</td><td>输出数组</td></tr>
+          <tr><td><code>stream(input)</code></td><td>流式调用，逐步返回结果</td><td>AsyncIterable</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+
+// ==========================================
+// 创建组件（都实现了 Runnable 接口）
+// ==========================================
+const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+
+const prompt = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个{role}专家。请用中文回答。"],
+  ["human", "{question}"],
+]);
+
+// ==========================================
+// 用管道符串联
+// ==========================================
+const chain = prompt.pipe(model);  // 等价于 prompt | model
+
+// === 方式一：invoke 单次调用 ===
+const result = await chain.invoke({
+  role: "人工智能",
+  question: "什么是深度学习？",
+});
+// 返回 AIMessage 对象
+
+// === 方式二：batch 批量处理 ===
+const results = await chain.batch([
+  { role: "历史", question: "简述工业革命的影响" },
+  { role: "科学", question: "什么是相对论？" },
+  { role: "技术", question: "解释 RESTful API" },
+]);
+// 返回三个 AIMessage 的数组
+
+// === 方式三：stream 流式处理 ===
+const stream = await chain.stream({
+  role: "文学",
+  question: "写一首关于春天的诗",
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content as string);
+}
+// 逐字输出，无需等待完整响应</code></pre>
+      </div>
+
+      <h3>概念三：RunnablePassthrough — 透传辅助组件</h3>
+
+      <p>
+        <code>RunnablePassthrough</code> 是一个非常简单的组件——它什么都不做，
+        直接把输入透传给下一个组件。那它有什么用呢？它的主要用途是<strong>调试</strong>和<strong>分支</strong>。
+        你可以在管线中插入一个 <code>RunnablePassthrough</code> 来检查中间数据，
+        或者在并行分支中用它来传递不变的数据。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { RunnablePassthrough } from "@langchain/core/runnables";
+
+// 例 1：调试——打印中间数据
+const debugChain = RunnablePassthrough.assign({
+  debug_info: (input) => {
+    console.log("当前输入:", JSON.stringify(input, null, 2));
+    return input;
+  },
+});
+
+// 例 2：透传——在并行分支中传递共享数据
+const sharedChain = RunnablePassthrough.assign({
+  // 这里的 transform 函数会接收到原始输入
+  processed: async (input) => `处理结果: ${input.text}`,
+});
+
+const output = await sharedChain.invoke({ text: "hello" });
+// 输出: { text: "hello", processed: "处理结果: hello" }</code></pre>
+      </div>
+
+      <h3>概念四：RunnableLambda — 自定义转换</h3>
+
+      <p>
+        当内置组件无法满足需求时，<code>RunnableLambda</code> 允许你把任意函数包装成 Runnable 组件。
+        它接受一个函数，这个函数的输入就是上一个组件的输出，输出会传递给下一个组件。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { RunnableLambda } from "@langchain/core/runnables";
+
+// 定义一个文本处理函数
+function truncateText(text: string): string {
+  if (text.length > 100) {
+    return text.substring(0, 97) + "...";
+  }
+  return text;
+}
+
+// 包装成 Runnable
+const truncationRunnable = RunnableLambda.from(truncateText);
+
+// 用在管线中
+const chain = prompt | model | truncationRunnable;
+
+// RunnableLambda 也支持 async 函数
+const asyncLambda = RunnableLambda.from(async (input: string) => {
+  const result = await someAsyncOperation(input);
+  return result;
+});</code></pre>
+      </div>
+
+      <h3>概念五：RunnableParallel — 并行处理</h3>
+
+      <p>
+        <code>RunnableParallel</code> 允许你同时运行多个管线，并将它们的结果合并为一个对象。
+        这就像"分头行动，最后汇总"的策略。例如，同一个问题可以同时发送给多个模型，
+        然后比较它们的回答。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">import { RunnableParallel } from "@langchain/core/runnables";
+
+// 并行运行两个处理管线
+const parallelChain = RunnableParallel.from({
+  // 分支 1：提取关键词
+  keywords: async (input: { text: string }) => {
+    // 模拟关键词提取
+    return input.text.split(" ").slice(0, 3);
+  },
+  // 分支 2：计算字数
+  wordCount: async (input: { text: string }) => {
+    return input.text.split(" ").length;
+  },
+  // 分支 3：检测语言（这里用 RunnableLambda）
+  language: RunnableLambda.from((input: { text: string }) => {
+    // 简单的语言检测逻辑
+    return /[\u4e00-\u9fff]/.test(input.text) ? "中文" : "英文";
+  }),
+});
+
+const output = await parallelChain.invoke({
+  text: "LangChain is a powerful framework for building AI applications"
+});
+
+console.log(output);
+// {
+//   keywords: ["LangChain", "is", "a"],
+//   wordCount: 10,
+//   language: "英文"
+// }</code></pre>
+      </div>
+
+      <!-- ==================== 实战演练 ==================== -->
+      <h2 id="practice" class="anchor-heading">🔨 实战演练</h2>
+
+      <h3>实战一：翻译链 — Prompt | Model | OutputParser</h3>
+
+      <p><strong>场景描述：</strong>你需要构建一个中英互译服务，用户输入一段文本，
+      系统自动翻译并返回结果。要求支持批量翻译和流式输出。</p>
+
+      <p><strong>你的任务：</strong>使用 LCEL 管道构建一个完整的翻译管线。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+
+// ==========================================
+// 1. 定义组件
+// ==========================================
+
+// 提示模板
+const translatePrompt = ChatPromptTemplate.fromMessages([
+  ["system", "你是一个专业翻译。请将{sourceLang}翻译成{targetLang}。只返回翻译结果，不要加解释。"],
+  ["human", "{text}"],
+]);
+
+// 模型（低温以保持翻译一致性）
+const model = new ChatOpenAI({
+  model: "gpt-4o-mini",
+  temperature: 0.1,
+});
+
+// 输出解析器——将 AIMessage 中的文本提取出来
+const outputParser = new StringOutputParser();
+
+// ==========================================
+// 2. 构建管线：Prompt | Model | Parser
+// ==========================================
+const translationChain = translatePrompt.pipe(model).pipe(outputParser);
+
+// 等价于：const translationChain = translatePrompt | model | outputParser;
+
+// ==========================================
+// 3. 单次翻译
+// ==========================================
+async function translate(text: string, source: string, target: string) {
+  return translationChain.invoke({
+    sourceLang: source,
+    targetLang: target,
+    text,
+  });
+}
+
+// ==========================================
+// 4. 批量翻译
+// ==========================================
+async function batchTranslate(texts: string[], source: string, target: string) {
+  const inputs = texts.map((text) => ({
+    sourceLang: source,
+    targetLang: target,
+    text,
+  }));
+
+  return translationChain.batch(inputs);
+}
+
+// ==========================================
+// 5. 流式翻译
+// ==========================================
+async function streamTranslate(text: string, source: string, target: string) {
+  const stream = await translationChain.stream({
+    sourceLang: source,
+    targetLang: target,
+    text,
+  });
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk);
+  }
+}
+
+// ==========================================
+// 6. 测试
+// ==========================================
+async function main() {
+  // 单次翻译
+  console.log(await translate("Hello, how are you?", "英文", "中文"));
+  // 你好，你怎么样？
+
+  // 批量翻译
+  const results = await batchTranslate(
+    ["Good morning", "Thank you", "I love programming"],
+    "英文",
+    "中文"
+  );
+  console.log(results);
+  // ["早上好", "谢谢", "我热爱编程"]
+
+  // 流式翻译
+  await streamTranslate("The future of AI is bright", "英文", "中文");
+}
+
+main();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">你好，你怎么样？
+
+["早上好", "谢谢", "我热爱编程"]
+
+人工智能的未来是光明的（逐字输出）</code></pre>
+        </div>
+      </details>
+
+      <h3>实战二：并行处理管线</h3>
+
+      <p><strong>场景描述：</strong>你需要对一篇文章进行多项分析——提取摘要、提取关键词、情感分析、语言检测。</p>
+
+      <p><strong>你的任务：</strong>使用 RunnableParallel 构建并行分析管线。</p>
+
+      <details>
+        <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">TypeScript</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { RunnableParallel } from "@langchain/core/runnables";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+
+const model = new ChatOpenAI({ model: "gpt-4o-mini" });
+const parser = new StringOutputParser();
+
+// ==========================================
+// 定义各分析任务
+// ==========================================
+
+// 摘要任务
+const summaryChain = ChatPromptTemplate.fromMessages([
+  ["system", "请用一句话概括以下内容，不超过 50 个字。"],
+  ["human", "{article}"],
+]).pipe(model).pipe(parser);
+
+// 关键词提取任务（用 RunnableLambda 实现自定义解析）
+const keywordsChain = ChatPromptTemplate.fromMessages([
+  ["system", "从以下内容中提取 3-5 个关键词，用逗号分隔。"],
+  ["human", "{article}"],
+]).pipe(model).pipe(parser);
+
+// 情感分析任务
+const sentimentChain = ChatPromptTemplate.fromMessages([
+  ["system", "分析以下内容的情感倾向（积极/消极/中性），只返回一个词。"],
+  ["human", "{article}"],
+]).pipe(model).pipe(parser);
+
+// ==========================================
+// 并行运行所有任务
+// ==========================================
+const analysisChain = RunnableParallel.from({
+  summary: summaryChain,
+  keywords: keywordsChain,
+  sentiment: sentimentChain,
+});
+
+// ==========================================
+// 测试
+// ==========================================
+async function main() {
+  const article = `
+    TypeScript 5.0 的发布引入了多项重要更新，包括装饰器(Decorators)的标准化、
+    新的 const 类型参数、以及性能的大幅提升。开发者社区对此反应积极，
+    许多大型项目已经开始迁移到新版本。
+  `;
+
+  const result = await analysisChain.invoke({ article });
+
+  console.log("📊 分析结果：");
+  console.log(`摘要：${result.summary}`);
+  console.log(`关键词：${result.keywords}`);
+  console.log(`情感：${result.sentiment}`);
+}
+
+main();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="lang-tag">输出</span>
+            <button class="copy-btn">📋 复制</button>
+          </div>
+          <pre><code class="language-text">📊 分析结果：
+摘要：TypeScript 5.0 发布，引入装饰器标准化和 const 类型参数等更新
+关键词：TypeScript 5.0, 装饰器, const 类型参数, 性能提升, 开发者社区
+情感：积极</code></pre>
+        </div>
+      </details>
+
+      <!-- ==================== 进阶技巧 ==================== -->
+      <h2 id="advanced" class="anchor-heading">⚡ 进阶技巧</h2>
+
+      <h3>技巧一：.withConfig() — 运行时配置</h3>
+
+      <p>
+        <code>.withConfig()</code> 方法允许你在运行时覆盖链中的配置，而无需修改链的定义。
+        比如，你可以在开发环境使用一个模型，生产环境使用另一个。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 根据环境配置不同的模型
+const isProduction = process.env.NODE_ENV === "production";
+
+const model = isProduction
+  ? new ChatOpenAI({ model: "gpt-4o" })
+  : new ChatOpenAI({ model: "gpt-4o-mini" });
+
+const chain = prompt.pipe(model).pipe(parser);
+
+// 运行时覆盖配置
+const configuredChain = chain.withConfig({
+  runName: "translation-chain", // 给链命名，方便调试
+  tags: ["translation", "production"],
+});</code></pre>
+      </div>
+
+      <h3>技巧二：.withFallbacks() — 容错机制</h3>
+
+      <p>
+        当主模型不可用时（API 限流、超时），<code>.withFallbacks()</code> 会自动切换到备用模型，
+        提高系统的可用性。
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="lang-tag">TypeScript</span>
+          <button class="copy-btn">📋 复制</button>
+        </div>
+        <pre><code class="language-typescript">// 主模型：GPT-4
+const primaryModel = new ChatOpenAI({
+  model: "gpt-4o",
+  timeout: 10000, // 10 秒超时
+});
+
+// 备用模型：GPT-4o-mini（更便宜、更快）
+const fallbackModel = new ChatOpenAI({
+  model: "gpt-4o-mini",
+});
+
+// 创建带备用的链
+const resilientChain = (prompt | primaryModel | parser).withFallbacks({
+  fallbacks: [prompt | fallbackModel | parser],
+});
+
+// 当主模型超时或出错时，自动调用备用模型
+const result = await resilientChain.invoke({
+  role: "技术",
+  question: "解释微服务架构",
+});</code></pre>
+      </div>
+
+      <h3>技巧三：LCEL vs createAgent 对比</h3>
+
+      <p>
+        LCEL 和 <code>createAgent</code> 是 LangChain 中两种不同的编程范式，各有适用场景：
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>特性</th><th>LCEL 管道</th><th>createAgent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>灵活性</td><td>高——你可以自定义任意处理管线</td><td>中等——有固定 Agent 循环模式</td></tr>
+          <tr><td>工具调用</td><td>需要手动实现</td><td>内置自动工具调用循环</td></tr>
+          <tr><td>流式支持</td><td>原生支持</td><td>原生支持</td></tr>
+          <tr><td>复杂度</td><td>适合确定性管线</td><td>适合需要 LLM 动态决策的场景</td></tr>
+          <tr><td>学习曲线</td><td>较低（直观的管道语法）</td><td>中等</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ==================== 知识检查点 ==================== -->
+      <h2 id="quiz" class="anchor-heading">🧠 知识检查点</h2>
+
+      <div class="quiz">
+        <div class="quiz-header">📝 自测题：检查你对本章内容的理解</div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">1. 用一句话解释 LCEL 的核心概念。管道运算符 | 做了什么事情？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>LCEL 的核心就是使用 <code>|</code> 运算符将实现了 Runnable 接口的组件串联起来，前一个组件的输出自动成为下一个组件的输入。本质上 <code>A | B</code> 等价于 <code>input => B(A(input))</code>，但 LCEL 自动处理了 invoke、batch、stream 三种调用模式。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">2. invoke、batch、stream 三种方法分别适用于什么场景？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>invoke</code> 适用于单次请求-响应的对话场景；<code>batch</code> 适用于需要批量处理大量独立请求的场景（如离线翻译大量文本）；<code>stream</code> 适用于需要实时展示进度的场景（如逐字显示 AI 回答）。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">3. RunnablePassthrough 和 RunnableLambda 有什么不同？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p><code>RunnablePassthrough</code> 不改变数据，直接将输入传递下去（或用于 assign 添加新字段），适合调试和分支场景。<code>RunnableLambda</code> 则用自定义函数对数据进行转换，适合在管线中插入自定义的处理逻辑。简单说：Passthrough 是"路过不修改"，Lambda 是"截获并转换"。</p>
+          </div>
+        </div>
+
+        <div class="quiz-item">
+          <div class="quiz-question">4. 什么时候应该用 LCEL 而不是 createAgent？</div>
+          <button class="reveal-btn">💡 查看答案</button>
+          <div class="quiz-answer">
+            <p>当你的处理流程是确定的（不需要 LLM 动态决策是否调用工具）时，应该优先使用 LCEL。比如：翻译管线、文本分析管线、数据预处理等。LCEL 更轻量、更直观、流式支持更好。而 <code>createAgent</code> 适用于需要 LLM 自主决策、调用外部工具的复杂场景。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== 常见错误 ==================== -->
+      <h2 id="common-errors" class="anchor-heading">🐛 常见错误</h2>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 1：管道数据流类型不匹配</div>
+        <p><strong>症状：</strong>运行时错误 <code>TypeError: prompt.pipe is not a function</code> 或类型错误。</p>
+        <p><strong>原因：</strong>不是所有对象都实现了 Runnable 接口。只有实现了该接口的组件才能用 <code>|</code> 串联。</p>
+        <p><strong>解决：</strong>检查串联的组件是否都来自 LangChain（如 ChatPromptTemplate、ChatOpenAI、输出解析器）。自定义函数需要用 <code>RunnableLambda.from()</code> 包装。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 2：invoke 时传入的参数与模板不匹配</div>
+        <p><strong>症状：</strong>调用 chain.invoke() 时提示缺少变量。</p>
+        <p><strong>原因：</strong>pipe 链中的第一个组件（通常是模板）需要的变量没有全部提供。</p>
+        <p><strong>解决：</strong>检查模板中的所有 <code>{variable}</code> 是否都在 invoke 的输入对象中提供了。可以使用 TypeScript 类型来辅助检查。</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="callout-title">❌ 错误 3：在流式模式中调用了非流式组件</div>
+        <p><strong>症状：</strong>stream() 调用没有逐块返回数据，而是直接返回完整结果。</p>
+        <p><strong>原因：</strong>链中的某个组件不支持流式输出（如某些自定义的输出解析器）。</p>
+        <p><strong>解决：</strong>确保链中所有组件都支持流式。LangChain 内置的模型和输出解析器都支持流式，但自定义 RunnableLambda 可能需要额外处理。</p>
+      </div>
+
+      <!-- ==================== 本章小结 ==================== -->
+      <h2 id="summary" class="anchor-heading">📝 本章小结</h2>
+
+      <div class="chapter-summary">
+        <h2>🎓 恭喜完成第 12 章！</h2>
+        <p>在本章中，你学习了以下核心内容：</p>
+        <ul>
+          <li><strong>LCEL 设计哲学</strong> — 用 <code>|</code> 管道运算符声明式地构建 AI 处理管线</li>
+          <li><strong>Runnable 接口</strong> — invoke（单次）、batch（批处理）、stream（流式）三种核心方法</li>
+          <li><strong>辅助组件</strong> — RunnablePassthrough（透传）、RunnableLambda（自定义转换）、RunnableParallel（并行处理）</li>
+          <li><strong>实战应用</strong> — 翻译链管线、并行文本分析管线</li>
+          <li><strong>进阶技巧</strong> — withConfig 运行时配置、withFallbacks 容错机制、LCEL vs createAgent 选型</li>
+        </ul>
+      </div>
+
+      <!-- ==================== 下一章预告 ==================== -->
+      <h2 id="next-chapter" class="anchor-heading">➡️ 下一章预告</h2>
+
+      <div class="card">
+        <h3>📖 第 13 章：Document Loaders & Text Splitters</h3>
+        <p>在下一章中，我们将进入 RAG（检索增强生成）的世界。首先学习如何加载各种格式的文档——
+        从 PDF、网页、JSON 到 CSV——以及如何将长文档智能分割成适合 LLM 处理的片段。</p>
+        <ul>
+          <li>Document 对象的结构（pageContent + metadata）</li>
+          <li>各种文档加载器的使用：TextLoader、PDFLoader、WebBaseLoader</li>
+          <li>文本分割策略：递归分割、字符分割、Token 分割</li>
+          <li>chunkSize 和 chunkOverlap 的调优方法</li>
+        </ul>
+        <a href="13-document-loaders.html" class="btn btn-primary">继续学习第 13 章 →</a>
+      </div>
+
+      <hr>
+      <div class="chapter-nav">
+        <a href="11-prompt-templates.html" class="nav-link">← 上一章</a>
+        <span class="chapter-progress">第 12 章 / 共 19 章</span>
+        <a href="13-document-loaders.html" class="nav-link">下一章 →</a>
+      </div>
+
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        🦜 LangChain.js 学习文档 · 基于官方最新文档生成 · <a href="https://docs.langchain.com" target="_blank">docs.langchain.com</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script src="../script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+</body>
+</html>
