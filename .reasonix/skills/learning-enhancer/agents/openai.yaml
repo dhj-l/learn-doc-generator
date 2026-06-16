@@ -1,0 +1,4 @@
+interface:
+  display_name: "专业教学文档简化器"
+  short_description: "将复杂专业文档转化为易懂内容，保留专业概念并添加简单解释"
+  default_prompt: "请使用 $learning-enhancer 简化这个专业文档，使其更易于理解"

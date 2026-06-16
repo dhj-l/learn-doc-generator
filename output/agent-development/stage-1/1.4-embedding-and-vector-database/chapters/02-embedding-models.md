@@ -41,7 +41,7 @@ const client = new OpenAI();
 async function basicEmbedding() {
   const response = await client.embeddings.create({
     model: 'text-embedding-3-small',
-    input: 'Hello world',
+    input: '深度学习模型是如何工作的',
   });
   console.log('维度:', response.data[0].embedding.length); // 1536
   console.log('前5维:', response.data[0].embedding.slice(0, 5));
@@ -63,7 +63,7 @@ async function reducedDimension() {
   const response = await client.embeddings.create({
     model: 'text-embedding-3-large',
     dimensions: 256,  // 从 3072 缩减到 256 维
-    input: 'Hello world',
+    input: '机器学习中的文本分类任务',
   });
   console.log('原始维度: 3072, 缩减后:', response.data[0].embedding.length); // 256
   // 缩减后仍保持大部分语义信息，但存储和计算成本大幅降低
@@ -71,6 +71,8 @@ async function reducedDimension() {
 ```
 
 ### 概念三：本地 Embedding 模型
+
+**生活类比：** 本地 Embedding 模型就像你家里的工具箱——你不需要每次用螺丝刀都去租借（调用 API），自己备一套工具随时可用。虽然工具种类可能没有五金店（云端 API）丰富，但**免费、无延迟、无网络依赖**就是最大的优势。
 
 ```typescript
 // src/local-embedding.ts
@@ -149,11 +151,23 @@ function precisionAtK(
 // 方法 3：分类准确率（用 Embedding 作为特征训练简单分类器）
 ```
 
+> **💡 为什么需要评估 Embedding 质量？** 不同的 Embedding 模型在不同任务上的表现差异很大。text-embedding-3-large 在英文检索上准确率更高，但 BGE-M3 在中文场景中表现更好。通过 Precision@K、召回率等指标量化评估，可以帮助你做出客观的选型决策，而不是凭感觉猜测。
+
 ---
 
 ## 🔨 实战演练
 
-### 练习：Embedding 模型性能对比测试
+### 场景：为电商平台选择最佳的 Embedding 模型
+
+**场景描述：**
+你正在为一个电商平台构建商品搜索功能。平台主要面向中文用户，商品数据包含标题、描述和类别标签。你需要对比多个 Embedding 模型，找出在「检索准确性」和「响应速度」之间最佳平衡的方案。
+
+**你的任务：**
+1. 准备一组中文商品数据作为测试集
+2. 分别使用 OpenAI text-embedding-3-small、text-embedding-3-large 和本地 BGE 模型生成向量
+3. 对比各模型的检索准确率（Precision@K）
+4. 对比各模型的响应时间和成本
+5. 给出最终的模型选型建议
 
 <details>
 <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
@@ -208,6 +222,96 @@ await benchmarkEmbeddingModels([
 ```
 
 </details>
+
+---
+
+## ⚡ 进阶技巧
+
+### 技巧一：模型集成（Ensemble）
+
+将多个 Embedding 模型的向量拼接或加权平均，可以获得比单个模型更优的检索效果：
+
+```typescript
+// 向量拼接：结合不同模型的优势
+async function ensembleEmbedding(text: string) {
+  const [openAIEmb, bgeEmb] = await Promise.all([
+    getOpenAIEmbedding(text),    // 1536 维，语义丰富
+    getBGEEmbedding(text),       // 1024 维，中文优化
+  ]);
+  
+  // 拼接为 2560 维向量
+  return [...openAIEmb, ...bgeEmb];
+}
+```
+
+> **💡 为什么 Ensemble 有效？** 不同模型在编码时侧重的特征不同——OpenAI 模型在通用语义上表现好，BGE 在中文专业术语上更精准。拼接后的向量保留了双方的优点，检索效果通常比单一模型提升 5-15%。
+
+### 技巧二：动态维度选择
+
+根据业务需求动态选择向量维度，在精度和性能之间做权衡：
+
+```typescript
+// 对于简单的分类任务，256 维就足够了
+// 对于精细的语义检索，建议使用 768-1024 维
+// 对于高精度搜索，使用 1536-3072 维
+
+function selectDimensions(budget: 'low' | 'medium' | 'high'): number {
+  switch (budget) {
+    case 'low': return 256;    // 快速、省存储
+    case 'medium': return 768; // 均衡
+    case 'high': return 1536;  // 最佳精度
+  }
+}
+```
+
+### 技巧三：模型量化
+
+将模型从 FP32 量化到 INT8，可以显著减少模型体积和推理时间：
+
+```text
+模型量化效果对比（以 BGE-M3 为例）：
+- FP32（原始）: 1.3GB, 推理时间 120ms
+- INT8（量化）: 350MB, 推理时间 45ms
+- 精度损失: < 2%
+对于生产环境部署，量化版本通常是更好的选择。
+```
+
+---
+
+## 🧠 知识检查点
+
+<details>
+<summary>点击展开答案</summary>
+
+**Q1：如何选择适合自己场景的 Embedding 模型？**
+
+A：考虑四个维度：（1）语言——中文优先选 BGE 系列，多语言用 Cohere embed-v3；（2）成本——预算充足用 OpenAI，本地部署用开源模型；（3）精度要求——高精度用 text-embedding-3-large 或 BGE-M3，轻量级用 nomic-embed；（4）延迟——本地模型无网络延迟，云端模型需要网络传输时间。
+
+**Q2：OpenAI 的 text-embedding-3 系列支持维度缩减，这有什么好处？**
+
+A：维度缩减可以大幅降低存储成本和计算时间，同时保留大部分语义信息。例如从 3072 维缩减到 256 维可节省约 92% 的存储空间，精度损失仅 3-5%（取决于具体任务）。
+
+**Q3：本地 Embedding 模型（如 BGE）相比云端 API 有什么优缺点？**
+
+A：优点：免费、无网络延迟、数据不出域（隐私安全）、可离线运行。缺点：需要本地计算资源（GPU 推荐）、模型更新需要手动下载新版本、多语言能力通常不如商业 API。
+
+**Q4：什么是 Embedding 质量评估中的 Precision@K？**
+
+A：Precision@K 是指在前 K 个检索结果中，相关文档所占的比例。例如 Precision@5 = 0.8 表示前 5 个结果中有 4 个是相关的。这是衡量检索系统准确性的核心指标。
+
+</details>
+
+---
+
+## 🐛 常见错误
+
+| 错误 | 原因 | 解决方案 |
+|------|------|----------|
+| 中文文本 Embedding 效果差 | 使用了以英文为主的 Embedding 模型 | 切换到中文优化模型（如 BGE-large-zh、text2vec） |
+| 本地模型加载速度慢 | 首次加载需要下载模型文件（500MB-1GB） | 提前下载并缓存模型文件，或使用更轻量的模型（如 nomic-embed-text v1.5，仅 137MB） |
+| 向量维度太大导致内存溢出 | 没有对向量做维度缩减或降维 | 使用 text-embedding-3 系列的 dimensions 参数缩减维度，或使用 PCA 降维 |
+| 不同批次的向量分布不一致 | 使用了不同的模型或模型版本 | 固定使用同一个模型版本，记录模型名称和版本号 |
+| 本地模型在 CPU 上推理极慢 | 没有利用 GPU 加速 | 安装 CUDA 版本的 ONNX Runtime，或使用 WebGPU（浏览器端） |
 
 ---
 

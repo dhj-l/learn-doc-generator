@@ -221,7 +221,16 @@ main();
 
 ## 🔨 实战演练
 
-### 练习：构建一个简易语义搜索引擎
+### 场景：为技术博客构建语义搜索功能
+
+**场景描述：**
+你正在为一个技术博客平台开发搜索功能。传统的关键词搜索无法理解「语义」——搜索「前端框架」时，包含「React」「Vue」「Next.js」的文章都应该出现，但靠关键词匹配只能找到标题中包含这些词的文章。你需要基于 Embedding 实现语义搜索。
+
+**你的任务：**
+1. 创建一个文档集合，包含不同类型的技术文章
+2. 使用 Embedding API 将文档转换为向量
+3. 实现语义搜索功能，支持按相似度排序
+4. 验证搜索「前端框架」能正确返回前端相关的文章
 
 <details>
 <summary>🧑‍💻 先自己写，写完再展开看参考答案</summary>
@@ -321,6 +330,121 @@ main();
 ```
 
 </details>
+
+---
+
+## ⚡ 进阶技巧
+
+### 技巧一：批量处理性能优化
+
+当需要处理大量文档时，可以利用 OpenAI Embedding API 的批量能力：
+
+```typescript
+// 批量处理比单条处理快 10-50 倍
+async function batchProcess(texts: string[], batchSize: number = 100) {
+  const embeddings: number[][] = [];
+  
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const response = await client.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: batch,
+    });
+    
+    // 按原始顺序排列
+    const sorted = response.data.sort((a, b) => a.index - b.index);
+    embeddings.push(...sorted.map(d => d.embedding));
+    
+    console.log(`处理进度: ${Math.min(i + batchSize, texts.length)}/${texts.length}`);
+  }
+  
+  return embeddings;
+}
+```
+
+> **💡 为什么批量处理更高效？** 单条请求需要建立一次 HTTP 连接和一次模型推理。批量处理将多个文本打包在同一个请求中，模型可以并行编码，大幅提升吞吐量。OpenAI 单次请求最多支持 2048 条文本。
+
+### 技巧二：维度缩减
+
+OpenAI 的 text-embedding-3 系列支持在返回时直接缩减维度，无需额外处理：
+
+```typescript
+// 从 1536 维缩减到 256 维，节省 83% 的存储空间
+const response = await client.embeddings.create({
+  model: 'text-embedding-3-small',
+  dimensions: 256,  // 指定目标维度
+  input: '要编码的文本',
+});
+
+console.log(response.data[0].embedding.length); // 256
+// 缩减后仍保留约 95% 的语义信息
+```
+
+### 技巧三：Embedding 缓存
+
+避免对相同的文本重复调用 API：
+
+```typescript
+class EmbeddingCache {
+  private cache = new Map<string, number[]>();
+  
+  async getOrCreate(text: string): Promise<number[]> {
+    if (this.cache.has(text)) {
+      return this.cache.get(text)!;  // 缓存命中，直接返回
+    }
+    
+    const response = await client.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text,
+    });
+    
+    this.cache.set(text, response.data[0].embedding);
+    return response.data[0].embedding;
+  }
+  
+  // 可以序列化到磁盘，进程重启后重新加载
+  save(path: string) {
+    // 保存为 JSON 文件
+  }
+}
+```
+
+---
+
+## 🧠 知识检查点
+
+<details>
+<summary>点击展开答案</summary>
+
+**Q1：Embedding 的本质是什么？**
+
+A：Embedding 是将文本（或其他数据）转换为固定长度的数值向量，使得语义上相近的文本在向量空间中距离更近。它通过深度学习模型（如 Transformer）捕捉词语和上下文之间的关系来实现。
+
+**Q2：余弦相似度的值域是多少？各代表什么含义？**
+
+A：值域为 [-1, 1]。1 表示方向完全相同（语义高度相似），0 表示正交（无关），-1 表示方向完全相反（语义对立）。在实际应用中，文本 Embedding 的余弦相似度通常在 [0, 1] 范围内。
+
+**Q3：为什么说「语义搜索」比「关键词搜索」更好？**
+
+A：关键词搜索只能匹配精确的字面词汇，无法理解同义词、近义词或上下文语义。例如搜索「汽车」会漏掉「轿车」「automobile」等语义相近的内容。语义搜索通过向量相似度匹配「意思」，能够理解同义词和上下文。
+
+**Q4：什么是 Embedding 的维度？维度越高越好吗？**
+
+A：维度是向量的长度，每个维度编码了文本的某个特征。维度越高表示信息容量越大（如 text-embedding-3-large 的 3072 维），但也会增加存储和计算成本。并非越高越好——需要根据应用场景在精度和效率之间做权衡。
+
+</details>
+
+---
+
+## 🐛 常见错误
+
+| 错误 | 原因 | 解决方案 |
+|------|------|----------|
+| 不同模型生成的向量无法比较 | 使用了不同的 Embedding 模型（如一部分用 text-embedding-3-small，另一部分用 BGE） | 确保存储和查询使用同一个 Embedding 模型，统一模型后再生成向量 |
+| 搜索「苹果」时水果和手机品牌混在一起 | Embedding 无法自动区一词多义，除非上下文明确 | 在文档中加入上下文描述（如「苹果（水果）」vs「苹果（手机品牌）」），或使用不同的 Collection 分别存储 |
+| 向量维度不匹配导致搜索报错 | Collection 创建时指定的 dimension 与实际向量维度不同 | 创建集合时明确指定 dimension 参数，或使用支持自动检测的向量数据库 |
+| 单条处理大量文档（1000+）导致超时 | 没有使用批量 API，一条一条发送请求 | 使用批量 Embedding，每批 100-500 条，大幅减少 API 调用次数 |
+| 余弦相似度计算结果全为正数 | 没有对向量做归一化，或者使用了未归一化的 Embedding | 使用 normalize=True 参数，或在计算前对向量做 L2 归一化 |
 
 ---
 
