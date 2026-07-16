@@ -1,0 +1,16 @@
+- [首页](/)
+- **基础篇**
+  - [第1章 概述与环境搭建](chapters/01-introduction.md)
+  - [第2章 核心概念：图、节点、边](chapters/02-core-concepts.md)
+- **实战篇**
+  - [第3章 Graph API](chapters/03-graph-api.md)
+  - [第4章 Functional API](chapters/04-functional-api.md)
+  - [第5章 持久化、流式输出与检查点](chapters/05-persistence-streaming.md)
+  - [第6章 高级特性](chapters/06-advanced-features.md)
+- **对比篇**
+  - [第7章 LangGraph vs LangChain](chapters/07-vs-langchain.md)
+- **项目篇**
+  - [第8章 综合实战项目](chapters/capstone-project.md)
+- **附录**
+  - [API 速查表](appendix/cheatsheet.md)
+  - [常见错误排错指南](appendix/troubleshooting.md)
